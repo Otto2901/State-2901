@@ -766,9 +766,9 @@ function renderAuth(app){
 
 function renderMain(app){
   var tabs=[{id:'board',icon:'📋',label:'Board'},{id:'add',icon:'➕',label:'Add'},{id:'lookup',icon:'🔍',label:'Lookup'}];
-  if(SESSION.isAdmin) tabs.push({id:'admin',icon:'👑',label:'Admin'});
+  if(isSuperAdmin(SESSION.name)||isAlbumAdmin(SESSION.name)) tabs.push({id:'admin',icon:'👑',label:'Admin'});
   var navHtml=tabs.map(function(t){ return '<button class="nav-btn '+(t.id==='admin'?'adm-btn ':'')+( TAB===t.id?'on':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>'; }).join('');
-  var chipCls=SESSION.isAdmin?'player-chip adm':'player-chip';
+  var chipCls=isSuperAdmin(SESSION.name)||isAlbumAdmin(SESSION.name)?'player-chip adm':'player-chip';
   app.innerHTML=
     '<div class="hdr"><div class="hdr-brand"><button style="background:none;border:none;color:#4a7a9b;font-size:18px;cursor:pointer;padding:0 8px 0 0;" id="backHome">←</button><div class="hdr-logo">🧩</div><div><div class="hdr-title">Tundra Albums</div><div class="hdr-sub">State 2901 · Puzzle Piece Coordination</div></div></div>'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">'+'<div class="'+chipCls+'" id="logoutBtn">'+(SESSION.isAdmin?'👑':'👤')+' '+SESSION.name+' <span style="font-size:10px;opacity:.4">✕</span></div>'+'<button class="guide-btn" id="guideBtn">❓ How to use</button></div></div>'+
@@ -781,7 +781,7 @@ function renderMain(app){
   if(TAB==='board')  renderBoard(tc);
   if(TAB==='add')    renderAdd(tc);
   if(TAB==='lookup') renderLookup(tc);
-  if(TAB==='admin')  renderAdmin(tc);
+  if(TAB==='admin'&&(isSuperAdmin(SESSION.name)||isAlbumAdmin(SESSION.name)))  renderAdmin(tc);
 }
 
 function renderLimitBar(tc){
@@ -848,7 +848,7 @@ function entryCard(e, isMatchSection){
     '<div class="ecard-top">'+
       '<div class="ecard-player">'+(own?'<span style="color:#4a7a9b;margin-right:3px">👤</span>':'')+e.player_name+'</div>'+
       '<div class="ecard-right"><div class="ecard-badges">'+mb+badge+'</div>'+
-      ((own||SESSION.isAdmin)?'<button class="edel" data-id="'+e.id+'" title="Remove">✕</button>':'')+
+      ((own||isSuperAdmin(SESSION.name)||isAlbumAdmin(SESSION.name)||isModerator(SESSION.name))?'<button class="edel" data-id="'+e.id+'" title="Remove">✕</button>':'')+
     '</div></div>'+
     '<div class="ecard-album">'+e.album+'</div>'+
     '<div class="ecard-puzzle">'+e.puzzle+'</div>'+
