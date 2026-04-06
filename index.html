@@ -1462,7 +1462,7 @@ function renderSvsApp(app){
   var role = getRole(SESSION.name);
   var chipCls = isSuperAdmin(SESSION.name)?'player-chip adm':'player-chip';
   var tabs = [{id:'board',icon:'⚔️',label:'Teams'},{id:'register',icon:'📝',label:'Register'}];
-  if(isSuperAdmin(SESSION.name)||isSvsAdmin(SESSION.name)) tabs.push({id:'admin',icon:'👑',label:'Admin'});
+  if(isSuperAdmin(SESSION.name)) tabs.push({id:'admin',icon:'👑',label:'Admin'});
   var navHtml = tabs.map(function(t){ return '<button class="nav-btn '+(t.id==='admin'?'adm-btn ':'')+( SVS_TAB===t.id?'on':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>'; }).join('');
 
   app.innerHTML=
@@ -1487,7 +1487,7 @@ function renderSvsApp(app){
   var sc = document.getElementById('svsContent');
   if(SVS_TAB==='board')    renderSvsBoard(sc);
   if(SVS_TAB==='register') renderSvsRegister(sc);
-  if(SVS_TAB==='admin')    renderSvsAdmin(sc);
+  if(SVS_TAB==='admin'&&isSuperAdmin(SESSION.name)) renderAdmin(sc);
 }
 
 async function saveSvsRegistration(){
