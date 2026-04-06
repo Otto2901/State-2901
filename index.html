@@ -1485,7 +1485,7 @@ function renderSvsApp(app){
   var sc = document.getElementById('svsContent');
   if(SVS_TAB==='board')    renderSvsBoard(sc);
   if(SVS_TAB==='register') renderSvsRegister(sc);
-  if(SVS_TAB==='admin')    renderAdmin(sc);
+  if(SVS_TAB==='admin')    renderSvsAdmin(sc);
 }
 
 async function saveSvsRegistration(){
@@ -1703,6 +1703,112 @@ async function revokeRole(playerName){
   if(r.error){ toast('Error: '+r.error.message); return; }
   ADMIN_ROLES=ADMIN_ROLES.filter(function(x){ return x.player_name!==playerName; });
   toast('🗑 Role revoked'); render();
+}
+
+
+function renderSvsAdmin(sc){
+  var canSuper = isSuperAdmin(SESSION.name);
+
+  // Team name editors
+  var teamNamesHtml = '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
+    '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">⚔️ Team Names</div>'+
+    SVS_TEAMS.map(function(t){
+      return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'+
+        '<span style="font-size:12px;color:#4a7a9b;width:60px;flex-shrink:0;">Team '+t.team_num+'</span>'+
+        '<input class="inp team-name-inp" data-team="'+t.team_num+'" value="'+t.team_name+'" style="flex:1;padding:8px 12px;font-size:13px;">'+
+        '<button class="btn btn-g btn-sm save-team-name" data-team="'+t.team_num+'" style="flex-shrink:0;padding:8px 14px;">Save</button>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+
+  // Player list with team assignment and remove
+  var attending = SVS_DATA.filter(function(x){ return x.attending; });
+  var notAttend = SVS_DATA.filter(function(x){ return !x.attending; });
+
+  function svsPlayerRow(reg){
+    var ts = troopStr(reg);
+    return '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(100,160,220,.06);gap:8px;">'+
+      '<div style="flex:1;">'+
+        '<div style="font-size:13px;font-weight:700;color:#d4eaf7;">'+reg.player_name+'</div>'+
+        (ts?'<div style="font-size:10px;color:#4a7a9b;margin-top:1px;">'+ts+'</div>':'')+
+      '</div>'+
+      '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">'+
+        SVS_TEAMS.map(function(t){
+          var active = reg.team===t.team_num;
+          return '<button class="assign-btn assign-'+t.team_num+(active?' active':'')+' svs-assign" data-player="'+reg.player_name+'" data-team="'+t.team_num+'">'+t.team_num+'</button>';
+        }).join('')+
+        (reg.team?'<button class="assign-btn assign-x svs-assign" data-player="'+reg.player_name+'" data-team="0">✕</button>':'')+
+        '<button class="assign-btn assign-x svs-del-reg" data-player="'+reg.player_name+'" style="font-size:11px;" title="Remove registration">🗑</button>'+
+      '</div>'+
+    '</div>';
+  }
+
+  var attendingHtml = '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
+    '<div style="font-size:12px;font-weight:800;color:#52c759;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">✅ Attending ('+attending.length+')</div>'+
+    (attending.length ? attending.map(svsPlayerRow).join('') : '<div style="font-size:12px;color:#2a4a65;padding:8px 0;">No registrations yet</div>')+
+  '</div>';
+
+  var notAttendHtml = notAttend.length ? '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
+    '<div style="font-size:12px;font-weight:800;color:#ff453a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">❌ Not Attending ('+notAttend.length+')</div>'+
+    notAttend.map(function(reg){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(100,160,220,.06);">'+
+        '<span style="font-size:13px;font-weight:700;color:#d4eaf7;">'+reg.player_name+'</span>'+
+        '<button class="assign-btn assign-x svs-del-reg" data-player="'+reg.player_name+'" style="font-size:11px;" title="Remove">🗑</button>'+
+      '</div>';
+    }).join('')+
+  '</div>' : '';
+
+  // Clear all button - only super admin
+  var clearHtml = canSuper ?
+    '<div style="margin-top:4px;">'+
+      '<button class="btn btn-d" id="clearAllSvsAdminBtn">🗑 Clear ALL SvS Registrations</button>'+
+    '</div>' : '';
+
+  sc.innerHTML = teamNamesHtml + attendingHtml + notAttendHtml + clearHtml;
+
+  // Save team names
+  sc.querySelectorAll('.save-team-name').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var teamNum = parseInt(btn.dataset.team);
+      var inp = sc.querySelector('.team-name-inp[data-team="'+teamNum+'"]');
+      if(inp && inp.value.trim()) renameTeam(teamNum, inp.value.trim());
+    });
+  });
+
+  // Assign to team
+  sc.querySelectorAll('.svs-assign').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var player = btn.dataset.player;
+      var team = parseInt(btn.dataset.team) || null;
+      assignTeam(player, team);
+    });
+  });
+
+  // Remove registration
+  sc.querySelectorAll('.svs-del-reg').forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      var player = btn.dataset.player;
+      if(!confirm('Remove SvS registration for '+player+'?')) return;
+      var r = await sb.from('svs_registrations').delete().eq('player_name', player);
+      if(r.error){ toast('Error: '+r.error.message); return; }
+      SVS_DATA = SVS_DATA.filter(function(x){ return x.player_name !== player; });
+      toast(player+' removed'); render();
+    });
+  });
+
+  // Clear all - super admin only
+  var clearBtn = document.getElementById('clearAllSvsAdminBtn');
+  if(clearBtn){
+    clearBtn.addEventListener('click', async function(){
+      if(!confirm('Clear ALL SvS registrations?')) return;
+      var typed = prompt('Type CLEAR to confirm:');
+      if(typed !== 'CLEAR'){ toast('Cancelled'); return; }
+      var r = await sb.from('svs_registrations').delete().neq('player_name','__none__');
+      if(r.error){ toast('Error: '+r.error.message); return; }
+      SVS_DATA = []; SVS_ATT=null; SVS_INF=null; SVS_INF_H=false; SVS_MARK=null; SVS_MARK_H=false; SVS_LANC=null; SVS_LANC_H=false;
+      toast('All SvS registrations cleared'); render();
+    });
+  }
 }
 
 async function init(){ render(); if(SESSION){ await loadAll(); subscribeRealtime(); render(); } }
