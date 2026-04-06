@@ -766,7 +766,7 @@ function renderAuth(app){
 
 function renderMain(app){
   var tabs=[{id:'board',icon:'📋',label:'Board'},{id:'add',icon:'➕',label:'Add'},{id:'lookup',icon:'🔍',label:'Lookup'}];
-  if(isSuperAdmin(SESSION.name)||isAlbumAdmin(SESSION.name)) tabs.push({id:'admin',icon:'👑',label:'Admin'});
+  if(isSuperAdmin(SESSION.name)) tabs.push({id:'admin',icon:'👑',label:'Admin'});
   var navHtml=tabs.map(function(t){ return '<button class="nav-btn '+(t.id==='admin'?'adm-btn ':'')+( TAB===t.id?'on':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>'; }).join('');
   var chipCls=isSuperAdmin(SESSION.name)||isAlbumAdmin(SESSION.name)?'player-chip adm':'player-chip';
   app.innerHTML=
@@ -781,7 +781,8 @@ function renderMain(app){
   if(TAB==='board')  renderBoard(tc);
   if(TAB==='add')    renderAdd(tc);
   if(TAB==='lookup') renderLookup(tc);
-  if(TAB==='admin'&&(isSuperAdmin(SESSION.name)||isAlbumAdmin(SESSION.name)))  renderAdmin(tc);
+  if(TAB==='admin'&&isSuperAdmin(SESSION.name))  renderAdmin(tc);
+  else if(TAB==='admin'&&isAlbumAdmin(SESSION.name))  renderAdmin(tc);
 }
 
 function renderLimitBar(tc){
@@ -1399,7 +1400,8 @@ function renderAdmin(tc){
     });
   });
 
-  // ── ROLES PANEL ──
+  // ── ROLES PANEL (super admin only) ──
+  if(!isSuperAdmin(SESSION.name)){ render(); return; }
   var rolesHtml='<div style="background:rgba(255,214,10,.04);border:1px solid rgba(255,214,10,.13);border-radius:12px;padding:14px;margin-bottom:12px;">'+
     '<div style="font-size:12px;font-weight:800;color:#ffd60a;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">👑 Admin Roles</div>'+
     '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
