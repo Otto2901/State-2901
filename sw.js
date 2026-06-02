@@ -1,4 +1,4 @@
-const CACHE = 'state2901-v1';
+const CACHE = 'state2901-v2';
 
 // Install — cache core files
 self.addEventListener('install', e => {
