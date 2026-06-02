@@ -1746,6 +1746,7 @@ function renderRotApp(app){
   var tabs=[{id:'board',icon:'🏰',label:'Board'},{id:'register',icon:'📝',label:'My Selection'}];
   if(canAdmin) tabs.push({id:'admin',icon:'👑',label:'Admin'});
   if(canAdmin||MY_ALLIANCES.length) tabs.push({id:'history',icon:'📅',label:'History'});
+  tabs.push({id:'guide',icon:'📲',label:'Notifications'});
   var navHtml=tabs.map(function(t){
     return '<button class="nav-btn '+(t.id==='admin'?'adm-btn ':'')+( ROT_TAB===t.id?'on':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>';
   }).join('');
@@ -1782,6 +1783,7 @@ function renderRotApp(app){
   if(ROT_TAB==='register') renderRotSelect(rc);
   if(ROT_TAB==='admin'&&canAdmin) renderRotAdmin(rc);
   if(ROT_TAB==='history'&&(canAdmin||MY_ALLIANCES.length)) renderRotHistory(rc);
+  if(ROT_TAB==='guide')   renderRotNotifGuide(rc);
 }
 
 // -- BOARD ------------------------------------------------
@@ -4979,6 +4981,77 @@ function subscribeRealtime(){
       });
     })
     .subscribe();
+}
+
+function renderRotNotifGuide(rc){
+  var notifState=typeof Notification!=='undefined'?Notification.permission:'unsupported';
+
+  var statusHtml='';
+  if(notifState==='granted'){
+    statusHtml='<div style="background:rgba(104,211,145,.1);border:1px solid rgba(104,211,145,.3);border-radius:12px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">'+
+      '<span style="font-size:20px;">✅</span>'+
+      '<div><div style="font-size:13px;font-weight:700;color:#68d391;">Notifications Active</div>'+
+      '<div style="font-size:11px;color:rgba(200,225,245,.5);margin-top:2px;">You will receive Rotation turn alerts.</div></div>'+
+    '</div>';
+  } else if(notifState==='denied'){
+    statusHtml='<div style="background:rgba(252,129,129,.1);border:1px solid rgba(252,129,129,.3);border-radius:12px;padding:12px 14px;margin-bottom:16px;">'+
+      '<div style="font-size:13px;font-weight:700;color:#fc8181;margin-bottom:4px;">❌ Notifications Blocked</div>'+
+      '<div style="font-size:12px;color:rgba(200,225,245,.5);">You blocked notifications. Reset in browser settings → Site permissions → Notifications.</div>'+
+    '</div>';
+  } else {
+    statusHtml='<div style="background:rgba(99,179,237,.08);border:1px solid rgba(99,179,237,.2);border-radius:12px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">'+
+      '<span style="font-size:20px;">🔔</span>'+
+      '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#90cdf4;">Enable Notifications</div>'+
+      '<div style="font-size:11px;color:rgba(200,225,245,.5);margin-top:2px;">Get alerted when it\'s your alliance\'s turn to select.</div></div>'+
+      '<button id="rotEnableNotif" style="background:linear-gradient(135deg,#1a6bb5,#63b3ed);border:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:20px;">Enable</button>'+
+    '</div>';
+  }
+
+  var androidSteps='<div style="margin-bottom:16px;">'+
+    '<div style="font-size:12px;font-weight:700;color:#68d391;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">🤖 Android (Chrome)</div>'+
+    '<div style="font-size:13px;color:rgba(200,225,245,.7);line-height:1.8;">'+
+      '1. Open the site in <strong style="color:#e8f4fd;">Chrome</strong><br>'+
+      '2. Tap the <strong style="color:#e8f4fd;">Enable Notifications</strong> button above<br>'+
+      '3. Tap <strong style="color:#e8f4fd;">Allow</strong> in the permission dialog<br>'+
+      '4. ✅ Done! You\'ll be notified when it\'s your turn.'+
+    '</div>'+
+    '<div style="margin-top:10px;padding:10px;background:rgba(104,211,145,.06);border-radius:10px;font-size:12px;color:rgba(200,225,245,.5);">'+
+      '💡 Tip: Tap the <strong style="color:#90cdf4;">⋮ menu → Add to Home screen</strong> to use as an app.'+
+    '</div>'+
+  '</div>';
+
+  var iosSteps='<div style="margin-bottom:16px;">'+
+    '<div style="font-size:12px;font-weight:700;color:#90cdf4;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">🍎 iPhone / iPad (Safari)</div>'+
+    '<div style="font-size:13px;color:rgba(200,225,245,.7);line-height:1.8;">'+
+      '1. Open the site in <strong style="color:#e8f4fd;">Safari</strong> (not Chrome)<br>'+
+      '2. Tap the <strong style="color:#e8f4fd;">Share button</strong> (□↑ at the bottom)<br>'+
+      '3. Tap <strong style="color:#e8f4fd;">Add to Home Screen</strong><br>'+
+      '4. Open the app from your <strong style="color:#e8f4fd;">Home Screen</strong><br>'+
+      '5. Tap <strong style="color:#e8f4fd;">Enable Notifications</strong> → Allow<br>'+
+      '6. ✅ Done!'+
+    '</div>'+
+    '<div style="margin-top:10px;padding:10px;background:rgba(99,179,237,.06);border-radius:10px;font-size:12px;color:rgba(200,225,245,.5);">'+
+      '⚠️ iOS requires the app to be <strong style="color:#90cdf4;">installed on Home Screen</strong> for notifications to work. Safari browser alone is not enough.'+
+    '</div>'+
+  '</div>';
+
+  rc.innerHTML=
+    '<div style="padding:4px 0;">'+
+      statusHtml+
+      androidSteps+
+      '<div style="height:1px;background:rgba(255,255,255,.07);margin:4px 0 16px;"></div>'+
+      iosSteps+
+    '</div>';
+
+  var enableBtn=rc.querySelector('#rotEnableNotif');
+  if(enableBtn) enableBtn.addEventListener('click',async function(){
+    enableBtn.textContent='...'; enableBtn.disabled=true;
+    var result=await requestPushPermission();
+    if(result==='granted') toast('✅ Notifications enabled!');
+    else if(result==='denied') toast('Blocked — check browser settings');
+    localStorage.setItem('push-dismissed','1');
+    ROT_TAB='guide'; render();
+  });
 }
 
 function renderCastleNotifGuide(cw){
