@@ -2536,6 +2536,12 @@ function renderRotAdmin(rc){
 }
 
 
+// ── CASTLE WAR NOTIFY HELPER ─────────────────────────────
+async function cwNotifyEdge(type, rally){
+  try { await sb.functions.invoke('castle-war-notify',{body:{type:type,record:rally}}); }
+  catch(e){ console.warn('cwNotify failed:',e); }
+}
+
 // ── ROTATION TIMER HELPERS ───────────────────────────────
 function getSelectionWindowStatus(){
   // Check for super admin manual override
@@ -4595,6 +4601,7 @@ function renderCastleWar(cw){
       CASTLE_RALLIES.unshift(r.data);
       if(navigator.vibrate) navigator.vibrate(100);
       toast('✅ Rally started! Timer running for '+btn.dataset.rallier);
+      cwNotifyEdge('opened', r.data);
       render();
       startRallyTimer(r.data.id);
     });
@@ -4617,6 +4624,7 @@ function renderCastleWar(cw){
       CASTLE_RALLIES.unshift(r.data);
       if(navigator.vibrate) navigator.vibrate([100,50,100]);
       toast('⚔️ Command sent: '+btn.dataset.alliance+' — '+btn.dataset.rallier);
+      cwNotifyEdge('commanded', r.data);
       render();
     });
   });
@@ -4634,6 +4642,7 @@ function renderCastleWar(cw){
       if(idx>=0) CASTLE_RALLIES[idx]=r.data;
       if(navigator.vibrate) navigator.vibrate(200);
       toast('✅ Rally opened! Timer started.');
+      cwNotifyEdge('opened', r.data);
       // Remove red alert if showing
       var alert=document.querySelector('.cw-alert');
       if(alert) alert.remove();
