@@ -1938,10 +1938,18 @@ function renderRotBoard(rc){
     '</div>'+
   '</div>';
 
+  // Order copy text
+  var weekLabel=ROT_STATE?new Date(ROT_STATE.week_start).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'';
+  var orderCopyText='📋 Week '+weekLabel+' — Selection Order\n'+
+    ro.order.map(function(al,i){ return (i+1)+'. '+al; }).join('\n');
+
   rc.innerHTML=
     winBanner+
     bannerHtml+
-    '<div class="rot-section-title">📋 Selection Order</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'+
+      '<div class="rot-section-title" style="margin-bottom:0;">📋 Selection Order</div>'+
+      '<button class="copy-btn" id="copyOrderBtn" style="width:auto;margin-top:0;padding:6px 12px;font-size:11px;">📋 Copy Order</button>'+
+    '</div>'+
     '<div class="rot-order" style="margin-bottom:12px;">'+orderHtml+'</div>'+
     '<div class="rot-section-title">🏰 Strongholds</div>'+
     '<div class="rot-grid-4" style="margin-bottom:12px;">'+shHtml+'</div>'+
@@ -1952,6 +1960,8 @@ function renderRotBoard(rc){
 
   var cpBtn=document.getElementById('copyResultBtn');
   if(cpBtn) cpBtn.addEventListener('click',function(){ navigator.clipboard.writeText(window._rotCopyText||'').then(function(){ toast('📋 Copied to clipboard!'); }); });
+  var cpOrdBtn=document.getElementById('copyOrderBtn');
+  if(cpOrdBtn) cpOrdBtn.addEventListener('click',function(){ navigator.clipboard.writeText(orderCopyText).then(function(){ toast('📋 Order copied!'); }); });
 
   rc.querySelectorAll('.del-sel-btn').forEach(function(btn){
     btn.addEventListener('click',async function(){
