@@ -4253,12 +4253,6 @@ function renderCastleWarApp(app){
   // Realtime subscription for castle war
   if(window._cwSub){ try{ sb.removeChannel(window._cwSub); }catch(e){} }
   window._cwSub=sb.channel('castle-war-live')
-    .on('postgres_changes',{event:'*',schema:'public',table:'castle_rallies'},function(p){
-      if(p.eventType==='INSERT') CASTLE_RALLIES.unshift(p.new);
-      else if(p.eventType==='UPDATE') CASTLE_RALLIES=CASTLE_RALLIES.map(function(r){ return r.id===p.new.id?p.new:r; });
-      else if(p.eventType==='DELETE') CASTLE_RALLIES=CASTLE_RALLIES.filter(function(r){ return r.id!==p.old.id; });
-      if(CASTLE_TAB==='war'){ var cw2=document.getElementById('cwContent'); if(cw2) renderCastleWar(cw2); }
-    })
     .on('postgres_changes',{event:'*',schema:'public',table:'castle_coordinators'},function(p){
       if(p.eventType==='INSERT') CASTLE_COORDS.push(p.new);
       else if(p.eventType==='UPDATE') CASTLE_COORDS=CASTLE_COORDS.map(function(r){ return r.id===p.new.id?p.new:r; });
