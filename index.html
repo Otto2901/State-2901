@@ -942,7 +942,7 @@ function renderHome(app){
              SVSP_SESSION.name)+
           '</div>'+
         '</div>'+
-        (isSuperAdmin(SESSION.name)||(CASTLE_WAR&&isCastleCoord(SESSION.name))?
+        (isSuperAdmin(SESSION.name)||(CASTLE_WAR&&(isCastleCoord(SESSION.name)||isCastleRallier(SESSION.name)))?
         '<div class="home-card" id="goCastle" style="'+cardCastle+'">'+
           '<div class="home-card-icon">🏰</div>'+
           '<div class="home-card-title" style="color:#fc8181;">Castle War</div>'+
@@ -4180,6 +4180,10 @@ function isCastleCoord(name){
   if(!CASTLE_WAR) return false;
   return CASTLE_COORDS.some(function(c){ return c.player_name===name&&c.war_id===CASTLE_WAR.id; });
 }
+function isCastleRallier(name){
+  if(!CASTLE_WAR) return false;
+  return CASTLE_RALLIERS.some(function(r){ return r.rallier_name===name&&r.war_id===CASTLE_WAR.id; });
+}
 
 function fmtTimer(totalSecs){
   if(totalSecs<=0) return '0:00';
@@ -4207,15 +4211,118 @@ function getRallyState(rally){
   return {phase:'rallying',secs:remaining-marchDur,totalSecs:remaining};
 }
 
+function renderCastleWarRallierView(app){
+  app.innerHTML=
+    buildModuleHeader('castlewar','🏰','Castle War',(CASTLE_WAR&&CASTLE_WAR.status==='active'?'🔴 LIVE — '+CASTLE_WAR.name:'No active war'))+
+    '<div class="content" id="cwRallierContent"></div>'+
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
+
+  document.getElementById('backHome').addEventListener('click',function(){
+    if(window._cwSub){ try{ sb.removeChannel(window._cwSub); window._cwSub=null; }catch(e){} }
+    MODULE=null; render();
+  });
+
+  var cw=document.getElementById('cwRallierContent');
+
+  function renderRallierContent(){
+    if(!CASTLE_WAR||CASTLE_WAR.status==='setup'){
+      cw.innerHTML='<div class="empty"><div class="empty-icon">⚙️</div><p>No active war.<br>Stand by.</p></div>';
+      return;
+    }
+    var war=CASTLE_WAR;
+    var warRallies=CASTLE_RALLIES.filter(function(r){ return r.war_id===war.id; });
+    var activeRallies=warRallies.filter(function(r){ return r.status==='commanded'||r.status==='opened'; });
+
+    if(!activeRallies.length){
+      cw.innerHTML='<div class="empty"><div class="empty-icon">⏳</div><p>No active rallies.<br>Stand by for commands.</p></div>';
+      return;
+    }
+
+    function alColor(al){ return ALLIANCE_COLORS&&ALLIANCE_COLORS[al]?ALLIANCE_COLORS[al]:'#7ec8e3'; }
+
+    cw.innerHTML='<div style="padding:12px;">'+
+      '<div style="font-size:11px;color:#4a7a9b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Active Rallies</div>'+
+      activeRallies.map(function(rally){
+        var state=getRallyState(rally);
+        var col=alColor(rally.alliance);
+        var timerHtml='';
+        if(rally.status==='opened'){
+          if(state.phase==='rallying')
+            timerHtml='<div class="cw-timer cw-timer-rallying" data-timer="'+rally.id+'">'+fmtTimer(state.secs)+'</div>'+
+              '<div style="text-align:center;font-size:12px;color:#ff9500;font-weight:700;">⚔️ RALLYING — join now!</div>';
+          else if(state.phase==='marching')
+            timerHtml='<div class="cw-timer cw-timer-marching" data-timer="'+rally.id+'">'+fmtTimer(state.secs)+'</div>'+
+              '<div style="text-align:center;font-size:13px;color:#ff453a;font-weight:800;">🏃 MARCH NOW!</div>';
+          else
+            timerHtml='<div class="cw-timer cw-timer-arrived">⚠️ ARRIVED!</div>';
+        } else {
+          timerHtml='<div style="text-align:center;font-size:13px;color:#ff9500;padding:12px;font-weight:700;">⏳ Waiting for coordinator to open rally...</div>';
+        }
+        return '<div style="background:rgba('+hexToRgb(col)+',.06);border:1px solid rgba('+hexToRgb(col)+',.2);border-radius:14px;padding:14px;margin-bottom:10px;">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'+
+            '<div>'+
+              '<div style="font-size:14px;font-weight:800;color:'+col+';">'+rally.alliance+'</div>'+
+              '<div style="font-size:12px;color:#8ab4cc;">Coord: '+rally.coordinator_name+'</div>'+
+              '<div style="font-size:11px;color:#7ec8e3;font-weight:700;">March: '+rally.march_seconds+'s</div>'+
+            '</div>'+
+            '<div style="font-size:11px;color:#8ab4cc;font-weight:700;">'+
+              new Date(rally.commanded_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC'})+' UTC'+
+            '</div>'+
+          '</div>'+
+          timerHtml+
+        '</div>';
+      }).join('')+
+    '</div>';
+
+    // Start timers for opened rallies
+    activeRallies.filter(function(r){ return r.status==='opened'; }).forEach(function(rally){
+      if(_cwTimers[rally.id]) return;
+      _cwTimers[rally.id]=setInterval(function(){
+        if(MODULE!=='castlewar'){ clearInterval(_cwTimers[rally.id]); delete _cwTimers[rally.id]; return; }
+        var el=document.querySelector('.cw-timer[data-timer="'+rally.id+'"]');
+        if(!el){ clearInterval(_cwTimers[rally.id]); delete _cwTimers[rally.id]; return; }
+        var s=getRallyState(rally);
+        if(s.phase==='rallying'){
+          el.textContent=fmtTimer(s.secs); el.className='cw-timer cw-timer-rallying';
+        } else if(s.phase==='marching'){
+          el.textContent=fmtTimer(s.secs); el.className='cw-timer cw-timer-marching';
+          if(navigator.vibrate&&s.secs===rally.march_seconds) navigator.vibrate([300,100,300]);
+        } else {
+          el.textContent='⚠️ ARRIVED!'; el.className='cw-timer cw-timer-arrived';
+          clearInterval(_cwTimers[rally.id]); delete _cwTimers[rally.id];
+        }
+      },1000);
+    });
+  }
+
+  renderRallierContent();
+
+  // Realtime subscription
+  if(window._cwSub){ try{ sb.removeChannel(window._cwSub); }catch(e){} }
+  window._cwSub=sb.channel('castle-war-rallier')
+    .on('postgres_changes',{event:'*',schema:'public',table:'castle_rallies'},function(p){
+      if(p.eventType==='INSERT') CASTLE_RALLIES.push(p.new);
+      else if(p.eventType==='UPDATE') CASTLE_RALLIES=CASTLE_RALLIES.map(function(r){ return r.id===p.new.id?p.new:r; });
+      else if(p.eventType==='DELETE') CASTLE_RALLIES=CASTLE_RALLIES.filter(function(r){ return r.id!==p.old.id; });
+      renderRallierContent();
+    })
+    .subscribe();
+}
+
 function renderCastleWarApp(app){
   var isSuper=isSuperAdmin(SESSION.name);
   var isCoord=isCastleCoord(SESSION.name);
-  if(!isCoord){
+  var isRallier=isCastleRallier(SESSION.name);
+  if(!isCoord&&!isRallier){
     app.innerHTML='<div class="hdr"><div class="hdr-brand">'+
       '<button style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(200,225,245,.7);font-size:14px;font-weight:600;cursor:pointer;padding:6px 13px;border-radius:10px;margin-right:8px;font-family:Inter,sans-serif;" id="backHome">← Back</button>'+
       '<div class="hdr-logo">🏰</div><div><div class="hdr-title">Castle War</div></div></div></div>'+
       '<div class="empty"><div class="empty-icon">🔒</div><p>Access restricted.<br>Contact the admin.</p></div>';
     document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+    return;
+  }
+  if(isRallier&&!isCoord){
+    renderCastleWarRallierView(app);
     return;
   }
 
@@ -4928,8 +5035,11 @@ async function init(){
       '<div style="font-size:12px;color:rgba(200,225,245,.4);letter-spacing:2px;text-transform:uppercase;">Loading...</div>'+
       '</div>';
     await loadAll(); subscribeRealtime();
+    // Deep-link from push notification
+    if(location.hash==='#castlewar') MODULE='castlewar';
   }
   render();
+  if(location.hash) history.replaceState(null,'',location.pathname);
 }
 init();
 
