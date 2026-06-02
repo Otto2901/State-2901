@@ -4415,7 +4415,7 @@ function renderCastleWar(cw){
       // Build player dropdown grouped by alliance
       var playerOpts='<option value="">— Select player —</option>';
       var playerGroups={};
-      ALL_PLAYERS.filter(function(p){ return p.status!=='pending'&&p.name!==SESSION.name; }).forEach(function(p){
+      ALL_PLAYERS.filter(function(p){ return p.status!=='pending'; }).forEach(function(p){
         var a=p.alliance||'Others';
         if(!playerGroups[a]) playerGroups[a]=[];
         playerGroups[a].push(p);
