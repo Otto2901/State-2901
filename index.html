@@ -2199,6 +2199,8 @@ function renderRotSelect(rc){
       if(r.error){ toast('Error: '+r.error.message); return; }
       ROT_SELS=ROT_SELS.filter(function(s){ return !(s.week_start===ROT_STATE.week_start&&s.alliance===myAlliance); });
       ROT_SELS.push(r.data);
+      // Notify next alliance in line
+      rotNotifyEdge(getCurrentTurnAlliance());
       toast('✅ Selection confirmed!');
       window._superAdminAlliance=null;
       window._rotSelSH=null; window._rotSelFT=null; window._rotSelAlliance=null;
@@ -2362,6 +2364,8 @@ function renderRotAdmin(rc){
     if(r.error){ toast('Error: '+r.error.message); return; }
     ROT_STATE=r.data;
     ROT_SELS=ROT_SELS.filter(function(s){ return s.week_start!==newWeek; });
+    // Notify first alliance in the new order
+    rotNotifyEdge(newTop4[0]);
     toast('✅ Week reset! New order: '+newTop4.join('→'));
     render();
   });
@@ -2540,6 +2544,13 @@ function renderRotAdmin(rc){
 async function cwNotifyEdge(type, rally){
   try { await sb.functions.invoke('castle-war-notify',{body:{type:type,record:rally}}); }
   catch(e){ console.warn('cwNotify failed:',e); }
+}
+
+// ── ROTATION NOTIFY HELPER ────────────────────────────────
+async function rotNotifyEdge(alliance){
+  if(!alliance) return;
+  try { await sb.functions.invoke('rotation-notify',{body:{alliance:alliance}}); }
+  catch(e){ console.warn('rotNotify failed:',e); }
 }
 
 // ── ROTATION TIMER HELPERS ───────────────────────────────
@@ -5046,6 +5057,7 @@ async function init(){
     await loadAll(); subscribeRealtime();
     // Deep-link from push notification
     if(location.hash==='#castlewar') MODULE='castlewar';
+    if(location.hash==='#rotation') MODULE='rotation';
   }
   render();
   if(location.hash) history.replaceState(null,'',location.pathname);
