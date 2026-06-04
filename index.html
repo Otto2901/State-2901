@@ -254,48 +254,41 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .footer{text-align:center;padding:16px;font-size:10px;color:rgba(200,225,245,.15);letter-spacing:.5px;position:relative;z-index:1;}
 
 /* SvS MODULE */
-.svs-form{display:flex;flex-direction:column;gap:14px;}
-.troop-card{background:var(--surface);border:1px solid var(--b);border-radius:14px;padding:14px;}
-.troop-title{font-size:11px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
-.troop-levels{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
-.lvl-btn{padding:7px 11px;border-radius:9px;border:1px solid var(--b2);background:var(--input);color:var(--t2);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none;}
-.lvl-btn.active{border-color:rgba(99,179,237,.65);background:rgba(99,179,237,.14);color:var(--ac);}
-.lvl-btn.helios-btn{border-color:rgba(246,224,94,.2);color:rgba(200,165,0,.7);}
-.lvl-btn.helios-btn.active{border-color:rgba(246,224,94,.65);background:rgba(246,224,94,.13);color:var(--gold);}
-.helios-divider{width:1px;background:var(--b2);margin:0 2px;}
-.attend-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;}
-.attend-btn{padding:13px;border-radius:11px;border:1px solid;font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:all .18s;text-align:center;background:transparent;}
-.attend-yes{border-color:rgba(104,211,145,.25);color:var(--green);}
-.attend-yes.on{border-color:rgba(104,211,145,.6);background:rgba(104,211,145,.1);}
-.attend-no{border-color:rgba(252,129,129,.25);color:var(--red);}
-.attend-no.on{border-color:rgba(252,129,129,.6);background:rgba(252,129,129,.1);}
-
-/* SvS BOARD */
-.svs-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
-.team-section{background:var(--surface);border:1px solid var(--b);border-radius:14px;margin-bottom:12px;overflow:hidden;}
-.team-header{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--b);}
-.team-name{font-family:'Cinzel',serif;font-size:14px;font-weight:700;}
-.team-1 .team-header{background:rgba(43,139,212,.07);} .team-1 .team-name{color:var(--ac);}
-.team-2 .team-header{background:rgba(246,173,85,.07);} .team-2 .team-name{color:var(--orange);}
-.team-3 .team-header{background:rgba(104,211,145,.07);} .team-3 .team-name{color:var(--green);}
-.team-unassigned .team-header{background:rgba(100,100,120,.06);} .team-unassigned .team-name{color:var(--t2);}
-.team-edit-btn{background:none;border:1px solid var(--b2);border-radius:8px;color:var(--t2);font-size:11px;font-weight:600;padding:4px 10px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
-.team-edit-btn:hover{color:var(--ac);border-color:rgba(99,179,237,.3);}
-.player-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);gap:10px;}
-.player-row:last-child{border-bottom:none;}
-.player-row-name{font-size:13px;font-weight:700;color:var(--t);flex:1;}
-.player-row-troops{font-size:10px;color:var(--t2);margin-top:2px;}
-.player-row-attend{font-size:11px;}
-.assign-btns{display:flex;gap:5px;}
-.assign-btn{padding:4px 8px;border-radius:6px;border:1px solid;font-size:10px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
-.assign-1{border-color:rgba(99,179,237,.3);color:var(--ac);background:transparent;}
-.assign-1.active,.assign-1:hover{background:rgba(99,179,237,.14);border-color:rgba(99,179,237,.55);}
-.assign-2{border-color:rgba(246,173,85,.3);color:var(--orange);background:transparent;}
-.assign-2.active,.assign-2:hover{background:rgba(246,173,85,.14);border-color:rgba(246,173,85,.55);}
-.assign-3{border-color:rgba(104,211,145,.3);color:var(--green);background:transparent;}
-.assign-3.active,.assign-3:hover{background:rgba(104,211,145,.14);border-color:rgba(104,211,145,.55);}
-.assign-x{border-color:rgba(100,100,120,.3);color:var(--t2);background:transparent;}
-.assign-x:hover{background:rgba(100,100,120,.12);}
+.svs-leader-card{background:var(--surface);border:1px solid rgba(246,173,85,.25);border-radius:16px;padding:16px;margin-bottom:12px;position:relative;}
+.svs-leader-name{font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:var(--orange);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.svs-section-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;margin-top:10px;}
+.svs-atk-label{color:rgba(252,129,129,.8);}
+.svs-def-label{color:rgba(99,179,237,.8);}
+.svs-ratio-row{display:flex;gap:6px;margin-bottom:6px;}
+.svs-ratio-chip{flex:1;background:rgba(0,0,0,.25);border:1px solid var(--b2);border-radius:8px;padding:6px 4px;text-align:center;}
+.svs-ratio-chip-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;}
+.svs-ratio-chip-val{font-size:15px;font-weight:800;color:var(--t);}
+.svs-heroes-text{font-size:12px;color:var(--t2);line-height:1.5;}
+.svs-guide-card{background:rgba(99,179,237,.05);border:1px solid rgba(99,179,237,.2);border-radius:16px;padding:16px;margin-bottom:16px;}
+.svs-guide-title{font-family:'Cinzel',serif;font-size:14px;font-weight:700;color:var(--ac);margin-bottom:12px;}
+.svs-copy-btn{width:100%;padding:10px;border-radius:10px;border:1px solid var(--b2);background:var(--surface2);color:var(--ac);font-family:'Inter',sans-serif;font-weight:700;font-size:12px;cursor:pointer;margin-top:10px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.svs-copy-btn:hover{background:rgba(99,179,237,.1);}
+.svs-copy-all-btn{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(246,173,85,.3);background:rgba(246,173,85,.06);color:var(--orange);font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:16px;transition:all .2s;}
+.svs-copy-all-btn:hover{background:rgba(246,173,85,.12);}
+.svs-preset-btn{padding:7px 10px;border-radius:8px;border:1px solid var(--b2);background:var(--input);color:var(--t2);font-family:'Inter',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.svs-preset-btn.active{border-color:rgba(246,173,85,.6);background:rgba(246,173,85,.12);color:var(--orange);}
+.svs-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.svs-custom-ratio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
+.svs-ratio-inp-box{background:rgba(0,0,0,.2);border:1px solid var(--b2);border-radius:10px;padding:8px;text-align:center;}
+.svs-ratio-inp-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.svs-ratio-inp-ctrl{display:flex;align-items:center;justify-content:center;gap:4px;}
+.svs-ratio-adj{background:none;border:1px solid var(--b2);border-radius:5px;color:var(--t2);font-size:13px;font-weight:700;width:22px;height:22px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+.svs-ratio-adj:hover{border-color:rgba(246,173,85,.4);color:var(--orange);}
+.svs-ratio-val{font-size:14px;font-weight:800;color:var(--t);width:32px;text-align:center;}
+.svs-ratio-total{font-size:11px;font-weight:700;text-align:right;margin-bottom:8px;}
+.svs-ratio-ok{color:var(--green);}
+.svs-ratio-bad{color:var(--red);}
+.svs-inp{width:100%;background:var(--input);border:1px solid var(--b2);border-radius:10px;padding:10px 12px;color:var(--t);font-family:'Inter',sans-serif;font-size:13px;outline:none;box-sizing:border-box;}
+.svs-inp:focus{border-color:rgba(246,173,85,.5);}
+.svs-admin-section{background:var(--surface);border:1px solid var(--b);border-radius:14px;padding:14px;margin-bottom:12px;}
+.svs-admin-section-title{font-size:11px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;}
+.svs-form-label{font-size:11px;color:var(--t2);font-weight:600;margin-bottom:4px;display:block;}
+.svs-form-group{margin-bottom:10px;}
 
 /* ROLES */
 .role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;}
@@ -635,15 +628,15 @@ var ROT_HIST_IDX = 0; // which past week to view (0=most recent)
 var MY_ALLIANCE = null;  // primary alliance
 var MY_ALLIANCES = []; // all alliances (can be multiple)
 var MODULE     = null; // null=home | 'albums' | 'svs'
-var SVS_DATA   = []; // svs_registrations
-var SVS_TEAMS  = [{team_num:1,team_name:'Team 1'},{team_num:2,team_name:'Team 2'},{team_num:3,team_name:'Team 3'}];
-var ADMIN_ROLES= []; // admin_roles
-var SVS_TAB    = 'board'; // board | register
-// SvS form state
-var SVS_ATT    = null; // true/false
-var SVS_INF    = null; var SVS_INF_H = false;
-var SVS_MARK   = null; var SVS_MARK_H= false;
-var SVS_LANC   = null; var SVS_LANC_H= false;
+var SVS_LEADERS = []; // svs_rally_leaders
+var SVS_GUIDE   = null; // svs_participant_guide (single row)
+var ADMIN_ROLES = []; // admin_roles
+var SVS_TAB     = 'board'; // board | admin
+// SvS edit state
+var SVS_EDIT_LEADER = null; // null=new, id=editing
+var SVS_EDIT_WHICH  = null; // which section open: 'leader'|'guide'
+// SvS form buffers
+var SVS_FORM = {};
 var SHOW_GUIDE = false;
 
 // MODULE HEADER CONFIGS
@@ -717,8 +710,8 @@ async function loadAll(){
   // All requests fire in parallel — reduces 3-5s to ~0.5s
   var results = await Promise.all([
     sb.from('players').select('name,created_at,status,player_id,alliance,valeria_level').order('created_at',{ascending:false}),
-    sb.from('svs_registrations').select('*'),
-    sb.from('svs_teams').select('*').order('team_num'),
+    sb.from('svs_rally_leaders').select('*').order('created_at'),
+    sb.from('svs_participant_guide').select('*').eq('id',1).maybeSingle(),
     sb.from('admin_roles').select('*'),
     sb.from('rotation_state').select('*').eq('id',1).maybeSingle(),
     sb.from('rotation_selections').select('*').order('week_start',{ascending:false}),
@@ -742,8 +735,8 @@ async function loadAll(){
   var rCW=results[14],rCC=results[15],rCR=results[16],rCRR=results[17];
 
   if(!r3.error&&r3.data) ALL_PLAYERS=r3.data;
-  if(!r4.error&&r4.data) SVS_DATA=r4.data;
-  if(!r5.error&&r5.data&&r5.data.length) SVS_TEAMS=r5.data;
+  if(!r4.error&&r4.data) SVS_LEADERS=r4.data;
+  if(!r5.error&&r5.data) SVS_GUIDE=r5.data;
   if(!r6.error&&r6.data) ADMIN_ROLES=r6.data;
   if(!r7.error&&r7.data) ROT_STATE=r7.data;
   if(!r8.error&&r8.data) ROT_SELS=r8.data;
@@ -1330,226 +1323,403 @@ function renderAuth(app){
 }
 
 
+// ═══════════════════════════════════════════════════════
+// SVS MODULE
+// ═══════════════════════════════════════════════════════
+
+var SVS_PRESETS = [
+  {label:'50/0/50',  inf:50, lanc:0,  mark:50},
+  {label:'50/10/40', inf:50, lanc:10, mark:40},
+  {label:'60/40/0',  inf:60, lanc:40, mark:0},
+  {label:'40/0/60',  inf:40, lanc:0,  mark:60}
+];
+
+function svsRatioChips(inf, lanc, mark){
+  return '<div class="svs-ratio-row">'+
+    '<div class="svs-ratio-chip"><div class="svs-ratio-chip-label">INF</div><div class="svs-ratio-chip-val">'+inf+'%</div></div>'+
+    '<div class="svs-ratio-chip"><div class="svs-ratio-chip-label">LNC</div><div class="svs-ratio-chip-val">'+lanc+'%</div></div>'+
+    '<div class="svs-ratio-chip"><div class="svs-ratio-chip-label">MRK</div><div class="svs-ratio-chip-val">'+mark+'%</div></div>'+
+  '</div>';
+}
+
+function svsLeaderCopyText(leader){
+  var g = SVS_GUIDE;
+  var lines = [];
+  lines.push('⚔️ RALLY LEADER: '+leader.name);
+  lines.push('━━━━━━━━━━━━━━━━');
+  lines.push('🗡 ATK: INF '+leader.atk_inf+'% | LNC '+leader.atk_lanc+'% | MRK '+leader.atk_mark+'%');
+  if(leader.atk_heroes) lines.push('🦸 ATK Heroes: '+leader.atk_heroes);
+  lines.push('🛡 DEF: INF '+leader.def_inf+'% | LNC '+leader.def_lanc+'% | MRK '+leader.def_mark+'%');
+  if(leader.def_heroes) lines.push('🦸 DEF Heroes: '+leader.def_heroes);
+  if(g){
+    lines.push('━━━━━━━━━━━━━━━━');
+    lines.push('👥 PARTICIPANTS');
+    lines.push('🗡 ATK: INF '+g.atk_inf+'% | LNC '+g.atk_lanc+'% | MRK '+g.atk_mark+'%');
+    if(g.atk_heroes) lines.push('🦸 ATK Heroes: '+g.atk_heroes);
+    lines.push('🛡 DEF: INF '+g.def_inf+'% | LNC '+g.def_lanc+'% | MRK '+g.def_mark+'%');
+    if(g.def_heroes) lines.push('🦸 DEF Heroes: '+g.def_heroes);
+  }
+  return lines.join('\n');
+}
+
+function svsAllCopyText(){
+  var parts = SVS_LEADERS.map(function(l){ return svsLeaderCopyText(l); });
+  return parts.join('\n\n');
+}
+
 function renderSvsApp(app){
-  var canManage = isSvsAdmin(SESSION.name);
-  var role = getRole(SESSION.name);
-  var chipCls = isSuperAdmin(SESSION.name)?'player-chip adm':'player-chip';
-  var tabs = [{id:'board',icon:'⚔️',label:'Teams'},{id:'register',icon:'📝',label:'Register'}];
-  if(isSuperAdmin(SESSION.name)) tabs.push({id:'admin',icon:'👑',label:'Admin'});
-  var navHtml = tabs.map(function(t){ return '<button class="nav-btn '+(t.id==='admin'?'adm-btn ':'')+( SVS_TAB===t.id?'on':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>'; }).join('');
+  var canAdmin = isSvsAdmin(SESSION.name);
+  var tabs = [{id:'board',icon:'⚔️',label:'Board'}];
+  if(canAdmin) tabs.push({id:'admin',icon:'🛡️',label:'Admin'});
+  var navHtml = tabs.map(function(t){
+    return '<button class="nav-btn '+(SVS_TAB===t.id?'on':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>';
+  }).join('');
 
   app.innerHTML=
-    buildModuleHeader('svs','⚔️','SvS Registration','Team Management & Registration')+
+    buildModuleHeader('svs','⚔️','SvS Rally Setup','Rally Leaders & Formations')+
     '<div class="content" id="svsContent"></div>'+
     '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
     '<div class="nav">'+navHtml+'</div>';
 
-  document.getElementById('backHome').addEventListener('click', function(){ MODULE=null; render(); });
-  app.querySelectorAll('.nav-btn').forEach(function(btn){ btn.addEventListener('click', function(){ SVS_TAB=btn.dataset.tab; render(); }); });
+  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  app.querySelectorAll('.nav-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){ SVS_TAB=btn.dataset.tab; render(); });
+  });
 
   var sc = document.getElementById('svsContent');
-  if(SVS_TAB==='board')    renderSvsBoard(sc);
-  if(SVS_TAB==='register') renderSvsRegister(sc);
-  if(SVS_TAB==='admin'&&isSuperAdmin(SESSION.name)) renderSvsAdmin(sc);
+  if(SVS_TAB==='board') renderSvsBoard(sc);
+  if(SVS_TAB==='admin'&&canAdmin) renderSvsAdmin(sc);
 }
 
-async function saveSvsRegistration(){
-  var reg = {
-    player_name: SESSION.name,
-    attending: SVS_ATT===true,
-    inf_level: SVS_INF, inf_helios: SVS_INF_H,
-    mark_level: SVS_MARK, mark_helios: SVS_MARK_H,
-    lanc_level: SVS_LANC, lanc_helios: SVS_LANC_H,
-    updated_at: new Date().toISOString()
-  };
-  var r = await sb.from('svs_registrations').upsert(reg, {onConflict:'player_name'}).select().single();
-  if(r.error){ toast('Save failed: '+r.error.message); return; }
-  var idx = SVS_DATA.findIndex(function(x){ return x.player_name===SESSION.name; });
-  if(idx>=0) SVS_DATA[idx]=r.data; else SVS_DATA.push(r.data);
-  toast('✅ Registration saved!');
-  SVS_TAB='board'; render();
-}
+function renderSvsLeaderCard(leader, canAdmin){
+  var editBtns = canAdmin?
+    '<div style="display:flex;gap:6px;margin-top:10px;">'+
+      '<button class="btn btn-g btn-sm svs-edit-leader" data-id="'+leader.id+'" style="flex:1;">✏️ Edit</button>'+
+      '<button class="btn btn-d btn-sm svs-del-leader" data-id="'+leader.id+'" style="padding:8px 14px;">🗑</button>'+
+    '</div>':'';
 
-async function assignTeam(playerName, team){
-  var r = await sb.from('svs_registrations').update({team:team}).eq('player_name',playerName);
-  if(r.error){ toast('Error: '+r.error.message); return; }
-  SVS_DATA = SVS_DATA.map(function(x){ return x.player_name===playerName?Object.assign({},x,{team:team}):x; });
-  render();
-}
-
-async function renameTeam(teamNum, newName){
-  var r = await sb.from('svs_teams').update({team_name:newName}).eq('team_num',teamNum);
-  if(r.error){ toast('Error: '+r.error.message); return; }
-  SVS_TEAMS = SVS_TEAMS.map(function(t){ return t.team_num===teamNum?Object.assign({},t,{team_name:newName}):t; });
-  render();
-}
-
-function renderSvsRegister(sc){
-  var mine = SVS_DATA.find(function(x){ return x.player_name===SESSION.name; });
-  if(mine && SVS_ATT===null){
-    SVS_ATT   = mine.attending;
-    SVS_INF   = mine.inf_level;  SVS_INF_H  = mine.inf_helios;
-    SVS_MARK  = mine.mark_level; SVS_MARK_H = mine.mark_helios;
-    SVS_LANC  = mine.lanc_level; SVS_LANC_H = mine.lanc_helios;
-  }
-  var levels = ['FC-5','FC-6','FC-7','FC-8'];
-
-  function troopSection(icon, label, curLevel, hasHelios, dataType){
-    var btns = levels.map(function(l){
-      return '<button class="lvl-btn'+(curLevel===l?' active':'')+'" data-type="'+dataType+'" data-level="'+l+'">'+l+'</button>';
-    }).join('');
-    var heliosBtn = '<div class="helios-divider"></div><button class="lvl-btn helios-btn'+(hasHelios?' active':'')+'" data-type="'+dataType+'" data-helios="1">⚡ Helios</button>';
-    return '<div class="troop-card">'+
-      '<div class="troop-title">'+icon+' '+label+
-        (curLevel?'<span style="font-size:10px;color:#4a7a9b;margin-left:auto;">'+curLevel+(hasHelios?' + ⚡ Helios':'')+'</span>':'')+
-      '</div>'+
-      '<div class="troop-levels">'+btns+heliosBtn+'</div>'+
-    '</div>';
-  }
-
-  sc.innerHTML=
-    '<div class="svs-form">'+
-      '<div class="troop-card">'+
-        '<div class="troop-title">📋 SvS Attendance</div>'+
-        '<div class="attend-row">'+
-          '<button class="attend-btn attend-yes'+(SVS_ATT===true?' on':'')+'" id="attYes">✅ I&apos;ll Attend</button>'+
-          '<button class="attend-btn attend-no'+(SVS_ATT===false?' on':'')+'" id="attNo">❌ Can&apos;t Attend</button>'+
-        '</div>'+
-      '</div>'+
-      (SVS_ATT===true?
-        troopSection('🗡️','Infantry',SVS_INF,SVS_INF_H,'inf')+
-        troopSection('🏹','Marksman',SVS_MARK,SVS_MARK_H,'mark')+
-        troopSection('🗡️','Lancer',SVS_LANC,SVS_LANC_H,'lanc')+
-        '<button class="btn btn-p" id="saveSvsBtn">💾 Save Registration</button>'
-        :'')+(SVS_ATT===false?'<button class="btn btn-p" id="saveSvsBtn">💾 Save (Not Attending)</button>':'')+
-    '</div>';
-
-  sc.querySelectorAll('.lvl-btn[data-level]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var t=btn.dataset.type; var l=btn.dataset.level;
-      if(t==='inf') SVS_INF=SVS_INF===l?null:l;
-      else if(t==='mark') SVS_MARK=SVS_MARK===l?null:l;
-      else if(t==='lanc') SVS_LANC=SVS_LANC===l?null:l;
-      render();
-    });
-  });
-  sc.querySelectorAll('.lvl-btn[data-helios]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var t=btn.dataset.type;
-      if(t==='inf') SVS_INF_H=!SVS_INF_H;
-      else if(t==='mark') SVS_MARK_H=!SVS_MARK_H;
-      else if(t==='lanc') SVS_LANC_H=!SVS_LANC_H;
-      render();
-    });
-  });
-  if(document.getElementById('attYes')) document.getElementById('attYes').addEventListener('click',function(){ SVS_ATT=true; render(); });
-  if(document.getElementById('attNo'))  document.getElementById('attNo').addEventListener('click',function(){ SVS_ATT=false; render(); });
-  if(document.getElementById('saveSvsBtn')) document.getElementById('saveSvsBtn').addEventListener('click', saveSvsRegistration);
+  return '<div class="svs-leader-card">'+
+    '<div class="svs-leader-name">👑 '+leader.name+'</div>'+
+    '<div class="svs-section-label svs-atk-label">🗡 Attack Formation</div>'+
+    svsRatioChips(leader.atk_inf, leader.atk_lanc, leader.atk_mark)+
+    (leader.atk_heroes?'<div class="svs-heroes-text">🦸 '+leader.atk_heroes+'</div>':'')+
+    '<div class="svs-section-label svs-def-label" style="margin-top:10px;">🛡 Defense Formation</div>'+
+    svsRatioChips(leader.def_inf, leader.def_lanc, leader.def_mark)+
+    (leader.def_heroes?'<div class="svs-heroes-text">🦸 '+leader.def_heroes+'</div>':'')+
+    '<button class="svs-copy-btn svs-copy-leader" data-id="'+leader.id+'">📋 Copy</button>'+
+    editBtns+
+  '</div>';
 }
 
 function renderSvsBoard(sc){
-  var canManage = isSvsAdmin(SESSION.name);
-  var attending  = SVS_DATA.filter(function(x){ return x.attending; });
-  var notAttend  = SVS_DATA.filter(function(x){ return !x.attending; });
-  var unassigned = attending.filter(function(x){ return !x.team; });
+  var canAdmin = isSvsAdmin(SESSION.name);
+  var g = SVS_GUIDE;
 
-  function playerRow(reg){
-    var ts = troopStr(reg);
-    var assignHtml = canManage?
-      '<div class="assign-btns">'+
-        SVS_TEAMS.map(function(t){
-          var cls='assign-btn assign-'+t.team_num+(reg.team===t.team_num?' active':'');
-          return '<button class="'+cls+'" data-player="'+reg.player_name+'" data-team="'+t.team_num+'">'+t.team_num+'</button>';
-        }).join('')+
-        (reg.team?'<button class="assign-btn assign-x" data-player="'+reg.player_name+'" data-team="0">✕</button>':'')+
-        '<button class="assign-btn assign-x del-svs-reg" data-player="'+reg.player_name+'" title="Remove registration" style="font-size:12px;">🗑</button>'+
-      '</div>':'';
-    return '<div class="player-row">'+
-      '<div style="flex:1;">'+
-        '<div class="player-row-name">'+(reg.player_name===SESSION.name?'👤 ':'')+reg.player_name+'</div>'+
-        (ts?'<div class="player-row-troops">'+ts+'</div>':'')+
-      '</div>'+
-      assignHtml+
+  var guideHtml = '';
+  if(g){
+    guideHtml='<div class="svs-guide-card">'+
+      '<div class="svs-guide-title">👥 Participant Guide</div>'+
+      '<div class="svs-section-label svs-atk-label">🗡 Attack Formation</div>'+
+      svsRatioChips(g.atk_inf, g.atk_lanc, g.atk_mark)+
+      (g.atk_heroes?'<div class="svs-heroes-text">🦸 '+g.atk_heroes+'</div>':'')+
+      '<div class="svs-section-label svs-def-label" style="margin-top:10px;">🛡 Defense Formation</div>'+
+      svsRatioChips(g.def_inf, g.def_lanc, g.def_mark)+
+      (g.def_heroes?'<div class="svs-heroes-text">🦸 '+g.def_heroes+'</div>':'')+
     '</div>';
   }
 
-  function teamSection(teamNum, teamName, cls, players){
-    var editBtn = canManage?'<button class="team-edit-btn" data-team="'+teamNum+'">✏️ Rename</button>':'';
-    return '<div class="team-section '+cls+'">'+
-      '<div class="team-header">'+
-        '<div class="team-name">'+teamName+' <span style="font-size:11px;color:#4a7a9b;">('+players.length+')</span></div>'+
-        editBtn+
-      '</div>'+
-      (players.length?players.map(playerRow).join(''):'<div style="padding:12px 14px;font-size:12px;color:#2a4a65;">No players assigned</div>')+
-    '</div>';
+  var leadersHtml = SVS_LEADERS.length?
+    SVS_LEADERS.map(function(l){ return renderSvsLeaderCard(l, canAdmin); }).join(''):
+    '<div style="text-align:center;padding:32px 0;color:var(--t3);font-size:13px;">No rally leaders set yet.</div>';
+
+  var copyAllBtn = SVS_LEADERS.length?'<button class="svs-copy-all-btn" id="svsCopyAll">📋 Copy All Rally Info</button>':'';
+
+  sc.innerHTML = guideHtml + copyAllBtn + leadersHtml;
+
+  if(document.getElementById('svsCopyAll')){
+    document.getElementById('svsCopyAll').addEventListener('click',function(){
+      navigator.clipboard.writeText(svsAllCopyText()).then(function(){ toast('📋 Copied!'); });
+    });
   }
+  sc.querySelectorAll('.svs-copy-leader').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var id=parseInt(btn.dataset.id);
+      var l=SVS_LEADERS.find(function(x){ return x.id===id; });
+      if(!l) return;
+      navigator.clipboard.writeText(svsLeaderCopyText(l)).then(function(){ toast('📋 Copied!'); });
+    });
+  });
+  if(canAdmin){
+    sc.querySelectorAll('.svs-edit-leader').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var id=parseInt(btn.dataset.id);
+        SVS_EDIT_LEADER=id; SVS_EDIT_WHICH='leader'; SVS_TAB='admin'; render();
+      });
+    });
+    sc.querySelectorAll('.svs-del-leader').forEach(function(btn){
+      btn.addEventListener('click',async function(){
+        var id=parseInt(btn.dataset.id);
+        var l=SVS_LEADERS.find(function(x){ return x.id===id; });
+        if(!confirm('Delete rally leader '+(l?l.name:'')+'?')) return;
+        var r=await sb.from('svs_rally_leaders').delete().eq('id',id);
+        if(r.error){ toast('Error: '+r.error.message); return; }
+        SVS_LEADERS=SVS_LEADERS.filter(function(x){ return x.id!==id; });
+        toast('🗑 Deleted'); render();
+      });
+    });
+  }
+}
 
-  // Stats
-  var totalReg = SVS_DATA.length;
-  var totalAtt = attending.length;
-  var totalNot = notAttend.length;
-
-  var teamsHtml = SVS_TEAMS.map(function(t){
-    var players = attending.filter(function(x){ return x.team===t.team_num; });
-    return teamSection(t.team_num, t.team_name, 'team-'+t.team_num, players);
+// ── SVS RATIO EDITOR HELPER ────────────────────────────
+function svsRatioEditor(prefix, inf, lanc, mark){
+  var total = inf+lanc+mark;
+  var presetHtml = SVS_PRESETS.map(function(p,i){
+    var active = (p.inf===inf&&p.lanc===lanc&&p.mark===mark);
+    return '<button class="svs-preset-btn'+(active?' active':'')+'" data-pidx="'+i+'" data-prefix="'+prefix+'">'+p.label+'</button>';
   }).join('');
 
-  var unassignedHtml = unassigned.length?
-    '<div class="team-section team-unassigned">'+
-      '<div class="team-header">'+
-        '<div class="team-name">⏳ Unassigned ('+unassigned.length+')</div>'+
-        (canManage?'<button class="team-edit-btn" id="clearAllSvsBtn" style="color:#ff453a;border-color:rgba(255,69,58,.3);">🗑 Clear All SvS</button>':'')+
-      '</div>'+
-      unassigned.map(playerRow).join('')+
-    '</div>':'';
-  var notAttendHtml = notAttend.length?
-    '<div class="team-section team-unassigned">'+
-      '<div class="team-header"><div class="team-name" style="color:#ff453a;">❌ Not Attending ('+notAttend.length+')</div></div>'+
-      notAttend.map(function(r){ return '<div class="player-row"><div class="player-row-name">'+r.player_name+'</div></div>'; }).join('')+
-    '</div>':'';
+  var isCustom = !SVS_PRESETS.some(function(p){ return p.inf===inf&&p.lanc===lanc&&p.mark===mark; });
+  presetHtml += '<button class="svs-preset-btn'+(isCustom?' active':'')+'" data-pcustom="1" data-prefix="'+prefix+'">Özel</button>';
 
-  sc.innerHTML=
-    '<div class="svs-stats">'+
-      '<div class="stat"><div class="stat-n">'+totalReg+'</div><div class="stat-l">Registered</div></div>'+
-      '<div class="stat"><div class="stat-n" style="color:#52c759">'+totalAtt+'</div><div class="stat-l">Attending</div></div>'+
-      '<div class="stat"><div class="stat-n" style="color:#ff453a">'+totalNot+'</div><div class="stat-l">Not Attending</div></div>'+
+  var customHtml = isCustom?
+    '<div class="svs-custom-ratio">'+
+      ['inf','lanc','mark'].map(function(key){
+        var val = key==='inf'?inf:key==='lanc'?lanc:mark;
+        var lbl = key==='inf'?'INF':key==='lanc'?'LNC':'MRK';
+        return '<div class="svs-ratio-inp-box">'+
+          '<div class="svs-ratio-inp-label">'+lbl+'</div>'+
+          '<div class="svs-ratio-inp-ctrl">'+
+            '<button class="svs-ratio-adj" data-prefix="'+prefix+'" data-key="'+key+'" data-dir="-1">−</button>'+
+            '<div class="svs-ratio-val">'+val+'</div>'+
+            '<button class="svs-ratio-adj" data-prefix="'+prefix+'" data-key="'+key+'" data-dir="1">+</button>'+
+          '</div>'+
+        '</div>';
+      }).join('')+
     '</div>'+
-    teamsHtml+unassignedHtml+notAttendHtml;
+    '<div class="svs-ratio-total '+(total===100?'svs-ratio-ok':'svs-ratio-bad')+'">Total: '+total+'%'+(total===100?' ✓':' (must be 100%)')+'</div>':
+    '<div class="svs-ratio-total svs-ratio-ok">Total: '+total+'% ✓</div>';
 
-  sc.querySelectorAll('.assign-btn[data-player]').forEach(function(btn){
+  return '<div class="svs-presets">'+presetHtml+'</div>'+customHtml;
+}
+
+function attachRatioEvents(sc, form){
+  sc.querySelectorAll('.svs-preset-btn[data-pidx]').forEach(function(btn){
     btn.addEventListener('click',function(){
-      var player=btn.dataset.player; var team=parseInt(btn.dataset.team)||null;
-      assignTeam(player,team);
+      var prefix=btn.dataset.prefix;
+      var p=SVS_PRESETS[parseInt(btn.dataset.pidx)];
+      form[prefix+'_inf']=p.inf; form[prefix+'_lanc']=p.lanc; form[prefix+'_mark']=p.mark;
+      render();
     });
   });
-  var clearSvsBtn=document.getElementById('clearAllSvsBtn');
-  if(clearSvsBtn){
-    clearSvsBtn.addEventListener('click',async function(){
-      if(!confirm('Clear ALL SvS registrations? This resets everything for next month.')) return;
-      var typed=prompt('Type CLEAR to confirm:');
-      if(typed!=='CLEAR'){ toast('Cancelled'); return; }
-      var r=await sb.from('svs_registrations').delete().neq('player_name','__none__');
-      if(r.error){ toast('Error: '+r.error.message); return; }
-      SVS_DATA=[]; SVS_ATT=null; SVS_INF=null; SVS_INF_H=false; SVS_MARK=null; SVS_MARK_H=false; SVS_LANC=null; SVS_LANC_H=false;
-      toast('🗑 All SvS registrations cleared'); render();
+  sc.querySelectorAll('.svs-preset-btn[data-pcustom]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var prefix=btn.dataset.prefix;
+      // switch to custom: keep current values
+      render();
     });
+  });
+  sc.querySelectorAll('.svs-ratio-adj').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var prefix=btn.dataset.prefix, key=btn.dataset.key, dir=parseInt(btn.dataset.dir);
+      var cur=form[prefix+'_'+key]||0;
+      var next=Math.max(0,Math.min(100,cur+dir*5));
+      form[prefix+'_'+key]=next;
+      render();
+    });
+  });
+}
+
+function renderSvsAdmin(sc){
+  var f = SVS_FORM;
+
+  // Editing an existing leader?
+  var editing = SVS_EDIT_LEADER?SVS_LEADERS.find(function(x){ return x.id===SVS_EDIT_LEADER; }):null;
+
+  // Init form if empty
+  if(!f.name && SVS_EDIT_WHICH==='leader' && editing){
+    f.name=editing.name;
+    f.atk_inf=editing.atk_inf; f.atk_lanc=editing.atk_lanc; f.atk_mark=editing.atk_mark;
+    f.atk_heroes=editing.atk_heroes||'';
+    f.def_inf=editing.def_inf; f.def_lanc=editing.def_lanc; f.def_mark=editing.def_mark;
+    f.def_heroes=editing.def_heroes||'';
   }
-  sc.querySelectorAll('.del-svs-reg').forEach(function(btn){
-    btn.addEventListener('click',async function(){
-      var player=btn.dataset.player;
-      if(!confirm('Remove SvS registration for '+player+'?')) return;
-      var r=await sb.from('svs_registrations').delete().eq('player_name',player);
-      if(r.error){ toast('Error: '+r.error.message); return; }
-      SVS_DATA=SVS_DATA.filter(function(x){ return x.player_name!==player; });
-      toast(player+' removed from SvS'); render();
+  if(!f.g_atk_inf && SVS_EDIT_WHICH==='guide'){
+    var g=SVS_GUIDE;
+    f.g_atk_inf=g?g.atk_inf:50; f.g_atk_lanc=g?g.atk_lanc:0; f.g_atk_mark=g?g.atk_mark:50;
+    f.g_atk_heroes=g?g.atk_heroes||'':'';
+    f.g_def_inf=g?g.def_inf:50; f.g_def_lanc=g?g.def_lanc:0; f.g_def_mark=g?g.def_mark:50;
+    f.g_def_heroes=g?g.def_heroes||'':'';
+  }
+
+  // Default ratio values for new leader form
+  var atk_inf=f.atk_inf!=null?f.atk_inf:50, atk_lanc=f.atk_lanc!=null?f.atk_lanc:0, atk_mark=f.atk_mark!=null?f.atk_mark:50;
+  var def_inf=f.def_inf!=null?f.def_inf:50, def_lanc=f.def_lanc!=null?f.def_lanc:0, def_mark=f.def_mark!=null?f.def_mark:50;
+  var g_atk_inf=f.g_atk_inf!=null?f.g_atk_inf:50, g_atk_lanc=f.g_atk_lanc!=null?f.g_atk_lanc:0, g_atk_mark=f.g_atk_mark!=null?f.g_atk_mark:50;
+  var g_def_inf=f.g_def_inf!=null?f.g_def_inf:50, g_def_lanc=f.g_def_lanc!=null?f.g_def_lanc:0, g_def_mark=f.g_def_mark!=null?f.g_def_mark:50;
+
+  var leaderFormHtml = (SVS_EDIT_WHICH==='leader')?
+    '<div class="svs-admin-section">'+
+      '<div class="svs-admin-section-title">'+(editing?'✏️ Edit Rally Leader':'➕ New Rally Leader')+'</div>'+
+      '<div class="svs-form-group"><label class="svs-form-label">Player Name</label>'+
+        '<input class="svs-inp" id="svsLeaderName" value="'+(f.name||'')+'" placeholder="Enter player name...">'+
+      '</div>'+
+      '<div class="svs-form-group"><div class="svs-section-label svs-atk-label">🗡 Attack Formation</div>'+
+        svsRatioEditor('atk', atk_inf, atk_lanc, atk_mark)+
+        '<label class="svs-form-label" style="margin-top:8px;">Attack Heroes</label>'+
+        '<input class="svs-inp" id="svsAtkHeroes" value="'+(f.atk_heroes||'')+'" placeholder="e.g. Jasser, Flint...">'+
+      '</div>'+
+      '<div class="svs-form-group"><div class="svs-section-label svs-def-label">🛡 Defense Formation</div>'+
+        svsRatioEditor('def', def_inf, def_lanc, def_mark)+
+        '<label class="svs-form-label" style="margin-top:8px;">Defense Heroes</label>'+
+        '<input class="svs-inp" id="svsDefHeroes" value="'+(f.def_heroes||'')+'" placeholder="e.g. Bahiti, Seo-yoon...">'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">'+
+        '<button class="btn btn-g" id="svsCancelLeader">Cancel</button>'+
+        '<button class="btn btn-p" id="svsSaveLeader">'+(editing?'💾 Update':'➕ Add Leader')+'</button>'+
+      '</div>'+
+    '</div>':'';
+
+  var guideFormHtml = (SVS_EDIT_WHICH==='guide')?
+    '<div class="svs-admin-section">'+
+      '<div class="svs-admin-section-title">✏️ Edit Participant Guide</div>'+
+      '<div class="svs-form-group"><div class="svs-section-label svs-atk-label">🗡 Attack Formation</div>'+
+        svsRatioEditor('g_atk', g_atk_inf, g_atk_lanc, g_atk_mark)+
+        '<label class="svs-form-label" style="margin-top:8px;">Attack Heroes</label>'+
+        '<input class="svs-inp" id="svsGAtkHeroes" value="'+(f.g_atk_heroes||'')+'" placeholder="e.g. Sergey...">'+
+      '</div>'+
+      '<div class="svs-form-group"><div class="svs-section-label svs-def-label">🛡 Defense Formation</div>'+
+        svsRatioEditor('g_def', g_def_inf, g_def_lanc, g_def_mark)+
+        '<label class="svs-form-label" style="margin-top:8px;">Defense Heroes</label>'+
+        '<input class="svs-inp" id="svsGDefHeroes" value="'+(f.g_def_heroes||'')+'" placeholder="e.g. Flint...">'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">'+
+        '<button class="btn btn-g" id="svsCancelGuide">Cancel</button>'+
+        '<button class="btn btn-p" id="svsSaveGuide">💾 Save Guide</button>'+
+      '</div>'+
+    '</div>':'';
+
+  var actionBtns = (!SVS_EDIT_WHICH)?
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">'+
+      '<button class="btn btn-p" id="svsNewLeaderBtn">👑 Add Rally Leader</button>'+
+      '<button class="btn btn-g" id="svsEditGuideBtn">👥 Edit Participant Guide</button>'+
+    '</div>':'';
+
+  // Existing leaders list (compact, with edit/delete)
+  var existingHtml = SVS_LEADERS.length?
+    '<div class="svs-admin-section">'+
+      '<div class="svs-admin-section-title">👑 Rally Leaders ('+SVS_LEADERS.length+')</div>'+
+      SVS_LEADERS.map(function(l){
+        return '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:8px;">'+
+          '<div style="flex:1;">'+
+            '<div style="font-size:13px;font-weight:700;color:var(--orange);">'+l.name+'</div>'+
+            '<div style="font-size:10px;color:var(--t3);">ATK: INF '+l.atk_inf+'% LNC '+l.atk_lanc+'% MRK '+l.atk_mark+' | DEF: INF '+l.def_inf+'% LNC '+l.def_lanc+'% MRK '+l.def_mark+'%</div>'+
+          '</div>'+
+          '<button class="btn btn-g btn-sm svs-edit-leader" data-id="'+l.id+'" style="padding:6px 10px;">✏️</button>'+
+          '<button class="btn btn-d btn-sm svs-del-leader" data-id="'+l.id+'" style="padding:6px 10px;">🗑</button>'+
+        '</div>';
+      }).join('')+
+    '</div>':'';
+
+  sc.innerHTML = actionBtns + leaderFormHtml + guideFormHtml + existingHtml;
+
+  // Action buttons
+  var newLeaderBtn=document.getElementById('svsNewLeaderBtn');
+  if(newLeaderBtn) newLeaderBtn.addEventListener('click',function(){
+    SVS_EDIT_LEADER=null; SVS_EDIT_WHICH='leader'; SVS_FORM={}; render();
+  });
+  var editGuideBtn=document.getElementById('svsEditGuideBtn');
+  if(editGuideBtn) editGuideBtn.addEventListener('click',function(){
+    SVS_EDIT_WHICH='guide'; SVS_FORM={}; render();
+  });
+
+  // Cancel buttons
+  var cancelLeader=document.getElementById('svsCancelLeader');
+  if(cancelLeader) cancelLeader.addEventListener('click',function(){ SVS_EDIT_LEADER=null; SVS_EDIT_WHICH=null; SVS_FORM={}; render(); });
+  var cancelGuide=document.getElementById('svsCancelGuide');
+  if(cancelGuide) cancelGuide.addEventListener('click',function(){ SVS_EDIT_WHICH=null; SVS_FORM={}; render(); });
+
+  // Ratio editors
+  attachRatioEvents(sc, SVS_FORM);
+
+  // Sync text inputs into form on change
+  function syncInput(id, key){ var el=document.getElementById(id); if(el) el.addEventListener('input',function(){ SVS_FORM[key]=el.value; }); }
+  syncInput('svsLeaderName','name');
+  syncInput('svsAtkHeroes','atk_heroes');
+  syncInput('svsDefHeroes','def_heroes');
+  syncInput('svsGAtkHeroes','g_atk_heroes');
+  syncInput('svsGDefHeroes','g_def_heroes');
+
+  // Save leader
+  var saveLeaderBtn=document.getElementById('svsSaveLeader');
+  if(saveLeaderBtn) saveLeaderBtn.addEventListener('click',async function(){
+    var name=(document.getElementById('svsLeaderName')||{}).value||(SVS_FORM.name||'');
+    name=name.trim();
+    if(!name){ toast('Player name required'); return; }
+    var ai=SVS_FORM.atk_inf!=null?SVS_FORM.atk_inf:atk_inf;
+    var al=SVS_FORM.atk_lanc!=null?SVS_FORM.atk_lanc:atk_lanc;
+    var am=SVS_FORM.atk_mark!=null?SVS_FORM.atk_mark:atk_mark;
+    var di=SVS_FORM.def_inf!=null?SVS_FORM.def_inf:def_inf;
+    var dl=SVS_FORM.def_lanc!=null?SVS_FORM.def_lanc:def_lanc;
+    var dm=SVS_FORM.def_mark!=null?SVS_FORM.def_mark:def_mark;
+    if(ai+al+am!==100){ toast('Attack ratio must total 100%'); return; }
+    if(di+dl+dm!==100){ toast('Defense ratio must total 100%'); return; }
+    var payload={
+      name:name,
+      atk_inf:ai, atk_lanc:al, atk_mark:am,
+      atk_heroes:(document.getElementById('svsAtkHeroes')||{}).value||(SVS_FORM.atk_heroes||''),
+      def_inf:di, def_lanc:dl, def_mark:dm,
+      def_heroes:(document.getElementById('svsDefHeroes')||{}).value||(SVS_FORM.def_heroes||'')
+    };
+    var r;
+    if(editing){ r=await sb.from('svs_rally_leaders').update(payload).eq('id',editing.id).select().single(); }
+    else { r=await sb.from('svs_rally_leaders').insert(payload).select().single(); }
+    if(r.error){ toast('Error: '+r.error.message); return; }
+    if(editing){ SVS_LEADERS=SVS_LEADERS.map(function(x){ return x.id===editing.id?r.data:x; }); }
+    else { SVS_LEADERS.push(r.data); }
+    toast('✅ Saved!'); SVS_EDIT_LEADER=null; SVS_EDIT_WHICH=null; SVS_FORM={}; render();
+  });
+
+  // Save guide
+  var saveGuideBtn=document.getElementById('svsSaveGuide');
+  if(saveGuideBtn) saveGuideBtn.addEventListener('click',async function(){
+    var gi=SVS_FORM.g_atk_inf!=null?SVS_FORM.g_atk_inf:g_atk_inf;
+    var gl=SVS_FORM.g_atk_lanc!=null?SVS_FORM.g_atk_lanc:g_atk_lanc;
+    var gm=SVS_FORM.g_atk_mark!=null?SVS_FORM.g_atk_mark:g_atk_mark;
+    var gdi=SVS_FORM.g_def_inf!=null?SVS_FORM.g_def_inf:g_def_inf;
+    var gdl=SVS_FORM.g_def_lanc!=null?SVS_FORM.g_def_lanc:g_def_lanc;
+    var gdm=SVS_FORM.g_def_mark!=null?SVS_FORM.g_def_mark:g_def_mark;
+    if(gi+gl+gm!==100){ toast('Attack ratio must total 100%'); return; }
+    if(gdi+gdl+gdm!==100){ toast('Defense ratio must total 100%'); return; }
+    var payload={
+      id:1,
+      atk_inf:gi, atk_lanc:gl, atk_mark:gm,
+      atk_heroes:(document.getElementById('svsGAtkHeroes')||{}).value||(SVS_FORM.g_atk_heroes||''),
+      def_inf:gdi, def_lanc:gdl, def_mark:gdm,
+      def_heroes:(document.getElementById('svsGDefHeroes')||{}).value||(SVS_FORM.g_def_heroes||''),
+      updated_at:new Date().toISOString()
+    };
+    var r=await sb.from('svs_participant_guide').upsert(payload,{onConflict:'id'}).select().single();
+    if(r.error){ toast('Error: '+r.error.message); return; }
+    SVS_GUIDE=r.data;
+    toast('✅ Guide saved!'); SVS_EDIT_WHICH=null; SVS_FORM={}; render();
+  });
+
+  // Edit/delete in list
+  sc.querySelectorAll('.svs-edit-leader').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      SVS_EDIT_LEADER=parseInt(btn.dataset.id); SVS_EDIT_WHICH='leader'; SVS_FORM={}; render();
     });
   });
-  sc.querySelectorAll('.team-edit-btn[data-team]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var t=parseInt(btn.dataset.team);
-      var cur=SVS_TEAMS.find(function(x){ return x.team_num===t; });
-      var name=prompt('New name for team '+t+':', cur?cur.team_name:'Team '+t);
-      if(name&&name.trim()) renameTeam(t, name.trim());
+  sc.querySelectorAll('.svs-del-leader').forEach(function(btn){
+    btn.addEventListener('click',async function(){
+      var id=parseInt(btn.dataset.id);
+      var l=SVS_LEADERS.find(function(x){ return x.id===id; });
+      if(!confirm('Delete rally leader '+(l?l.name:'')+'?')) return;
+      var r=await sb.from('svs_rally_leaders').delete().eq('id',id);
+      if(r.error){ toast('Error: '+r.error.message); return; }
+      SVS_LEADERS=SVS_LEADERS.filter(function(x){ return x.id!==id; });
+      if(SVS_EDIT_LEADER===id){ SVS_EDIT_LEADER=null; SVS_EDIT_WHICH=null; SVS_FORM={}; }
+      toast('🗑 Deleted'); render();
     });
   });
 }
@@ -1571,110 +1741,6 @@ async function revokeRole(playerName){
 }
 
 
-function renderSvsAdmin(sc){
-  var canSuper = isSuperAdmin(SESSION.name);
-
-  // Team name editors
-  var teamNamesHtml = '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-    '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">⚔️ Team Names</div>'+
-    SVS_TEAMS.map(function(t){
-      return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'+
-        '<span style="font-size:12px;color:#4a7a9b;width:60px;flex-shrink:0;">Team '+t.team_num+'</span>'+
-        '<input class="inp team-name-inp" data-team="'+t.team_num+'" value="'+t.team_name+'" style="flex:1;padding:8px 12px;font-size:13px;">'+
-        '<button class="btn btn-g btn-sm save-team-name" data-team="'+t.team_num+'" style="flex-shrink:0;padding:8px 14px;">Save</button>'+
-      '</div>';
-    }).join('')+
-  '</div>';
-
-  // Player list with team assignment and remove
-  var attending = SVS_DATA.filter(function(x){ return x.attending; });
-  var notAttend = SVS_DATA.filter(function(x){ return !x.attending; });
-
-  function svsPlayerRow(reg){
-    var ts = troopStr(reg);
-    return '<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(100,160,220,.06);gap:8px;">'+
-      '<div style="flex:1;">'+
-        '<div style="font-size:13px;font-weight:700;color:#d4eaf7;">'+reg.player_name+'</div>'+
-        (ts?'<div style="font-size:10px;color:#4a7a9b;margin-top:1px;">'+ts+'</div>':'')+
-      '</div>'+
-      '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">'+
-        SVS_TEAMS.map(function(t){
-          var active = reg.team===t.team_num;
-          return '<button class="assign-btn assign-'+t.team_num+(active?' active':'')+' svs-assign" data-player="'+reg.player_name+'" data-team="'+t.team_num+'">'+t.team_num+'</button>';
-        }).join('')+
-        (reg.team?'<button class="assign-btn assign-x svs-assign" data-player="'+reg.player_name+'" data-team="0">✕</button>':'')+
-        '<button class="assign-btn assign-x svs-del-reg" data-player="'+reg.player_name+'" style="font-size:11px;" title="Remove registration">🗑</button>'+
-      '</div>'+
-    '</div>';
-  }
-
-  var attendingHtml = '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-    '<div style="font-size:12px;font-weight:800;color:#52c759;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">✅ Attending ('+attending.length+')</div>'+
-    (attending.length ? attending.map(svsPlayerRow).join('') : '<div style="font-size:12px;color:#2a4a65;padding:8px 0;">No registrations yet</div>')+
-  '</div>';
-
-  var notAttendHtml = notAttend.length ? '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-    '<div style="font-size:12px;font-weight:800;color:#ff453a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">❌ Not Attending ('+notAttend.length+')</div>'+
-    notAttend.map(function(reg){
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(100,160,220,.06);">'+
-        '<span style="font-size:13px;font-weight:700;color:#d4eaf7;">'+reg.player_name+'</span>'+
-        '<button class="assign-btn assign-x svs-del-reg" data-player="'+reg.player_name+'" style="font-size:11px;" title="Remove">🗑</button>'+
-      '</div>';
-    }).join('')+
-  '</div>' : '';
-
-  // Clear all button - only super admin
-  var clearHtml = canSuper ?
-    '<div style="margin-top:4px;">'+
-      '<button class="btn btn-d" id="clearAllSvsAdminBtn">🗑 Clear ALL SvS Registrations</button>'+
-    '</div>' : '';
-
-  sc.innerHTML = teamNamesHtml + attendingHtml + notAttendHtml + clearHtml;
-
-  // Save team names
-  sc.querySelectorAll('.save-team-name').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var teamNum = parseInt(btn.dataset.team);
-      var inp = sc.querySelector('.team-name-inp[data-team="'+teamNum+'"]');
-      if(inp && inp.value.trim()) renameTeam(teamNum, inp.value.trim());
-    });
-  });
-
-  // Assign to team
-  sc.querySelectorAll('.svs-assign').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var player = btn.dataset.player;
-      var team = parseInt(btn.dataset.team) || null;
-      assignTeam(player, team);
-    });
-  });
-
-  // Remove registration
-  sc.querySelectorAll('.svs-del-reg').forEach(function(btn){
-    btn.addEventListener('click', async function(){
-      var player = btn.dataset.player;
-      if(!confirm('Remove SvS registration for '+player+'?')) return;
-      var r = await sb.from('svs_registrations').delete().eq('player_name', player);
-      if(r.error){ toast('Error: '+r.error.message); return; }
-      SVS_DATA = SVS_DATA.filter(function(x){ return x.player_name !== player; });
-      toast(player+' removed'); render();
-    });
-  });
-
-  // Clear all - super admin only
-  var clearBtn = document.getElementById('clearAllSvsAdminBtn');
-  if(clearBtn){
-    clearBtn.addEventListener('click', async function(){
-      if(!confirm('Clear ALL SvS registrations?')) return;
-      var typed = prompt('Type CLEAR to confirm:');
-      if(typed !== 'CLEAR'){ toast('Cancelled'); return; }
-      var r = await sb.from('svs_registrations').delete().neq('player_name','__none__');
-      if(r.error){ toast('Error: '+r.error.message); return; }
-      SVS_DATA = []; SVS_ATT=null; SVS_INF=null; SVS_INF_H=false; SVS_MARK=null; SVS_MARK_H=false; SVS_LANC=null; SVS_LANC_H=false;
-      toast('All SvS registrations cleared'); render();
-    });
-  }
-}
 
 
 // ═══════════════════════════════════════════════════════
@@ -3304,7 +3370,7 @@ function renderAdminPlayers(ac){
         await sb.from('players').update({name:newId}).eq('name',player);
           await sb.from('alliance_reps').update({player_name:newId}).eq('player_name',player);
         await sb.from('admin_roles').update({player_name:newId}).eq('player_name',player);
-        await sb.from('svs_registrations').update({player_name:newId}).eq('player_name',player);
+        await sb.from('svs_rally_leaders').update({name:newId}).eq('name',player);
         var p=ALL_PLAYERS.find(function(x){ return x.name===player; });
         if(p) p.name=newId;
         ALLIANCE_REPS.forEach(function(r){ if(r.player_name===player) r.player_name=newId; });
@@ -3449,7 +3515,7 @@ function renderAdminStats(ac){
   ALL_PLAYERS.filter(function(p){ return p.status!=='pending'; }).forEach(function(p){
     var a=p.alliance||'None'; if(!alliances[a]) alliances[a]=0; alliances[a]++;
   });
-  var svsAtt=SVS_DATA.filter(function(s){ return s.attending; }).length;
+  var svsLeaders=SVS_LEADERS.length;
   var allianceRows=Object.entries(alliances).sort(function(a,b){ return b[1]-a[1]; }).map(function(kv){
     return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;">'+
       '<span style="font-weight:600;color:#e8f4fd;">'+kv[0]+'</span>'+
@@ -3460,7 +3526,7 @@ function renderAdminStats(ac){
       '<div class="stat"><div class="stat-n">'+total+'</div><div class="stat-l">Approved</div></div>'+
       '<div class="stat"><div class="stat-n">'+pending+'</div><div class="stat-l">Pending</div></div>'+
       '<div class="stat"><div class="stat-n">'+noId+'</div><div class="stat-l">No ID</div></div>'+
-      '<div class="stat"><div class="stat-n">'+svsAtt+'</div><div class="stat-l">SvS Attending</div></div>'+
+      '<div class="stat"><div class="stat-n">'+svsLeaders+'</div><div class="stat-l">SvS Leaders</div></div>'+
     '</div>'+
     '<div class="card"><div style="font-size:11px;font-weight:700;color:rgba(200,225,245,.45);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Alliance Breakdown</div>'+
       (allianceRows||'<div style="color:rgba(200,225,245,.22);font-size:13px;">No data</div>')+
