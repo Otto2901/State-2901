@@ -1412,7 +1412,7 @@ function renderSvsLeaderCard(leader, canAdmin){
     svsRatioChips(leader.part_def_inf, leader.part_def_lanc, leader.part_def_mark)+
     (leader.part_def_heroes?'<div class="svs-heroes-text">🦸 '+leader.part_def_heroes+'</div>':'')+
 
-    '<button class="svs-copy-btn svs-copy-leader" data-id="'+leader.id+'">📋 Copy</button>'+
+    (canAdmin?'<button class="svs-copy-btn svs-copy-leader" data-id="'+leader.id+'">📋 Copy</button>':'')+
     editBtns+
   '</div>';
 }
@@ -1424,7 +1424,7 @@ function renderSvsBoard(sc){
     SVS_LEADERS.map(function(l){ return renderSvsLeaderCard(l, canAdmin); }).join(''):
     '<div style="text-align:center;padding:32px 0;color:var(--t3);font-size:13px;">No rally leaders set yet.</div>';
 
-  var copyAllBtn = SVS_LEADERS.length?'<button class="svs-copy-all-btn" id="svsCopyAll">📋 Copy All Rally Info</button>':'';
+  var copyAllBtn = (SVS_LEADERS.length&&canAdmin)?'<button class="svs-copy-all-btn" id="svsCopyAll">📋 Copy All Rally Info</button>':'';
 
   sc.innerHTML = copyAllBtn + leadersHtml;
 
