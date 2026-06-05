@@ -551,15 +551,21 @@ const MAX_SENDS    = 5;
 const MAX_RECVS    = 3;
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function getRole(name){
-  var r=ADMIN_ROLES.find(function(x){ return x.player_name===name; });
-  return r?r.role:null;
+function getRoles(name){
+  // Returns array of all roles for this player
+  return ADMIN_ROLES.filter(function(x){ return x.player_name===name; }).map(function(x){ return x.role; });
 }
-function isSuperAdmin(name){ return name===ADMIN_NAME||getRole(name)==='super_admin'; }
-function isSvsAdmin(name){ var r=getRole(name); return isSuperAdmin(name)||r==='svs_admin'; }
-function isAlbumAdmin(name){ var r=getRole(name); return isSuperAdmin(name)||r==='album_admin'; }
-function isModerator(name){ var r=getRole(name); return isSuperAdmin(name)||r==='moderator'; }
-function isCjAdmin(name){ var r=getRole(name); return isSuperAdmin(name)||r==='cj_admin'; }
+function getRole(name){
+  // Returns first role (backwards compat) — prefer hasRole() for checks
+  var roles=getRoles(name);
+  return roles.length?roles[0]:null;
+}
+function hasRole(name,role){ return getRoles(name).indexOf(role)>=0; }
+function isSuperAdmin(name){ return name===ADMIN_NAME||hasRole(name,'super_admin'); }
+function isSvsAdmin(name){ return isSuperAdmin(name)||hasRole(name,'svs_admin'); }
+function isAlbumAdmin(name){ return isSuperAdmin(name)||hasRole(name,'album_admin'); }
+function isModerator(name){ return isSuperAdmin(name)||hasRole(name,'moderator'); }
+function isCjAdmin(name){ return isSuperAdmin(name)||hasRole(name,'cj_admin'); }
 function troopStr(reg){
   if(!reg) return '';
   var parts=[];
@@ -865,9 +871,10 @@ function renderHome(app){
     '</div>';
   }
   var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super">Super Admin</span>':
-    role==='svs_admin'?'<span class="role-badge role-svs">SvS Admin</span>':
-    role==='prep_admin'?'<span class="role-badge role-svs">Prep Admin</span>':
-    role==='moderator'?'<span class="role-badge role-mod">Moderator</span>':'';
+    getRoles(SESSION.name).map(function(r){
+      var cls=r==='svs_admin'||r==='prep_admin'||r==='cj_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
+      return '<span class="role-badge '+cls+'">'+r.replace(/_/g,' ')+'</span>';
+    }).join(' ');
 
   // Card accent colors
   var cardSvs   = 'border-color:rgba(246,173,85,.28);';
@@ -1742,16 +1749,21 @@ function renderSvsAdmin(sc){
 // -- ADMIN ROLES PANEL (inside renderAdmin) -----------------------------------
 async function grantRole(playerName, role){
   if(!playerName||!role) return;
-  var r = await sb.from('admin_roles').upsert({player_name:playerName,role:role,granted_by:SESSION.name},{onConflict:'player_name'});
+  // Check already has this role
+  if(hasRole(playerName,role)){ toast('Already has this role.'); return; }
+  var r = await sb.from('admin_roles').insert({player_name:playerName,role:role,granted_by:SESSION.name});
   if(r.error){ toast('Error: '+r.error.message); return; }
-  var idx=ADMIN_ROLES.findIndex(function(x){ return x.player_name===playerName; });
-  if(idx>=0) ADMIN_ROLES[idx].role=role; else ADMIN_ROLES.push({player_name:playerName,role:role});
+  ADMIN_ROLES.push({player_name:playerName,role:role,granted_by:SESSION.name});
   toast('✅ Role granted!'); render();
 }
-async function revokeRole(playerName){
-  var r = await sb.from('admin_roles').delete().eq('player_name',playerName).neq('player_name',ADMIN_NAME);
+async function revokeRole(playerName, role){
+  // If role specified, remove only that role. Otherwise remove all roles for player.
+  var q = sb.from('admin_roles').delete().eq('player_name',playerName).neq('player_name',ADMIN_NAME);
+  if(role) q = sb.from('admin_roles').delete().eq('player_name',playerName).eq('role',role).neq('player_name',ADMIN_NAME);
+  var r = await q;
   if(r.error){ toast('Error: '+r.error.message); return; }
-  ADMIN_ROLES=ADMIN_ROLES.filter(function(x){ return x.player_name!==playerName; });
+  if(role) ADMIN_ROLES=ADMIN_ROLES.filter(function(x){ return !(x.player_name===playerName&&x.role===role); });
+  else ADMIN_ROLES=ADMIN_ROLES.filter(function(x){ return x.player_name!==playerName; });
   toast('🗑 Role revoked'); render();
 }
 
@@ -3467,14 +3479,24 @@ function renderAdminPlayers(ac){
 
 // ── ROLES TAB ────────────────────────────────────────────
 function renderAdminRoles(ac){
-  var rolesHtml=ADMIN_ROLES.filter(function(r){ return r.player_name!==ADMIN_NAME; }).map(function(r){
-    var badgeCls=r.role==='svs_admin'?'role-svs':r.role==='album_admin'?'role-album':r.role==='prep_admin'?'role-svs':'role-mod';
+  // Group by player name
+  var byPlayer={};
+  ADMIN_ROLES.filter(function(r){ return r.player_name!==ADMIN_NAME; }).forEach(function(r){
+    if(!byPlayer[r.player_name]) byPlayer[r.player_name]=[];
+    byPlayer[r.player_name].push(r);
+  });
+  var rolesHtml=Object.keys(byPlayer).sort().map(function(pname){
+    var roles=byPlayer[pname];
+    var badgesHtml=roles.map(function(r){
+      var badgeCls=r.role==='svs_admin'?'role-svs':r.role==='cj_admin'?'role-svs':r.role==='album_admin'?'role-album':r.role==='prep_admin'?'role-svs':'role-mod';
+      return '<span class="role-badge '+badgeCls+'" style="margin-right:4px;">'+r.role.replace(/_/g," ")+'</span>'+
+        '<button class="btn btn-d btn-sm revoke-role" data-player="'+pname+'" data-role="'+r.role+'" style="padding:3px 8px;font-size:10px;margin-right:4px;">✕</button>';
+    }).join('');
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(100,160,220,.07);">'+
       '<div>'+
-        '<div style="font-size:13px;font-weight:700;color:#8ab4cc;">'+r.player_name+'</div>'+
-        '<span class="role-badge '+badgeCls+'">'+r.role.replace(/_/g," ")+'</span>'+
+        '<div style="font-size:13px;font-weight:700;color:#8ab4cc;margin-bottom:4px;">'+pname+'</div>'+
+        '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;">'+badgesHtml+'</div>'+
       '</div>'+
-      '<button class="btn btn-d btn-sm revoke-role" data-player="'+r.player_name+'" style="padding:5px 10px;font-size:11px;">Revoke</button>'+
     '</div>';
   }).join('')||'<div style="color:#2a4a65;font-size:12px;padding:8px 0;">No roles assigned yet</div>';
 
@@ -3517,7 +3539,10 @@ function renderAdminRoles(ac){
     if(p&&r) grantRole(p,r);
   });
   ac.querySelectorAll('.revoke-role').forEach(function(btn){
-    btn.addEventListener('click',function(){ revokeRole(btn.dataset.player); });
+    btn.addEventListener('click',function(){
+      var p=btn.dataset.player, r=btn.dataset.role;
+      if(confirm('Revoke '+r.replace(/_/g,' ')+' from '+p+'?')) revokeRole(p,r);
+    });
   });
 }
 
