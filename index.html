@@ -559,6 +559,7 @@ function isSuperAdmin(name){ return name===ADMIN_NAME||getRole(name)==='super_ad
 function isSvsAdmin(name){ var r=getRole(name); return isSuperAdmin(name)||r==='svs_admin'; }
 function isAlbumAdmin(name){ var r=getRole(name); return isSuperAdmin(name)||r==='album_admin'; }
 function isModerator(name){ var r=getRole(name); return isSuperAdmin(name)||r==='moderator'; }
+function isCjAdmin(name){ var r=getRole(name); return isSuperAdmin(name)||r==='cj_admin'; }
 function troopStr(reg){
   if(!reg) return '';
   var parts=[];
@@ -633,6 +634,13 @@ var ADMIN_ROLES = []; // admin_roles
 var SVS_TAB     = 'board'; // board | admin
 // SvS edit state
 var SVS_EDIT_LEADER = null; // null=new, id=editing
+
+// CRAZY JOE STATE
+var CJ_TEAMS   = []; // cj_teams
+var CJ_MEMBERS = []; // cj_team_members
+var CJ_TAB     = 'board'; // board | admin
+var CJ_EDIT_TEAM = null; // null=new, obj=editing
+var CJ_VIEW_ALLIANCE = null; // super admin selected alliance filter
 var SVS_EDIT_WHICH  = null; // which section open: 'leader'|'guide'
 // SvS form buffers
 var SVS_FORM = {};
@@ -725,7 +733,9 @@ async function loadAll(){
     sb.from('castle_wars').select('*').neq('status','ended').order('created_at',{ascending:false}).limit(1).maybeSingle(),
     sb.from('castle_coordinators').select('*').order('alliance'),
     sb.from('castle_rallies').select('*').order('commanded_at',{ascending:false}).limit(100),
-    sb.from('castle_ralliers').select('*').order('created_at')
+    sb.from('castle_ralliers').select('*').order('created_at'),
+    sb.from('cj_teams').select('*').order('created_at'),
+    sb.from('cj_team_members').select('*').order('position')
   ]);
   var r3=results[0],r4=results[1],r5=results[2],r6=results[3];
   var r7=results[4],r8=results[5],r9=results[6],r10=results[7];
@@ -755,6 +765,9 @@ async function loadAll(){
   if(!rCC.error&&rCC.data) CASTLE_COORDS=rCC.data;
   if(!rCR.error&&rCR.data) CASTLE_RALLIES=rCR.data;
   if(!rCRR.error&&rCRR.data) CASTLE_RALLIERS=rCRR.data;
+  var rCJT=results[18],rCJM=results[19];
+  if(!rCJT.error&&rCJT.data) CJ_TEAMS=rCJT.data;
+  if(!rCJM.error&&rCJM.data) CJ_MEMBERS=rCJM.data;
 
   LOADING=false; LAST_REF=new Date();
 }
@@ -833,6 +846,7 @@ function render(){
   if(MODULE==='transfer') renderTransferApp(app);
   if(MODULE==='svsprep') renderSvspApp(app);
   if(MODULE==='castlewar') renderCastleWarApp(app);
+  if(MODULE==='crazyjoe')  renderCrazyJoeApp(app);
   if(MODULE==='adminpanel') renderAdminPanel(app);
 }
 
@@ -861,6 +875,7 @@ function renderHome(app){
   var cardTr    = 'border-color:rgba(183,148,244,.22);';
   var cardPrep  = 'border-color:rgba(252,129,129,.22);'+((!SVSP_SESSION||SVSP_SESSION.status==='hidden')&&!isSuperAdmin(SESSION.name)?'opacity:.5;':'');
   var cardCastle= 'border-color:rgba(252,129,129,.3);background:rgba(252,129,129,.04);';
+  var cardCj    = 'border-color:rgba(104,211,145,.22);background:rgba(104,211,145,.03);';
   var cardAdmin = 'border-color:rgba(246,224,94,.22);';
 
   app.innerHTML=
@@ -933,6 +948,16 @@ function renderHome(app){
              SVSP_SESSION.name)+
           '</div>'+
         '</div>'+
+        (function(){
+          var myP=ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
+          var hasAlliance=isSuperAdmin(SESSION.name)||(myP&&myP.alliance);
+          if(!hasAlliance) return '';
+          return '<div class="home-card" id="goCj" style="'+cardCj+'">'+
+            '<div class="home-card-icon">🤪</div>'+
+            '<div class="home-card-title" style="color:#68d391;">Crazy Joe</div>'+
+            '<div class="home-card-sub">Team assignments for the event</div>'+
+          '</div>';
+        })()+
         (isSuperAdmin(SESSION.name)||(CASTLE_WAR&&(isCastleCoord(SESSION.name)||isCastleRallier(SESSION.name)))?
         '<div class="home-card" id="goCastle" style="'+cardCastle+'">'+
           '<div class="home-card-icon">🏰</div>'+
@@ -970,6 +995,8 @@ function renderHome(app){
   document.getElementById('goTransfer').addEventListener('click', function(){ MODULE='transfer'; TR_TAB='list'; render(); });
   var goSvspBtn=document.getElementById('goSvsp');
   if(goSvspBtn) goSvspBtn.addEventListener('click',function(){ MODULE='svsprep'; SVSP_TAB='days'; render(); });
+  var goCjBtn=document.getElementById('goCj');
+  if(goCjBtn) goCjBtn.addEventListener('click',function(){ MODULE='crazyjoe'; CJ_TAB='board'; CJ_VIEW_ALLIANCE=null; render(); });
   var goCastleBtn=document.getElementById('goCastle');
   if(goCastleBtn) goCastleBtn.addEventListener('click',function(){ MODULE='castlewar'; CASTLE_TAB='war'; render(); });
   var goAdminBtn=document.getElementById('goAdmin');
@@ -3463,7 +3490,7 @@ function renderAdminRoles(ac){
         '</div>'+
         '<select class="sel" id="roleSelect" style="flex:1;min-width:120px;"><option value="">— Select role —</option>'+
           '<option value="svs_admin">⚔️ SvS Admin</option>'+
-
+          '<option value="cj_admin">🤪 Crazy Joe Admin</option>'+
           '<option value="moderator">🛡️ Moderator</option>'+
           '<option value="prep_admin">⚔️ SvS Prep Admin</option>'+
         '</select>'+
@@ -5181,6 +5208,390 @@ function renderCastleNotifGuide(cw){
     CASTLE_TAB='guide'; render();
   });
 }
+
+// ── CRAZY JOE ─────────────────────────────────────────────────
+
+function renderCrazyJoeApp(app){
+  var isSuper = isSuperAdmin(SESSION.name);
+  var isCjAdm = isCjAdmin(SESSION.name);
+  var myPlayer = ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
+  var myAlliance = isSuper ? null : (myPlayer&&myPlayer.alliance ? myPlayer.alliance : null);
+
+  // Gate: non-super must have alliance
+  if(!isSuper && !myAlliance){
+    app.innerHTML=
+      buildModuleHeader('crazyjoe','🤪','Crazy Joe','Team Assignments')+
+      '<div class="empty"><div class="empty-icon">⚠️</div><p>Please set your Alliance in your profile before accessing this module.</p></div>';
+    document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+    return;
+  }
+
+  // Super admin: alliance picker (view all or filter)
+  var viewAlliance = isSuper ? (CJ_VIEW_ALLIANCE||'__all__') : myAlliance;
+
+  var tabs = [{id:'board',icon:'👥',label:'Teams'}];
+  if(isCjAdm) tabs.push({id:'admin',icon:'⚙️',label:'Admin'});
+
+  var navHtml = tabs.map(function(t){
+    return '<button class="nav-btn '+(CJ_TAB===t.id?'on':'')+'" data-tab="'+t.id+'">'+
+      '<span class="ic">'+t.icon+'</span>'+t.label+'</button>';
+  }).join('');
+
+  app.innerHTML=
+    buildModuleHeader('crazyjoe','🤪','Crazy Joe','Team Assignments')+
+    '<div class="content" id="cjContent"></div>'+
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
+    '<div class="nav">'+navHtml+'</div>';
+
+  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  app.querySelectorAll('.nav-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){ CJ_TAB=btn.dataset.tab; renderCjContent(); });
+  });
+
+  var cjEl = document.getElementById('cjContent');
+
+  function renderCjContent(){
+    if(CJ_TAB==='board') renderCjBoard(cjEl, viewAlliance, isSuper, isCjAdm, myAlliance);
+    if(CJ_TAB==='admin' && isCjAdm) renderCjAdmin(cjEl, isSuper, myAlliance);
+  }
+  renderCjContent();
+}
+
+function getCjAllianceFilter(isSuper, viewAlliance, myAlliance){
+  if(isSuper && viewAlliance && viewAlliance!=='__all__') return viewAlliance;
+  if(isSuper && (!viewAlliance||viewAlliance==='__all__')) return null; // all
+  return myAlliance;
+}
+
+function renderCjBoard(el, viewAlliance, isSuper, isCjAdm, myAlliance){
+  // Alliance selector for super admin
+  var allianceFilter = getCjAllianceFilter(isSuper, viewAlliance, myAlliance);
+
+  var alliances = [];
+  if(isSuper){
+    alliances = [...new Set(CJ_TEAMS.map(function(t){ return t.alliance; }))].sort();
+  }
+
+  var superAlliancePicker = '';
+  if(isSuper){
+    var alOpts = '<option value="__all__"'+(CJ_VIEW_ALLIANCE===null||CJ_VIEW_ALLIANCE==='__all__'?' selected':'')+'>All Alliances</option>'+
+      alliances.map(function(al){
+        return '<option value="'+al+'"'+(CJ_VIEW_ALLIANCE===al?' selected':'')+'>'+al+'</option>';
+      }).join('');
+    superAlliancePicker =
+      '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">'+
+        '<label style="font-size:11px;font-weight:700;color:rgba(200,225,245,.45);text-transform:uppercase;letter-spacing:.8px;flex-shrink:0;">View Alliance</label>'+
+        '<select class="sel" id="cjAllianceSel" style="flex:1;">'+alOpts+'</select>'+
+      '</div>';
+  }
+
+  // Filter teams
+  var teams = allianceFilter
+    ? CJ_TEAMS.filter(function(t){ return t.alliance===allianceFilter; })
+    : CJ_TEAMS;
+
+  if(!teams.length && !isSuper){
+    el.innerHTML = superAlliancePicker +
+      '<div class="empty"><div class="empty-icon">👥</div><p>No teams set up yet.<br>Your alliance admin will configure the teams.</p></div>';
+    return;
+  }
+  if(!teams.length && isSuper){
+    el.innerHTML = superAlliancePicker +
+      '<div class="empty"><div class="empty-icon">👥</div><p>No teams found'+(allianceFilter?' for '+allianceFilter:'')+'.</p></div>';
+    var alSel=el.querySelector('#cjAllianceSel');
+    if(alSel) alSel.addEventListener('change',function(){ CJ_VIEW_ALLIANCE=this.value==='__all__'?null:this.value; render(); });
+    return;
+  }
+
+  // Group by alliance if showing all
+  var grouped = {};
+  teams.forEach(function(t){
+    if(!grouped[t.alliance]) grouped[t.alliance]=[];
+    grouped[t.alliance].push(t);
+  });
+
+  var alKeys = Object.keys(grouped).sort();
+
+  var html = superAlliancePicker;
+
+  alKeys.forEach(function(al){
+    var alTeams = grouped[al];
+    if(alKeys.length>1){
+      html += '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgba(200,225,245,.4);margin-bottom:8px;margin-top:4px;">'+al+'</div>';
+    }
+
+    // Copy all teams button (admin only)
+    if(isCjAdm && (isSuper || al===myAlliance)){
+      html += '<button class="btn btn-g btn-sm" id="cjCopyAll_'+al+'" style="margin-bottom:10px;width:100%;">📋 Copy All Teams</button>';
+    }
+
+    alTeams.forEach(function(team){
+      var members = CJ_MEMBERS.filter(function(m){ return m.team_id===team.id; })
+        .sort(function(a,b){ return a.position-b.position; });
+      var memberCount = members.length;
+      var countColor = memberCount>=6?'var(--green)':memberCount===0?'var(--t3)':'var(--orange)';
+
+      html +=
+        '<div class="card" style="margin-bottom:12px;">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
+            '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(team.team_name)+'</div>'+
+            '<div style="display:flex;align-items:center;gap:8px;">'+
+              '<span style="font-size:12px;font-weight:700;color:'+countColor+';">'+memberCount+'/6</span>'+
+              (isCjAdm&&(isSuper||al===myAlliance)?
+                '<button class="btn btn-g btn-sm" id="cjCopyTeam_'+team.id+'">📋 Copy</button>':'')+
+            '</div>'+
+          '</div>'+
+          (memberCount===0
+            ? '<div style="font-size:12px;color:var(--t3);text-align:center;padding:10px 0;">No members yet</div>'
+            : '<div style="display:flex;flex-direction:column;gap:4px;">'+
+                members.map(function(m,i){
+                  return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06);">'+
+                    '<span style="font-size:11px;font-weight:800;color:var(--t3);width:16px;text-align:right;">'+(i+1)+'.</span>'+
+                    '<span style="font-size:13px;font-weight:600;">'+escHtml(m.player_name)+'</span>'+
+                  '</div>';
+                }).join('')+
+              '</div>')+
+        '</div>';
+    });
+  });
+
+  el.innerHTML=html;
+
+  // Alliance picker change
+  var alSel=el.querySelector('#cjAllianceSel');
+  if(alSel) alSel.addEventListener('change',function(){ CJ_VIEW_ALLIANCE=this.value==='__all__'?null:this.value; render(); });
+
+  // Copy single team
+  el.querySelectorAll('[id^="cjCopyTeam_"]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var tid=btn.id.replace('cjCopyTeam_','');
+      var team=CJ_TEAMS.find(function(t){ return t.id===tid; });
+      if(!team) return;
+      var members=CJ_MEMBERS.filter(function(m){ return m.team_id===tid; }).sort(function(a,b){ return a.position-b.position; });
+      var text='👥 '+team.team_name+' ('+members.length+'/6)\n'+'─'.repeat(20)+'\n'+
+        members.map(function(m,i){ return (i+1)+'. '+m.player_name; }).join('\n');
+      navigator.clipboard.writeText(text).then(function(){ toast('✅ Team copied!'); });
+    });
+  });
+
+  // Copy all teams per alliance
+  alKeys.forEach(function(al){
+    var btn=el.querySelector('#cjCopyAll_'+al);
+    if(!btn) return;
+    btn.addEventListener('click',function(){
+      var alTeams=grouped[al];
+      var lines=['🤪 CRAZY JOE — '+al,'━'.repeat(24),''];
+      alTeams.forEach(function(team){
+        var members=CJ_MEMBERS.filter(function(m){ return m.team_id===team.id; }).sort(function(a,b){ return a.position-b.position; });
+        lines.push('👥 '+team.team_name+' ('+members.length+'/6)');
+        members.forEach(function(m,i){ lines.push('  '+(i+1)+'. '+m.player_name); });
+        lines.push('');
+      });
+      navigator.clipboard.writeText(lines.join('\n')).then(function(){ toast('✅ All teams copied!'); });
+    });
+  });
+}
+
+function renderCjAdmin(el, isSuper, myAlliance){
+  // Admin sees only their alliance teams (super sees all)
+  var myTeams = isSuper ? CJ_TEAMS : CJ_TEAMS.filter(function(t){ return t.alliance===myAlliance; });
+
+  // My alliance players from DB (for picker)
+  var alliancePlayers = isSuper ? ALL_PLAYERS : ALL_PLAYERS.filter(function(p){
+    return p.alliance && p.alliance.toLowerCase()===(myAlliance||'').toLowerCase();
+  });
+
+  var teamListHtml = myTeams.length===0
+    ? '<div class="empty" style="padding:20px 0;"><div class="empty-icon">👥</div><p>No teams yet. Create your first team below.</p></div>'
+    : myTeams.map(function(team){
+        var members = CJ_MEMBERS.filter(function(m){ return m.team_id===team.id; }).sort(function(a,b){ return a.position-b.position; });
+        return '<div class="card" style="margin-bottom:10px;">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'+
+            '<div>'+
+              '<div style="font-size:13px;font-weight:800;">'+escHtml(team.team_name)+'</div>'+
+              (isSuper?'<div style="font-size:10px;color:var(--t3);">'+team.alliance+'</div>':'')+
+            '</div>'+
+            '<div style="display:flex;gap:6px;">'+
+              '<button class="btn btn-g btn-sm cjEditTeamBtn" data-id="'+team.id+'" style="font-size:11px;">✏️ Edit</button>'+
+              '<button class="btn btn-d btn-sm cjDelTeamBtn" data-id="'+team.id+'" style="font-size:11px;">🗑️</button>'+
+            '</div>'+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--t3);">'+members.length+'/6 members — '+
+            (members.length?members.map(function(m){ return m.player_name; }).join(', '):'Empty')+
+          '</div>'+
+        '</div>';
+      }).join('');
+
+  // Alliance selector for super admin when creating
+  var superAlSelect = isSuper
+    ? '<div class="field"><label class="lbl">Alliance</label>'+
+        '<input class="inp" id="cjFormAlliance" placeholder="Alliance name (e.g. BST)" value="'+(CJ_VIEW_ALLIANCE&&CJ_VIEW_ALLIANCE!=='__all__'?CJ_VIEW_ALLIANCE:'')+'" autocomplete="off">'+
+      '</div>'
+    : '';
+
+  // Member builder
+  var memberRows = '';
+  for(var i=1;i<=6;i++){
+    // DB player options for this alliance
+    var pOpts = '<option value="">— Select from roster —</option>'+
+      alliancePlayers.map(function(p){ return '<option value="'+escHtml(p.name)+'">'+escHtml(p.name)+(p.alliance?' ['+p.alliance+']':'')+'</option>'; }).join('');
+    memberRows +=
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;" id="cjMemberRow_'+i+'">'+
+        '<span style="font-size:11px;font-weight:800;color:var(--t3);width:14px;flex-shrink:0;">'+i+'.</span>'+
+        '<select class="sel" id="cjMemberSel_'+i+'" style="flex:1;font-size:12px;">'+pOpts+'</select>'+
+        '<input class="inp" id="cjMemberMan_'+i+'" placeholder="or type name" style="flex:1;font-size:12px;" autocomplete="off">'+
+      '</div>';
+  }
+
+  el.innerHTML=
+    '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:rgba(200,225,245,.4);margin-bottom:10px;">Current Teams</div>'+
+    teamListHtml+
+    '<div style="height:1px;background:rgba(255,255,255,.07);margin:16px 0;"></div>'+
+    '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:rgba(200,225,245,.4);margin-bottom:10px;" id="cjFormTitle">➕ Add New Team</div>'+
+    '<div id="cjFormCard" class="card" style="margin-bottom:12px;">'+
+      superAlSelect+
+      '<div class="field"><label class="lbl">Team Name</label>'+
+        '<input class="inp" id="cjTeamName" placeholder="e.g. Team Alpha" autocomplete="off">'+
+      '</div>'+
+      '<div class="field">'+
+        '<label class="lbl">Members <span style="font-size:10px;color:var(--t3);font-weight:500;">(select from roster or type manually)</span></label>'+
+        memberRows+
+      '</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button class="btn btn-p" id="cjSaveTeam" style="flex:1;">Save Team</button>'+
+        '<button class="btn btn-g" id="cjCancelEdit" style="display:none;flex:1;">Cancel</button>'+
+      '</div>'+
+      '<div class="err" id="cjFormErr"></div>'+
+    '</div>';
+
+  // Bind edit/delete
+  el.querySelectorAll('.cjEditTeamBtn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var tid=btn.dataset.id;
+      var team=CJ_TEAMS.find(function(t){ return t.id===tid; });
+      if(!team) return;
+      CJ_EDIT_TEAM=team;
+      document.getElementById('cjFormTitle').textContent='✏️ Edit Team';
+      document.getElementById('cjTeamName').value=team.team_name;
+      if(isSuper&&document.getElementById('cjFormAlliance')) document.getElementById('cjFormAlliance').value=team.alliance||'';
+      document.getElementById('cjCancelEdit').style.display='';
+      // Fill members
+      var members=CJ_MEMBERS.filter(function(m){ return m.team_id===tid; }).sort(function(a,b){ return a.position-b.position; });
+      for(var i=1;i<=6;i++){
+        var m=members[i-1];
+        var selEl=document.getElementById('cjMemberSel_'+i);
+        var manEl=document.getElementById('cjMemberMan_'+i);
+        if(!m){ if(selEl) selEl.value=''; if(manEl) manEl.value=''; continue; }
+        // Check if name matches a roster option
+        var matchOpt=selEl?Array.from(selEl.options).find(function(o){ return o.value===m.player_name; }):null;
+        if(matchOpt){ selEl.value=m.player_name; if(manEl) manEl.value=''; }
+        else { if(selEl) selEl.value=''; if(manEl) manEl.value=m.player_name; }
+      }
+      document.getElementById('cjFormCard').scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  });
+
+  el.querySelectorAll('.cjDelTeamBtn').forEach(function(btn){
+    btn.addEventListener('click',async function(){
+      var tid=btn.dataset.id;
+      var team=CJ_TEAMS.find(function(t){ return t.id===tid; });
+      if(!team) return;
+      if(!confirm('Delete team "'+team.team_name+'"? This cannot be undone.')) return;
+      btn.disabled=true;
+      await sb.from('cj_team_members').delete().eq('team_id',tid);
+      await sb.from('cj_teams').delete().eq('id',tid);
+      CJ_TEAMS=CJ_TEAMS.filter(function(t){ return t.id!==tid; });
+      CJ_MEMBERS=CJ_MEMBERS.filter(function(m){ return m.team_id!==tid; });
+      toast('✅ Team deleted.');
+      renderCjAdmin(el, isSuper, myAlliance);
+    });
+  });
+
+  document.getElementById('cjCancelEdit').addEventListener('click',function(){
+    CJ_EDIT_TEAM=null;
+    document.getElementById('cjFormTitle').textContent='➕ Add New Team';
+    document.getElementById('cjTeamName').value='';
+    for(var i=1;i<=6;i++){
+      var s=document.getElementById('cjMemberSel_'+i); if(s) s.value='';
+      var m=document.getElementById('cjMemberMan_'+i); if(m) m.value='';
+    }
+    if(isSuper&&document.getElementById('cjFormAlliance')) document.getElementById('cjFormAlliance').value='';
+    document.getElementById('cjCancelEdit').style.display='none';
+    document.getElementById('cjFormTitle').textContent='➕ Add New Team';
+  });
+
+  // When a roster select changes, clear the manual input and vice versa
+  for(var i=1;i<=6;i++){
+    (function(idx){
+      var selEl=document.getElementById('cjMemberSel_'+idx);
+      var manEl=document.getElementById('cjMemberMan_'+idx);
+      if(selEl) selEl.addEventListener('change',function(){ if(this.value&&manEl) manEl.value=''; });
+      if(manEl) manEl.addEventListener('input',function(){ if(this.value.trim()&&selEl) selEl.value=''; });
+    })(i);
+  }
+
+  document.getElementById('cjSaveTeam').addEventListener('click',async function(){
+    var saveBtn=this;
+    var teamName=document.getElementById('cjTeamName').value.trim();
+    var alliance=isSuper?(document.getElementById('cjFormAlliance')?document.getElementById('cjFormAlliance').value.trim().toUpperCase():''):myAlliance;
+    var errEl=document.getElementById('cjFormErr');
+    errEl.textContent='';
+
+    if(!teamName){ errEl.textContent='Team name is required.'; return; }
+    if(!alliance){ errEl.textContent='Alliance is required.'; return; }
+
+    // Collect members (priority: manual input > select)
+    var members=[];
+    for(var i=1;i<=6;i++){
+      var manEl=document.getElementById('cjMemberMan_'+i);
+      var selEl=document.getElementById('cjMemberSel_'+i);
+      var name=(manEl&&manEl.value.trim())||(selEl&&selEl.value)||'';
+      if(name) members.push({name:name,pos:members.length+1});
+    }
+
+    saveBtn.disabled=true; saveBtn.textContent='Saving...';
+
+    try{
+      var teamId;
+      if(CJ_EDIT_TEAM){
+        // Update team
+        var upd=await sb.from('cj_teams').update({team_name:teamName,alliance:alliance}).eq('id',CJ_EDIT_TEAM.id).select().single();
+        if(upd.error) throw upd.error;
+        teamId=CJ_EDIT_TEAM.id;
+        CJ_TEAMS=CJ_TEAMS.map(function(t){ return t.id===teamId?upd.data:t; });
+        // Delete old members
+        await sb.from('cj_team_members').delete().eq('team_id',teamId);
+        CJ_MEMBERS=CJ_MEMBERS.filter(function(m){ return m.team_id!==teamId; });
+      } else {
+        // Insert team
+        var ins=await sb.from('cj_teams').insert({team_name:teamName,alliance:alliance}).select().single();
+        if(ins.error) throw ins.error;
+        teamId=ins.data.id;
+        CJ_TEAMS.push(ins.data);
+      }
+
+      // Insert members
+      if(members.length){
+        var mRows=members.map(function(m){ return {team_id:teamId,player_name:m.name,position:m.pos}; });
+        var mIns=await sb.from('cj_team_members').insert(mRows).select();
+        if(mIns.error) throw mIns.error;
+        CJ_MEMBERS=CJ_MEMBERS.concat(mIns.data);
+      }
+
+      CJ_EDIT_TEAM=null;
+      toast('✅ Team saved!');
+      renderCjAdmin(el, isSuper, myAlliance);
+    } catch(e){
+      errEl.textContent='Error: '+(e.message||'Unknown error');
+    } finally {
+      saveBtn.disabled=false; saveBtn.textContent='Save Team';
+    }
+  });
+}
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── CRAZY JOE END ──────────────────────────────────────────────
 
 async function init(){
   if(SESSION){
