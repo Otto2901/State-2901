@@ -2502,7 +2502,7 @@ function renderRotAdmin(rc){
       var al=btn.dataset.al; var grp=btn.dataset.group;
       var newName=prompt('Rename "'+al+'" to:', al);
       if(!newName||!newName.trim()||newName.trim()===al) return;
-      newName=newName.trim().toUpperCase();
+      newName=newName.trim();
       var newTop4=ro.top4.map(function(x){ return x===al?newName:x; });
       var newBot5=ro.bot5.map(function(x){ return x===al?newName:x; });
       // Update ALLIANCE_COLORS
@@ -2588,10 +2588,10 @@ function renderRotAdmin(rc){
   var addAlBtn=document.getElementById('addAllianceBtn');
   if(addAlBtn){
     addAlBtn.addEventListener('click',async function(){
-      var name=document.getElementById('newAllianceName').value.trim().toUpperCase();
+      var name=document.getElementById('newAllianceName').value.trim();
       var group=document.getElementById('newAllianceGroup').value;
       if(!name){ toast('Enter alliance name'); return; }
-      if(getAllAlliances().includes(name)){ toast('Alliance already exists'); return; }
+      if(getAllAlliances().some(function(a){ return a.toLowerCase()===name.toLowerCase(); })){ toast('Alliance already exists'); return; }
       var newTop4=ro.top4.slice(); var newBot5=ro.bot5.slice();
       if(group==='top4') newTop4.push(name);
       else newBot5.push(name);
