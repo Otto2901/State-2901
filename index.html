@@ -1046,7 +1046,7 @@ function renderHome(app){
         '</div>':'')+
         '<div class="home-card" id="goRules" style="border-color:rgba(79,209,197,.18);">'+
           '<div class="home-card-icon">📜</div>'+
-          '<div class="home-card-title" style="color:#4fd1c5;">Eyalet Kuralları</div>'+
+          '<div class="home-card-title" style="color:#4fd1c5;">State Rules</div>'+
           '<div class="home-card-sub">State rules & regulations</div>'+
         '</div>'+
         (isSuperAdmin(SESSION.name)||getRole(SESSION.name)?
@@ -5370,7 +5370,7 @@ function renderRulesApp(app){
   }).join('');
 
   app.innerHTML =
-    buildModuleHeader('rules','📜','Eyalet Kuralları','State Rules & Regulations')+
+    buildModuleHeader('rules','📜','State Rules','Rules & Regulations')+
     '<div class="sub-nav">'+tabsHtml+'</div>'+
     '<div id="rulesContent"></div>';
 
