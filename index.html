@@ -1100,7 +1100,7 @@ function renderPending(app){
       '<div class="auth-card card" style="text-align:center;">'+
         '<div style="font-size:40px;margin-bottom:12px;">🔒</div>'+
         '<div style="font-size:14px;color:#d4eaf7;font-weight:700;margin-bottom:8px;">Your registration is pending.</div>'+
-        '<div style="font-size:12px;color:#4a7a9b;line-height:1.6;">An admin will review and approve your account shortly.<br>Please check back later.</div>'+
+        '<div style="font-size:12px;color:var(--t2);line-height:1.6;">An admin will review and approve your account shortly.<br>Please check back later.</div>'+
         '<button class="btn btn-d" id="pendLogout" style="margin-top:16px;">← Back to Login</button>'+
       '</div>'+
     '</div>'+
@@ -1120,7 +1120,7 @@ function renderProfileSetup(app){
       '<div class="auth-title">'+( isNew?'Complete Registration':'Complete Your Profile')+'</div>'+
       '<div class="auth-state">· State 2901 ·</div>'+
       '<div class="auth-card card">'+
-        '<div style="font-size:12px;color:#4a7a9b;margin-bottom:14px;text-align:center;">'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:14px;text-align:center;">'+
           (isNew?'Almost there! Fill in your details to complete registration.':'Please add your Player ID and Alliance to continue.')+
         '</div>'+
         '<div class="field"><label class="lbl">In-Game Name</label>'+
@@ -1200,7 +1200,7 @@ function renderProfileComplete(app){
       '<div class="auth-title">Complete Your Profile</div>'+
       '<div class="auth-state">· State 2901 ·</div>'+
       '<div class="auth-card card">'+
-        '<div style="font-size:12px;color:#4a7a9b;margin-bottom:14px;text-align:center;line-height:1.6;">'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:14px;text-align:center;line-height:1.6;">'+
           'Your Player ID is required to use the system.<br>Please enter your in-game ID to continue.'+
         '</div>'+
         '<div class="field"><label class="lbl">In-Game Name</label>'+
@@ -1253,15 +1253,15 @@ function renderProfile(app){
     '</div>'+
     '<div class="content">'+
       '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:16px;margin-bottom:12px;">'+
-        '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">👤 Profile Information</div>'+
+        '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">👤 Profile Information</div>'+
         // Name (read only)
         '<div style="margin-bottom:12px;">'+
-          '<label style="font-size:11px;color:#4a7a9b;">In-Game Name</label>'+
+          '<label style="font-size:11px;color:var(--t2);">In-Game Name</label>'+
           '<div style="font-size:14px;font-weight:700;color:#d4eaf7;margin-top:4px;">'+SESSION.name+'</div>'+
         '</div>'+
         // Player Name change request
         '<div style="margin-bottom:12px;">'+
-          '<label style="font-size:11px;color:#4a7a9b;">In-Game Name</label>'+
+          '<label style="font-size:11px;color:var(--t2);">In-Game Name</label>'+
           '<div style="font-size:14px;font-weight:700;color:#d4eaf7;margin-top:4px;display:flex;align-items:center;gap:8px;">'+SESSION.name+
             (pendingReq&&pendingReq.request_type==='name'?
               '<span style="font-size:11px;color:#ff9500;">⏳ Name change pending: '+pendingReq.new_id+'</span>':
@@ -1270,13 +1270,13 @@ function renderProfile(app){
           (!pendingReq||pendingReq.request_type!=='name'?
             '<div style="margin-top:6px;">'+
               '<input class="inp" id="newNameInp" placeholder="Request name change..." style="margin-bottom:6px;">'+
-              '<div style="font-size:10px;color:#4a7a9b;margin-bottom:6px;">⚠️ Name changes require admin approval.</div>'+
+              '<div style="font-size:10px;color:var(--t2);margin-bottom:6px;">⚠️ Name changes require admin approval.</div>'+
               '<button class="btn btn-d btn-sm" id="reqNameChange" style="padding:6px 14px;font-size:12px;">Request Change</button>'+
             '</div>':'')+ 
         '</div>'+
         // Player ID
         '<div style="margin-bottom:12px;">'+
-          '<label style="font-size:11px;color:#4a7a9b;">Player ID</label>'+
+          '<label style="font-size:11px;color:var(--t2);">Player ID</label>'+
           '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;">'+
             '<div style="font-size:13px;font-weight:700;color:#ffd60a;font-family:monospace;">'+(myPlayer&&myPlayer.player_id?myPlayer.player_id:'Not set')+'</div>'+
           '</div>'+
@@ -1284,14 +1284,14 @@ function renderProfile(app){
             '<div style="font-size:11px;color:#ff9500;margin-top:4px;">⏳ ID change request pending: '+pendingReq.new_id+'</div>':
             '<div style="margin-top:8px;">'+
               '<input class="inp" id="newIdInp" placeholder="Request ID change..." style="margin-bottom:6px;">'+
-              '<div style="font-size:10px;color:#4a7a9b;margin-bottom:6px;">⚠️ ID change requests require admin approval.</div>'+
+              '<div style="font-size:10px;color:var(--t2);margin-bottom:6px;">⚠️ ID change requests require admin approval.</div>'+
               '<button class="btn btn-d btn-sm" id="reqIdChange" style="padding:6px 14px;font-size:12px;">Request Change</button>'+
             '</div>'
           )+
         '</div>'+
         // Alliance
         '<div style="margin-bottom:12px;">'+
-          '<label style="font-size:11px;color:#4a7a9b;">Alliance</label>'+
+          '<label style="font-size:11px;color:var(--t2);">Alliance</label>'+
           '<div style="display:flex;gap:8px;margin-top:4px;">'+
             '<input class="inp" id="allianceInp" value="'+(myPlayer&&myPlayer.alliance||'')+'" placeholder="Alliance name">'+
             '<button class="btn btn-g btn-sm" id="saveAlliance" style="flex-shrink:0;padding:8px 14px;">Save</button>'+
@@ -1299,7 +1299,7 @@ function renderProfile(app){
         '</div>'+
         // Valeria
         '<div style="margin-bottom:4px;">'+
-          '<label style="font-size:11px;color:#4a7a9b;">Valeria Expert Level <span style="color:#52c759;">(+'+Math.round(valeria*2)+'% SvS bonus)</span></label>'+
+          '<label style="font-size:11px;color:var(--t2);">Valeria Expert Level <span style="color:#52c759;">(+'+Math.round(valeria*2)+'% SvS bonus)</span></label>'+
           '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">'+
             [0,1,2,3,4,5,6,7,8,9,10].map(function(l){
               return '<button class="lvl-btn val-prof-lvl'+(valeria===l?' active':'')+'" data-lvl="'+l+'">'+
@@ -1416,7 +1416,7 @@ function renderAuth(app){
     var keys=[['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9'],['',''],['0','0'],['⌫','DEL']];
     var numpad=keys.map(function(k){ if(!k[0]) return '<div class="nk nk-empty"></div>'; return '<div class="nk '+(k[1]==='DEL'?'nk-del':'')+'" data-k="'+k[1]+'">'+k[0]+'</div>'; }).join('');
     inner='<div class="auth-logo">🔐</div><div class="auth-title">'+(isNew?'Set Your PIN':'Enter PIN')+'</div><div class="auth-state">· State 2901 ·</div>'+
-      '<div class="auth-sub">'+(isNew?'Hi <strong style="color:#7ec8e3">'+NAME_INP+'</strong>! Set a 6-digit PIN.':'Welcome back, <strong style="color:#7ec8e3">'+NAME_INP+'</strong>!')+'</div>'+
+      '<div class="auth-sub">'+(isNew?'Hi <strong style="color:var(--ac)">'+NAME_INP+'</strong>! Set a 6-digit PIN.':'Welcome back, <strong style="color:var(--ac)">'+NAME_INP+'</strong>!')+'</div>'+
       '<div class="auth-card card"><div class="pin-dots">'+dots+'</div><div class="numpad">'+numpad+'</div><div class="err">'+AUTH_ERR+'</div><button class="btn btn-g" id="backBtn">← Back</button></div>';
   }
   app.innerHTML='<div class="auth">'+inner+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
@@ -1945,7 +1945,7 @@ function renderRotApp(app){
           '<span style="font-size:13px;font-weight:800;color:'+urgentColor+';">⏱ '+fmtCountdown(ws.secsLeft)+' left</span>';
       } else {
         el.innerHTML='<span style="font-size:12px;color:#ff453a;font-weight:700;">🔴 Selections Closed</span>'+
-          '<span style="font-size:13px;font-weight:800;color:#4a7a9b;">Opens in '+fmtCountdown(ws.secsLeft)+'</span>';
+          '<span style="font-size:13px;font-weight:800;color:var(--t2);">Opens in '+fmtCountdown(ws.secsLeft)+'</span>';
       }
     }
   }, 1000);
@@ -1995,7 +1995,7 @@ function renderRotBoard(rc){
     var ally=takenSH[i];
     var reward=getReward('stronghold',i);
     var cls=ally?'rot-loc-taken':'rot-loc-free';
-    var color=ally?(ALLIANCE_COLORS[ally]||'#7ec8e3'):'#4a7a9b';
+    var color=ally?(ALLIANCE_COLORS[ally]||'var(--ac)'):'var(--t2)';
     var adminBtn=canAdminBoard&&ally?'<button class="del-sel-btn" data-alliance="'+ally+'" style="background:none;border:none;color:#ff453a;font-size:11px;cursor:pointer;margin-top:4px;">✕ Remove</button>':'';
     shHtml+='<div class="rot-loc '+cls+'">'+
       '<div class="rot-loc-name">🏰 SH '+i+'</div>'+
@@ -2011,7 +2011,7 @@ function renderRotBoard(rc){
     var fally=takenFT[j];
     var freward=getReward('fort',j);
     var fcls=fally?'rot-loc-taken':(done?'rot-loc-open':'rot-loc-free');
-    var fcolor=fally?(ALLIANCE_COLORS[fally]||'#7ec8e3'):(done?'#52c759':'#4a7a9b');
+    var fcolor=fally?(ALLIANCE_COLORS[fally]||'var(--ac)'):(done?'#52c759':'var(--t2)');
     var fadminBtn=canAdminBoard&&fally?'<button class="del-sel-btn" data-alliance="'+fally+'" style="background:none;border:none;color:#ff453a;font-size:11px;cursor:pointer;margin-top:4px;">✕ Remove</button>':'';
     ftHtml+='<div class="rot-loc '+fcls+'">'+
       '<div class="rot-loc-name">🏯 F'+j+'</div>'+
@@ -2026,12 +2026,12 @@ function renderRotBoard(rc){
   ro.order.forEach(function(ally,idx){
     var sel=sels.find(function(s){ return s.alliance===ally; });
     var isCurrent=ally===currentTurn;
-    var color=ALLIANCE_COLORS[ally]||'#7ec8e3';
+    var color=ALLIANCE_COLORS[ally]||'var(--ac)';
     var status=sel?'<span class="rot-order-done">✅ Done</span>':(isCurrent?'<span class="rot-order-waiting">⏳ Selecting...</span>':'<span class="rot-order-pending">Waiting</span>');
     var isTop=idx<4;
     orderHtml+='<div class="rot-order-row '+(isCurrent?'rot-current':'')+'" style="'+(isCurrent?'background:rgba(255,214,10,.06);border-radius:8px;padding:6px 8px;':'')+'">'+
       '<div class="rot-order-num">'+(idx+1)+'</div>'+
-      '<div class="rot-order-name" style="color:'+color+';">'+ally+(isTop?' <span style="font-size:9px;color:#4a7a9b;">SH+F</span>':' <span style="font-size:9px;color:#4a7a9b;">F only</span>')+'</div>'+
+      '<div class="rot-order-name" style="color:'+color+';">'+ally+(isTop?' <span style="font-size:9px;color:var(--t2);">SH+F</span>':' <span style="font-size:9px;color:var(--t2);">F only</span>')+'</div>'+
       status+
     '</div>';
   });
@@ -2044,7 +2044,7 @@ function renderRotBoard(rc){
       var fa=takenSH[fi]||'';
       shFinalSlots+='<div class="final-slot">'+
         '<div class="final-slot-num">SH'+fi+'</div>'+
-        '<div class="final-slot-name" style="color:'+(ALLIANCE_COLORS[fa]||'#7ec8e3')+';">'+fa+'</div>'+
+        '<div class="final-slot-name" style="color:'+(ALLIANCE_COLORS[fa]||'var(--ac)')+';">'+fa+'</div>'+
       '</div>';
     }
     var ftFinalSlots='';
@@ -2053,7 +2053,7 @@ function renderRotBoard(rc){
       var isOpen=!ffa;
       ftFinalSlots+='<div class="final-slot '+(isOpen?'final-slot-open':'')+'">'+
         '<div class="final-slot-num">F'+fj+'</div>'+
-        '<div class="final-slot-name" style="color:'+(isOpen?'#52c759':(ALLIANCE_COLORS[ffa]||'#7ec8e3'))+';">'+(isOpen?'FREE':ffa)+'</div>'+
+        '<div class="final-slot-name" style="color:'+(isOpen?'#52c759':(ALLIANCE_COLORS[ffa]||'var(--ac)'))+';">'+(isOpen?'FREE':ffa)+'</div>'+
       '</div>';
     }
     var copyText='🏰 Strongholds\n';
@@ -2091,7 +2091,7 @@ function renderRotBoard(rc){
     var closedLabel=winStatus.forced?'⚡ Force Closed':'Opens in '+fmtCountdown(winStatus.secsLeft);
     winBanner = '<div id="rotCountdown" style="background:rgba(255,69,58,.06);border:1px solid rgba(255,69,58,.2);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">'+
       '<span style="font-size:12px;color:#ff453a;font-weight:700;">🔴 Selections Closed</span>'+
-      '<span style="font-size:13px;font-weight:800;color:#4a7a9b;">'+closedLabel+'</span>'+
+      '<span style="font-size:13px;font-weight:800;color:var(--t2);">'+closedLabel+'</span>'+
     '</div>';
   }
 
@@ -2103,7 +2103,7 @@ function renderRotBoard(rc){
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
     getAllAlliances().map(function(al){
       var reps=repsByAl[al]||[];
-      var color=ALLIANCE_COLORS[al]||'#7ec8e3';
+      var color=ALLIANCE_COLORS[al]||'var(--ac)';
       return '<div style="background:rgba(7,20,38,.4);border:1px solid rgba(100,160,220,.1);border-radius:10px;padding:10px;">'+
         '<div style="font-size:11px;font-weight:800;color:'+color+';margin-bottom:6px;">'+al+'</div>'+
         (reps.length?reps.map(function(n){ return '<div style="font-size:11px;color:#8ab4cc;font-weight:600;">👤 '+n+'</div>'; }).join(''):'<div style="font-size:10px;color:#2a4a65;">No rep</div>')+
@@ -2164,10 +2164,10 @@ function renderRotSelect(rc){
     rc.innerHTML=
       '<div class="card">'+
         '<div style="font-family:Cinzel,serif;font-size:15px;color:#ffd60a;margin-bottom:6px;">Select Alliance</div>'+
-        '<div style="font-size:12px;color:#4a7a9b;margin-bottom:14px;">You represent multiple alliances. Which one are you selecting for?</div>'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:14px;">You represent multiple alliances. Which one are you selecting for?</div>'+
         MY_ALLIANCES.map(function(al){
           var done=doneSels.includes(al);
-          var color=ALLIANCE_COLORS[al]||'#7ec8e3';
+          var color=ALLIANCE_COLORS[al]||'var(--ac)';
           return '<button class="rot-alliance-pick-btn" data-al="'+al+'" style="display:block;width:100%;margin-bottom:8px;padding:14px;background:rgba('+hexToRgb(color)+',.1);border:2px solid '+color+';border-radius:12px;color:'+color+';font-size:14px;font-weight:800;font-family:Cinzel,sans-serif;cursor:pointer;">'+
             al+(done?' ✅':'')+
           '</button>';
@@ -2189,7 +2189,7 @@ function renderRotSelect(rc){
         '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+
         getAllAlliances().map(function(al){
           var done=doneSels.includes(al);
-          var color=ALLIANCE_COLORS[al]||'#7ec8e3';
+          var color=ALLIANCE_COLORS[al]||'var(--ac)';
           return '<button class="tog" data-al="'+al+'" style="border-color:'+(done?'rgba(52,199,89,.3)':'rgba(100,160,220,.2)')+';color:'+(done?'#52c759':color)+';opacity:'+(done?'0.6':'1')+';">'+
             al+(done?' ✅':'')+
           '</button>';
@@ -2219,8 +2219,8 @@ function renderRotSelect(rc){
     rc.innerHTML='<div class="card" style="text-align:center;">'+
       '<div style="font-size:40px;margin-bottom:12px;">🔒</div>'+
       '<div style="font-family:Cinzel,serif;font-size:16px;color:#ff453a;margin-bottom:8px;">Selections Closed</div>'+
-      '<div style="font-size:13px;color:#4a7a9b;margin-bottom:8px;">The selection window is closed.</div>'+
-      '<div style="font-size:14px;font-weight:800;color:#7ec8e3;">Opens in '+fmtCountdown(selWin.secsLeft)+'</div>'+
+      '<div style="font-size:13px;color:var(--t2);margin-bottom:8px;">The selection window is closed.</div>'+
+      '<div style="font-size:14px;font-weight:800;color:var(--ac);">Opens in '+fmtCountdown(selWin.secsLeft)+'</div>'+
       '<div style="font-size:11px;color:#2a4a65;margin-top:8px;">Wed 00:00 UTC — Fri 00:00 UTC</div>'+
     '</div>';
     return;
@@ -2230,7 +2230,7 @@ function renderRotSelect(rc){
     rc.innerHTML='<div class="card" style="text-align:center;">'+
       '<div style="font-size:40px;margin-bottom:12px;">✅</div>'+
       '<div style="font-family:Cinzel,serif;font-size:16px;color:#52c759;margin-bottom:8px;">Selection Complete</div>'+
-      '<div style="font-size:13px;color:#4a7a9b;margin-bottom:16px;">'+myAlliance+' has made its selection for this week.</div>'+
+      '<div style="font-size:13px;color:var(--t2);margin-bottom:16px;">'+myAlliance+' has made its selection for this week.</div>'+
       (isTop4&&mySel.stronghold?'<div style="font-size:13px;color:#d4eaf7;margin-bottom:6px;">🏰 Stronghold '+mySel.stronghold+'</div>':'')+
       (mySel.fort?'<div style="font-size:13px;color:#d4eaf7;">🏯 Fort '+mySel.fort+'</div>':'')+
       (function(){
@@ -2259,7 +2259,7 @@ function renderRotSelect(rc){
     rc.innerHTML='<div class="card" style="text-align:center;">'+
       '<div style="font-size:40px;margin-bottom:12px;">⏳</div>'+
       '<div style="font-family:Cinzel,serif;font-size:16px;color:#ffd60a;margin-bottom:8px;">Not Your Turn Yet</div>'+
-      '<div style="font-size:13px;color:#4a7a9b;margin-bottom:8px;">Currently: <strong style="color:'+(ALLIANCE_COLORS[currentTurn]||'#ffd60a')+';">'+currentTurn+'</strong> is selecting.<br>Your position: <strong style="color:#7ec8e3;">#'+(pos+1)+'</strong></div>'+
+      '<div style="font-size:13px;color:var(--t2);margin-bottom:8px;">Currently: <strong style="color:'+(ALLIANCE_COLORS[currentTurn]||'#ffd60a')+';">'+currentTurn+'</strong> is selecting.<br>Your position: <strong style="color:var(--ac);">#'+(pos+1)+'</strong></div>'+
       '<div style="font-size:10px;color:#2a4a65;margin-top:12px;padding:8px;background:rgba(7,20,38,.4);border-radius:8px;">'+
         'Your alliance: '+myAlliance+' · Turn: '+currentTurn+' · Done: '+sels.length+'/9'+
       '</div>'+
@@ -2284,7 +2284,7 @@ function renderRotSelect(rc){
       if(taken){
         shPickerHtml+='<div class="rot-loc rot-loc-taken">'+
           '<div class="rot-loc-name">SH '+i+'</div>'+
-          '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[taken]||'#4a7a9b')+';">'+taken+'</div>'+
+          '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[taken]||'var(--t2)')+';">'+taken+'</div>'+
           (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
         '</div>';
       } else {
@@ -2308,7 +2308,7 @@ function renderRotSelect(rc){
     if(ftaken){
       ftPickerHtml+='<div class="rot-loc rot-loc-taken">'+
         '<div class="rot-loc-name">F'+j+'</div>'+
-        '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[ftaken]||'#4a7a9b')+';">'+ftaken+'</div>'+
+        '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[ftaken]||'var(--t2)')+';">'+ftaken+'</div>'+
         (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
       '</div>';
     } else {
@@ -2328,7 +2328,7 @@ function renderRotSelect(rc){
       '<div class="rot-turn-sub">Making selection for:</div>'+
       '<div class="rot-turn-alliance" style="color:'+(ALLIANCE_COLORS[myAlliance]||'#ffd60a')+';">'+myAlliance+'</div>'+
     '</div>'+
-    '<div id="selPreview" style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:#4a7a9b;text-align:center;">'+
+    '<div id="selPreview" style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--t2);text-align:center;">'+
       (isTop4?'Select a Stronghold and a Fort':'Select a Fort')+
     '</div>'+
     shPickerHtml+ftPickerHtml+
@@ -2408,7 +2408,7 @@ function renderRotAdmin(rc){
   ALLIANCE_REPS.filter(function(r){ return r.alliance!=='TRANSFER'; }).forEach(function(r){ if(!repByAlliance[r.alliance]) repByAlliance[r.alliance]=[]; repByAlliance[r.alliance].push(r); });
   var repRows=getAllAlliances().map(function(al){
     var reps=repByAlliance[al]||[];
-    var color=ALLIANCE_COLORS[al]||'#7ec8e3';
+    var color=ALLIANCE_COLORS[al]||'var(--ac)';
     return '<div style="margin-bottom:10px;">'+
       '<div style="font-size:11px;font-weight:800;color:'+color+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">'+al+' ('+reps.length+')</div>'+
       (reps.length?reps.map(function(r){
@@ -2423,7 +2423,7 @@ function renderRotAdmin(rc){
   // Reward editor
   var rewardRows='';
   for(var i=1;i<=4;i++){
-    rewardRows+='<div style="margin-bottom:8px;"><div style="font-size:11px;color:#7ec8e3;font-weight:700;">🏰 Stronghold '+i+'</div>'+
+    rewardRows+='<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--ac);font-weight:700;">🏰 Stronghold '+i+'</div>'+
       '<input class="reward-inp" data-type="stronghold" data-num="'+i+'" value="'+getReward('stronghold',i)+'"></div>';
   }
   for(var j=1;j<=12;j++){
@@ -2433,7 +2433,7 @@ function renderRotAdmin(rc){
 
   // Build alliance management UI
   function allianceRow(al, idx, group){
-    var color=ALLIANCE_COLORS[al]||'#7ec8e3';
+    var color=ALLIANCE_COLORS[al]||'var(--ac)';
     var isTop=group==='top4';
     var arr=isTop?ro.top4:ro.bot5;
     var canUp=idx>0;
@@ -2457,7 +2457,7 @@ function renderRotAdmin(rc){
   // Add new alliance row
   var addAllianceHtml=
     '<div style="margin-top:10px;">'+
-      '<div style="font-size:11px;font-weight:800;color:#7ec8e3;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">➕ Add Alliance</div>'+
+      '<div style="font-size:11px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">➕ Add Alliance</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
         '<input class="inp" id="newAllianceName" placeholder="Name (e.g. NEW)" style="flex:1;min-width:80px;text-transform:uppercase;">'+
         '<select class="sel" id="newAllianceGroup" style="flex:2;min-width:120px;">'+
@@ -2494,7 +2494,7 @@ function renderRotAdmin(rc){
         top4Rows+
       '</div>'+
       '<div style="margin-bottom:8px;">'+
-        '<div style="font-size:11px;font-weight:800;color:#7ec8e3;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">🏯 Bot 5 (Fort only)</div>'+
+        '<div style="font-size:11px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">🏯 Bot 5 (Fort only)</div>'+
         bot5Rows+
       '</div>'+
       addAllianceHtml+
@@ -2688,7 +2688,7 @@ function renderRotAdmin(rc){
     if(existsRep){ toast(pl+' is already a rep for '+al); return; }
     var r=await sb.from('alliance_reps').insert([{player_name:pl,alliance:al,granted_by:SESSION.name}]).select().single();
     if(r.error){ toast('Error: '+r.error.message); return; }
-    var idx=ALLIANCE_REPS.findIndex(function(x){ return x.player_name===pl; });
+    var idx=ALLIANCE_REPS.findIndex(function(x){ return x.player_name===pl&&x.alliance===al; });
     if(idx>=0) ALLIANCE_REPS[idx]=r.data; else ALLIANCE_REPS.push(r.data);
     toast('✅ Rep added: '+pl+' → '+al);
     render();
@@ -2885,7 +2885,7 @@ function renderTransferList(tc){
             (inv.state_num?'<span class="tr-badge tr-badge-state">State '+inv.state_num+'</span>':'')+
             (inv.alliance?'<span class="tr-badge tr-badge-alliance">'+inv.alliance+'</span>':'')+
           '</div>'+
-          (inv.notes?'<div style="font-size:11px;color:#4a7a9b;margin-top:4px;">📝 '+inv.notes+'</div>':'')+
+          (inv.notes?'<div style="font-size:11px;color:var(--t2);margin-top:4px;">📝 '+inv.notes+'</div>':'')+
         '</div>'+
         '<div class="tr-actions">'+
           '<button class="tr-btn tr-btn-edit tr-edit" data-id="'+inv.id+'">✏️</button>'+
@@ -2909,7 +2909,7 @@ function renderTransferList(tc){
       '<div class="tr-stat">'+
         '<div class="tr-stat-n" style="color:#2a9fd6;">'+normal.length+'/'+p.normal_limit+'</div>'+
         '<div class="tr-stat-l">Normal Invites</div>'+
-        '<div class="tr-bar"><div class="tr-bar-fill" style="width:'+normalPct+'%;background:linear-gradient(90deg,#2a9fd6,#7ec8e3);"></div></div>'+
+        '<div class="tr-bar"><div class="tr-bar-fill" style="width:'+normalPct+'%;background:linear-gradient(90deg,#2a9fd6,var(--ac));"></div></div>'+
         '<div style="font-size:10px;color:#52c759;margin-top:4px;">'+normalAcc+' accepted</div>'+
       '</div>'+
       '<div class="tr-stat">'+
@@ -2924,7 +2924,7 @@ function renderTransferList(tc){
     '</div>'+
     // Add form
     '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:14px;">'+
-      '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">➕ Add Invite</div>'+
+      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">➕ Add Invite</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
         '<input class="inp" id="trId" placeholder="Player ID" autocomplete="off">'+
         '<input class="inp" id="trName" placeholder="Player Name" autocomplete="off">'+
@@ -3021,24 +3021,24 @@ function renderTransferList(tc){
 }
 
 function renderTransferAdmin(tc){
-  if(!TRANSFER_PERIOD){ tc.innerHTML='<div style="color:#4a7a9b;padding:20px;text-align:center;">Loading...</div>'; return; }
+  if(!TRANSFER_PERIOD){ tc.innerHTML='<div style="color:var(--t2);padding:20px;text-align:center;">Loading...</div>'; return; }
   var p=TRANSFER_PERIOD;
 
   tc.innerHTML=
     '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">📅 Current Period</div>'+
-      '<div style="margin-bottom:8px;"><label style="font-size:11px;color:#4a7a9b;">Period Name</label><input class="inp" id="trPName" value="'+p.name+'" style="margin-top:4px;"></div>'+
+      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">📅 Current Period</div>'+
+      '<div style="margin-bottom:8px;"><label style="font-size:11px;color:var(--t2);">Period Name</label><input class="inp" id="trPName" value="'+p.name+'" style="margin-top:4px;"></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Normal Limit</label><input class="inp" id="trNLimit" type="number" value="'+p.normal_limit+'" style="margin-top:4px;"></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Special Invites</label><input class="inp" id="trSLimit" type="number" value="'+p.special_limit+'" style="margin-top:4px;"></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Power Cap</label><input class="inp" id="trPCap" value="'+formatPower(p.power_cap)+'" style="margin-top:4px;"></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Normal Limit</label><input class="inp" id="trNLimit" type="number" value="'+p.normal_limit+'" style="margin-top:4px;"></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Special Invites</label><input class="inp" id="trSLimit" type="number" value="'+p.special_limit+'" style="margin-top:4px;"></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Power Cap</label><input class="inp" id="trPCap" value="'+formatPower(p.power_cap)+'" style="margin-top:4px;"></div>'+
       '</div>'+
       '<button class="btn btn-p" id="trSavePeriod" style="margin-bottom:8px;">💾 Save Period Settings</button>'+
       '<button class="btn btn-d" id="trNewPeriod">🔄 End Period & Start New</button>'+
     '</div>'+
     '<div style="background:rgba(255,214,10,.04);border:1px solid rgba(255,214,10,.13);border-radius:14px;padding:14px;margin-bottom:12px;">'+
       '<div style="font-size:12px;font-weight:800;color:#ffd60a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">✈️ Transfer Managers</div>'+
-      '<div style="font-size:12px;color:#4a7a9b;margin-bottom:10px;">Add players with "TRANSFER" alliance to give them access.</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-bottom:10px;">Add players with "TRANSFER" alliance to give them access.</div>'+
       '<div style="display:flex;gap:8px;margin-bottom:10px;">'+
         '<select class="sel" id="trMgrPlayer" style="flex:1;">'+groupedPlayerOpts(ALL_PLAYERS)+'</select>'+
         '<button class="btn btn-g btn-sm" id="trAddMgr">Add Manager</button>'+
@@ -3089,7 +3089,7 @@ function renderTransferAdmin(tc){
     if(existsTr){ toast(pl+' is already a transfer manager'); return; }
     var r=await sb.from('alliance_reps').insert([{player_name:pl,alliance:'TRANSFER',granted_by:SESSION.name}]).select().single();
     if(r.error){ toast('Error'); return; }
-    var idx=ALLIANCE_REPS.findIndex(function(x){ return x.player_name===pl; });
+    var idx=ALLIANCE_REPS.findIndex(function(x){ return x.player_name===pl&&x.alliance==='TRANSFER'; });
     if(idx>=0) ALLIANCE_REPS[idx]=r.data; else ALLIANCE_REPS.push(r.data);
     toast('✅ Manager added: '+pl); render();
   });
@@ -3131,18 +3131,18 @@ function renderTransferEdit(tc){
 
   tc.innerHTML=
     '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">✏️ Edit Invite — '+inv.player_name+'</div>'+
+      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">✏️ Edit Invite — '+inv.player_name+'</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Player ID</label><input class="inp" id="edId" value="'+inv.player_id+'" style="margin-top:4px;"></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Player Name</label><input class="inp" id="edName" value="'+inv.player_name+'" style="margin-top:4px;"></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Power</label><input class="inp" id="edPower" value="'+formatPower(inv.power)+'" style="margin-top:4px;"></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">FC Level</label><select class="sel" id="edFc" style="margin-top:4px;">'+fcOpts+'</select></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">State</label><input class="inp" id="edState" value="'+(inv.state_num||'')+'" style="margin-top:4px;"></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Alliance</label><select class="sel" id="edAlliance" style="margin-top:4px;">'+allianceOpts+'</select></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Type</label><select class="sel" id="edType" style="margin-top:4px;">'+typeOpts+'</select></div>'+
-        '<div><label style="font-size:11px;color:#4a7a9b;">Status</label><select class="sel" id="edStatus" style="margin-top:4px;">'+statusOpts+'</select></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Player ID</label><input class="inp" id="edId" value="'+inv.player_id+'" style="margin-top:4px;"></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Player Name</label><input class="inp" id="edName" value="'+inv.player_name+'" style="margin-top:4px;"></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Power</label><input class="inp" id="edPower" value="'+formatPower(inv.power)+'" style="margin-top:4px;"></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">FC Level</label><select class="sel" id="edFc" style="margin-top:4px;">'+fcOpts+'</select></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">State</label><input class="inp" id="edState" value="'+(inv.state_num||'')+'" style="margin-top:4px;"></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Alliance</label><select class="sel" id="edAlliance" style="margin-top:4px;">'+allianceOpts+'</select></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Type</label><select class="sel" id="edType" style="margin-top:4px;">'+typeOpts+'</select></div>'+
+        '<div><label style="font-size:11px;color:var(--t2);">Status</label><select class="sel" id="edStatus" style="margin-top:4px;">'+statusOpts+'</select></div>'+
       '</div>'+
-      '<div style="margin-bottom:12px;"><label style="font-size:11px;color:#4a7a9b;">Notes</label><input class="inp" id="edNotes" value="'+(inv.notes||'')+'" style="margin-top:4px;"></div>'+
+      '<div style="margin-bottom:12px;"><label style="font-size:11px;color:var(--t2);">Notes</label><input class="inp" id="edNotes" value="'+(inv.notes||'')+'" style="margin-top:4px;"></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
         '<button class="btn btn-p" id="edSave">💾 Save Changes</button>'+
         '<button class="btn btn-d" id="edDelete" style="background:rgba(255,69,58,.12);border-color:rgba(255,69,58,.3);color:#ff453a;">🗑 Delete</button>'+
@@ -3220,7 +3220,7 @@ function renderRotHistory(rc){
       '<button class="rot-act-btn" id="histPrev" '+(ROT_HIST_IDX<weeks.length-1?'':'disabled')+' style="padding:6px 12px;">← Older</button>'+
       '<div style="text-align:center;">'+
         '<div style="font-size:13px;font-weight:800;color:#d4eaf7;">Week of '+weekDate+'</div>'+
-        '<div style="font-size:11px;color:#4a7a9b;">'+(ROT_HIST_IDX===0?'Most Recent':'Week '+(ROT_HIST_IDX+1)+' ago')+'</div>'+
+        '<div style="font-size:11px;color:var(--t2);">'+(ROT_HIST_IDX===0?'Most Recent':'Week '+(ROT_HIST_IDX+1)+' ago')+'</div>'+
       '</div>'+
       '<button class="rot-act-btn" id="histNext" '+(ROT_HIST_IDX>0?'':'disabled')+' style="padding:6px 12px;">Newer →</button>'+
     '</div>';
@@ -3231,9 +3231,9 @@ function renderRotHistory(rc){
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
   for(var i=1;i<=4;i++){
     var al=takenSH[i];
-    var color=al?(ALLIANCE_COLORS[al]||'#7ec8e3'):'#2a4a65';
+    var color=al?(ALLIANCE_COLORS[al]||'var(--ac)'):'#2a4a65';
     shHtml+='<div style="background:rgba(7,20,38,.5);border:1px solid rgba(100,160,220,.1);border-radius:10px;padding:10px;text-align:center;">'+
-      '<div style="font-size:11px;color:#4a7a9b;margin-bottom:4px;">SH '+i+'</div>'+
+      '<div style="font-size:11px;color:var(--t2);margin-bottom:4px;">SH '+i+'</div>'+
       '<div style="font-size:14px;font-weight:800;color:'+color+';">'+(al||'—')+'</div>'+
     '</div>';
   }
@@ -3241,15 +3241,15 @@ function renderRotHistory(rc){
 
   // Forts
   var ftHtml='<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:12px;padding:14px;margin-bottom:12px;">'+
-    '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🏯 Forts</div>'+
+    '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🏯 Forts</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
   for(var j=1;j<=12;j++){
     var fal=takenFT[j];
-    var fcolor=fal?(ALLIANCE_COLORS[fal]||'#7ec8e3'):'#52c759';
+    var fcolor=fal?(ALLIANCE_COLORS[fal]||'var(--ac)'):'#52c759';
     var fbg=fal?'rgba(7,20,38,.5)':'rgba(52,199,89,.06)';
     var fborder=fal?'rgba(100,160,220,.1)':'rgba(52,199,89,.2)';
     ftHtml+='<div style="background:'+fbg+';border:1px solid '+fborder+';border-radius:8px;padding:8px;text-align:center;">'+
-      '<div style="font-size:10px;color:#4a7a9b;margin-bottom:3px;">F'+j+'</div>'+
+      '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">F'+j+'</div>'+
       '<div style="font-size:12px;font-weight:800;color:'+fcolor+'">'+(fal||'FREE')+'</div>'+
     '</div>';
   }
@@ -3257,10 +3257,10 @@ function renderRotHistory(rc){
 
   // Alliance breakdown
   var allRows=weekSels.map(function(s){
-    var color=ALLIANCE_COLORS[s.alliance]||'#7ec8e3';
+    var color=ALLIANCE_COLORS[s.alliance]||'var(--ac)';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(100,160,220,.06);">'+
       '<span style="font-size:13px;font-weight:800;color:'+color+';">'+s.alliance+'</span>'+
-      '<span style="font-size:12px;color:#4a7a9b;">'+
+      '<span style="font-size:12px;color:var(--t2);">'+
         (s.stronghold?'🏰 SH'+s.stronghold+' · ':'')+
         (s.fort?'🏯 F'+s.fort:'')+
       '</span>'+
@@ -3269,7 +3269,7 @@ function renderRotHistory(rc){
 
   var breakdownHtml=weekSels.length?
     '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:12px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">📋 Selections ('+weekSels.length+')</div>'+
+      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">📋 Selections ('+weekSels.length+')</div>'+
       allRows+
     '</div>':'';
 
@@ -3354,7 +3354,7 @@ function renderAdminPlayers(ac){
           '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
             '<div>'+
               '<div style="font-size:13px;font-weight:800;color:#d4eaf7;">'+p.name+'</div>'+
-              '<div style="font-size:11px;color:#4a7a9b;">ID: '+(p.player_id||'—')+' · Alliance: '+(p.alliance||'—')+'</div>'+
+              '<div style="font-size:11px;color:var(--t2);">ID: '+(p.player_id||'—')+' · Alliance: '+(p.alliance||'—')+'</div>'+
             '</div>'+
             '<div style="display:flex;gap:6px;">'+
               '<button class="btn btn-g btn-sm approve-player" data-name="'+p.name+'" style="padding:5px 12px;font-size:11px;">✅ Approve</button>'+
@@ -3374,7 +3374,7 @@ function renderAdminPlayers(ac){
           '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
             '<div>'+
               '<div style="font-size:13px;font-weight:800;color:#d4eaf7;">'+req.player_name+'</div>'+
-              '<div style="font-size:11px;color:#4a7a9b;">'+req.old_id+' → <strong style="color:#ffd60a;">'+req.new_id+'</strong></div>'+
+              '<div style="font-size:11px;color:var(--t2);">'+req.old_id+' → <strong style="color:#ffd60a;">'+req.new_id+'</strong></div>'+
             '</div>'+
             '<div style="display:flex;gap:6px;">'+
               '<button class="btn btn-g btn-sm approve-id-req" data-id="'+req.id+'" data-player="'+req.player_name+'" data-newid="'+req.new_id+'" style="padding:5px 12px;font-size:11px;">✅ Approve</button>'+
@@ -3534,15 +3534,6 @@ function renderAdminPlayers(ac){
     });
   });
 
-  // Clear entries
-  ac.querySelectorAll('.del-player').forEach(function(btn){
-    btn.addEventListener('click',async function(){
-      var pl=btn.dataset.player;
-      if(!confirm('Clear all entries from '+pl+'?')) return;
-      if(r.error){ toast('Error'); return; }
-      toast(pl+' entries cleared'); render();
-    });
-  });
   // Delete account
   ac.querySelectorAll('.del-account').forEach(function(btn){
     btn.addEventListener('click',async function(){
@@ -3550,7 +3541,12 @@ function renderAdminPlayers(ac){
       if(!confirm('Delete account for '+pl+'?')) return;
       var typed=prompt('Type DELETE to confirm:');
       if(typed!=='DELETE'){ toast('Cancelled'); return; }
-      await sb.from('players').delete().eq('name',pl);      ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
+      await sb.from('admin_roles').delete().eq('player_name',pl);
+      ADMIN_ROLES=ADMIN_ROLES.filter(function(x){ return x.player_name!==pl; });
+      await sb.from('alliance_reps').delete().eq('player_name',pl);
+      ALLIANCE_REPS=ALLIANCE_REPS.filter(function(x){ return x.player_name!==pl; });
+      await sb.from('players').delete().eq('name',pl);
+      ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
       toast(pl+' deleted'); render();
     });
   });
@@ -3806,12 +3802,12 @@ function renderSvspDays(sc){
   var dayRealNums=['1','4','5']; // actual SvS day numbers
   
   sc.innerHTML=
-    '<div style="font-size:12px;color:#4a7a9b;text-align:center;margin-bottom:16px;">'+
+    '<div style="font-size:12px;color:var(--t2);text-align:center;margin-bottom:16px;">'+
       (isLocked?'⚠️ Submissions are locked — view only':'Select a day to enter your resources')+
     '</div>'+
     days.map(function(d,i){
       var mySub=SVSP_SUBS.find(function(s){ return s.day_id===d.id&&s.player_name===SESSION.name; });
-      var color=dayColors[i]||'#7ec8e3';
+      var color=dayColors[i]||'var(--ac)';
       var icon=dayIcons[i]||'📅';
       var dateStr=d.svs_date?new Date(d.svs_date).toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'short'}):'Date TBD';
       var realDay=dayRealNums[i]||d.day_num;
@@ -3825,7 +3821,7 @@ function renderSvspDays(sc){
           '</div>'+
           '<div style="text-align:right;">'+
             (mySub?'<div style="font-size:11px;color:#52c759;font-weight:700;">✅ Submitted</div>':
-             isLocked?'<div style="font-size:11px;color:#4a7a9b;">Locked</div>':
+             isLocked?'<div style="font-size:11px;color:var(--t2);">Locked</div>':
              '<div style="font-size:11px;color:#ffd60a;">Tap to enter →</div>')+
           '</div>'+
         '</div>'+
@@ -3852,18 +3848,18 @@ function renderSvspForm(sc, day, isLocked, isOpen){
       '<div class="svsp-field-group">'+
         '<div class="svsp-field-title">🔥 Fire Crystals</div>'+
         '<div class="svsp-row">'+
-          '<div><label style="font-size:10px;color:#4a7a9b;">Refined Fire Crystals</label>'+
+          '<div><label style="font-size:10px;color:var(--t2);">Refined Fire Crystals</label>'+
             '<input class="inp" id="rfc" type="number" min="0" value="'+(s.refined_fire_crystals||0)+'" '+(isLocked?'disabled':'')+'></div>'+
-          '<div><label style="font-size:10px;color:#4a7a9b;">Fire Crystals</label>'+
+          '<div><label style="font-size:10px;color:var(--t2);">Fire Crystals</label>'+
             '<input class="inp" id="fc" type="number" min="0" value="'+(s.fire_crystals||0)+'" '+(isLocked?'disabled':'')+'></div>'+
         '</div>'+
       '</div>'+
       '<div class="svsp-field-group">'+
         '<div class="svsp-field-title">⚡ Construction Speedups</div>'+
         '<div class="svsp-row">'+
-          '<div><label style="font-size:10px;color:#4a7a9b;">Days</label>'+
+          '<div><label style="font-size:10px;color:var(--t2);">Days</label>'+
             '<input class="inp" id="csd" type="number" min="0" value="'+(s.construction_speedup_days||0)+'" '+(isLocked?'disabled':'')+'></div>'+
-          '<div><label style="font-size:10px;color:#4a7a9b;">Hours</label>'+
+          '<div><label style="font-size:10px;color:var(--t2);">Hours</label>'+
             '<input class="inp" id="csh" type="number" min="0" max="23" value="'+(s.construction_speedup_hours||0)+'" '+(isLocked?'disabled':'')+'></div>'+
         '</div>'+
       '</div>';
@@ -3873,9 +3869,9 @@ function renderSvspForm(sc, day, isLocked, isOpen){
       '<div class="svsp-field-group">'+
         '<div class="svsp-field-title">⚡ Training Speedups</div>'+
         '<div class="svsp-row">'+
-          '<div><label style="font-size:10px;color:#4a7a9b;">Days</label>'+
+          '<div><label style="font-size:10px;color:var(--t2);">Days</label>'+
             '<input class="inp" id="tsd" type="number" min="0" value="'+(s.training_speedup_days||0)+'" '+(isLocked?'disabled':'')+'></div>'+
-          '<div><label style="font-size:10px;color:#4a7a9b;">Hours</label>'+
+          '<div><label style="font-size:10px;color:var(--t2);">Hours</label>'+
             '<input class="inp" id="tsh" type="number" min="0" max="23" value="'+(s.training_speedup_hours||0)+'" '+(isLocked?'disabled':'')+'></div>'+
         '</div>'+
       '</div>';
@@ -3884,13 +3880,13 @@ function renderSvspForm(sc, day, isLocked, isOpen){
     resourceFields=
       '<div class="svsp-field-group">'+
         '<div class="svsp-field-title">🔮 Research Resources</div>'+
-        '<div><label style="font-size:10px;color:#4a7a9b;">Fire Crystal Shards</label>'+
+        '<div><label style="font-size:10px;color:var(--t2);">Fire Crystal Shards</label>'+
           '<input class="inp" id="fcs" type="number" min="0" value="'+(s.fire_crystal_shards||0)+'" '+(isLocked?'disabled':'')+'></div>'+
-        '<div style="margin-top:8px;"><label style="font-size:10px;color:#4a7a9b;">Research Speedups</label></div>'+
+        '<div style="margin-top:8px;"><label style="font-size:10px;color:var(--t2);">Research Speedups</label></div>'+
         '<div class="svsp-row" style="margin-top:4px;">'+
-          '<div><label style="font-size:10px;color:#4a7a9b;">Days</label>'+
+          '<div><label style="font-size:10px;color:var(--t2);">Days</label>'+
             '<input class="inp" id="rsd" type="number" min="0" value="'+(s.research_speedup_days||0)+'" '+(isLocked?'disabled':'')+'></div>'+
-          '<div><label style="font-size:10px;color:#4a7a9b;">Hours</label>'+
+          '<div><label style="font-size:10px;color:var(--t2);">Hours</label>'+
             '<input class="inp" id="rsh" type="number" min="0" max="23" value="'+(s.research_speedup_hours||0)+'" '+(isLocked?'disabled':'')+'></div>'+
         '</div>'+
       '</div>';
@@ -3901,16 +3897,16 @@ function renderSvspForm(sc, day, isLocked, isOpen){
     '<div class="svsp-field-group">'+
       '<div class="svsp-field-title">⚡ General Speedups</div>'+
       '<div class="svsp-row">'+
-        '<div><label style="font-size:10px;color:#4a7a9b;">Total — Days</label>'+
+        '<div><label style="font-size:10px;color:var(--t2);">Total — Days</label>'+
           '<input class="inp" id="gsd" type="number" min="0" value="'+(s.general_speedup_days||0)+'" '+(isLocked?'disabled':'')+'></div>'+
-        '<div><label style="font-size:10px;color:#4a7a9b;">Total — Hours</label>'+
+        '<div><label style="font-size:10px;color:var(--t2);">Total — Hours</label>'+
           '<input class="inp" id="gsh" type="number" min="0" max="23" value="'+(s.general_speedup_hours||0)+'" '+(isLocked?'disabled':'')+'></div>'+
       '</div>'+
       '<div class="svsp-note">How much of your general speedups do you plan to use for this day?</div>'+
       '<div class="svsp-row" style="margin-top:6px;">'+
-        '<div><label style="font-size:10px;color:#4a7a9b;">Planned — Days</label>'+
+        '<div><label style="font-size:10px;color:var(--t2);">Planned — Days</label>'+
           '<input class="inp" id="gpd" type="number" min="0" value="'+(s.general_speedup_planned_days||0)+'" '+(isLocked?'disabled':'')+'></div>'+
-        '<div><label style="font-size:10px;color:#4a7a9b;">Planned — Hours</label>'+
+        '<div><label style="font-size:10px;color:var(--t2);">Planned — Hours</label>'+
           '<input class="inp" id="gph" type="number" min="0" max="23" value="'+(s.general_speedup_planned_hours||0)+'" '+(isLocked?'disabled':'')+'></div>'+
       '</div>'+
     '</div>';
@@ -3944,12 +3940,12 @@ function renderSvspForm(sc, day, isLocked, isOpen){
       '</div>'+
       '<div id="rangeFields" style="'+(s.preferred_time_type==="specific"?'display:none':'')+'">' +
         '<div class="svsp-row">'+
-          '<div><label style="font-size:11px;color:#7ec8e3;font-weight:700;">From (UTC)</label><select class="sel" id="tStart" style="margin-top:4px;">'+slotOpts+'</select></div>'+
-          '<div><label style="font-size:11px;color:#7ec8e3;font-weight:700;">To (UTC)</label><select class="sel" id="tEnd" style="margin-top:4px;">'+slotOpts+'</select></div>'+
+          '<div><label style="font-size:11px;color:var(--ac);font-weight:700;">From (UTC)</label><select class="sel" id="tStart" style="margin-top:4px;">'+slotOpts+'</select></div>'+
+          '<div><label style="font-size:11px;color:var(--ac);font-weight:700;">To (UTC)</label><select class="sel" id="tEnd" style="margin-top:4px;">'+slotOpts+'</select></div>'+
         '</div>'+
       '</div>'+
       '<div id="specificField" style="'+(s.preferred_time_type!=="specific"?'display:none':'')+'">'+
-        '<label style="font-size:11px;color:#7ec8e3;font-weight:700;">Exact Time (UTC)</label><select class="sel" id="tExact" style="margin-top:4px;">'+slotOpts+'</select>'+
+        '<label style="font-size:11px;color:var(--ac);font-weight:700;">Exact Time (UTC)</label><select class="sel" id="tExact" style="margin-top:4px;">'+slotOpts+'</select>'+
       '</div>'+
     '</div>';
 
@@ -4068,21 +4064,21 @@ function renderSvspResults(sc){
       '<div style="font-size:11px;font-weight:800;color:#ffd60a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">➕ Add / Edit Entry</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
         '<div>'+
-          '<label style="font-size:10px;color:#4a7a9b;">Player ID</label>'+
+          '<label style="font-size:10px;color:var(--t2);">Player ID</label>'+
           '<input class="inp" id="mPlayerId" placeholder="Player ID" style="margin-top:3px;">'+
         '</div>'+
         '<div>'+
-          '<label style="font-size:10px;color:#4a7a9b;">Search & Select Player</label>'+
+          '<label style="font-size:10px;color:var(--t2);">Search & Select Player</label>'+
           '<input class="inp" id="mPlayerSearch" placeholder="🔍 Name or ID..." style="margin-top:3px;margin-bottom:3px;">'+
           '<select class="sel" id="mPlayerSel">'+playerOpts+'</select>'+
           '<input class="inp" id="mPlayerName" placeholder="Or type name manually" style="margin-top:4px;">'+
         '</div>'+
         '<div>'+
-          '<label style="font-size:10px;color:#4a7a9b;">Day</label>'+
+          '<label style="font-size:10px;color:var(--t2);">Day</label>'+
           '<select class="sel" id="mDay" style="margin-top:3px;">'+dayOpts+'</select>'+
         '</div>'+
         '<div>'+
-          '<label style="font-size:10px;color:#4a7a9b;">Assign Slot</label>'+
+          '<label style="font-size:10px;color:var(--t2);">Assign Slot</label>'+
           '<select class="sel" id="mSlot" style="margin-top:3px;">'+slotOpts+'</select>'+
         '</div>'+
       '</div>'+
@@ -4104,7 +4100,7 @@ function renderSvspResults(sc){
 
     html+='<div style="font-family:Cinzel,serif;font-size:13px;color:#ffd60a;margin-bottom:8px;margin-top:16px;">'+
       (day.buff_type==='construction'?'🏗️':day.buff_type==='training'?'⚔️':'🔬')+' Day '+day.day_num+' — '+day.buff_name+
-      ' <span style="font-size:11px;color:#4a7a9b;">('+bySlot.length+'/48 slots)</span>'+
+      ' <span style="font-size:11px;color:var(--t2);">('+bySlot.length+'/48 slots)</span>'+
     '</div>';
 
     if(!bySlot.length){
@@ -4123,8 +4119,8 @@ function renderSvspResults(sc){
         '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+
           '<span style="font-size:15px;font-weight:800;color:#ffd60a;width:48px;flex-shrink:0;">'+slot+'</span>'+
           '<div style="flex:1;min-width:0;">'+
-            '<div style="font-size:10px;color:#4a7a9b;font-family:monospace;margin-bottom:2px;">'+(sub.player_id||'No ID')+'</div>'+
-            '<div style="font-size:13px;font-weight:700;color:'+(isDone?'#4a7a9b':'#d4eaf7')+';">'+sub.player_name+'</div>'+
+            '<div style="font-size:10px;color:var(--t2);font-family:monospace;margin-bottom:2px;">'+(sub.player_id||'No ID')+'</div>'+
+            '<div style="font-size:13px;font-weight:700;color:'+(isDone?'var(--t2)':'#d4eaf7')+';">'+sub.player_name+'</div>'+
             (isSuper?'<div style="font-size:10px;color:#2a4a65;">Score: '+((sub.calculated_score||0)).toLocaleString()+'</div>':'')+
           '</div>'+
           '<div style="display:flex;gap:5px;align-items:center;">'+
@@ -4288,15 +4284,15 @@ function renderSvspAdminSetup(ac){
 
   ac.innerHTML=
     '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">⚔️ SvS Prep Session</div>'+
+      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">⚔️ SvS Prep Session</div>'+
       (session?
         '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:10px;">'+
           '<div>'+
-            '<label style="font-size:11px;color:#4a7a9b;">Session Name</label>'+
+            '<label style="font-size:11px;color:var(--t2);">Session Name</label>'+
             '<input class="inp" id="spName" value="'+session.name+'" style="margin-top:4px;">'+
           '</div>'+
           '<div>'+
-            '<label style="font-size:11px;color:#4a7a9b;">Status</label>'+
+            '<label style="font-size:11px;color:var(--t2);">Status</label>'+
             '<select class="sel" id="spStatus" style="margin-top:4px;">'+statusOptions+'</select>'+
           '</div>'+
         '</div>'+
@@ -4308,7 +4304,7 @@ function renderSvspAdminSetup(ac){
     '</div>'+
     (session?
       '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-        '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">📅 Days Setup</div>'+
+        '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">📅 Days Setup</div>'+
         [{dn:1,label:'Day 1',bt:'construction',bn:'Construction',icon:'🏗️'},
           {dn:4,label:'Day 4',bt:'training',bn:'Training',icon:'⚔️'},
           {dn:5,label:'Day 5',bt:'research',bn:'Research',icon:'🔬'}].map(function(cfg,i){
@@ -4452,10 +4448,10 @@ function renderCastleWarRallierView(app){
       return;
     }
 
-    function alColor(al){ return ALLIANCE_COLORS&&ALLIANCE_COLORS[al]?ALLIANCE_COLORS[al]:'#7ec8e3'; }
+    function alColor(al){ return ALLIANCE_COLORS&&ALLIANCE_COLORS[al]?ALLIANCE_COLORS[al]:'var(--ac)'; }
 
     cw.innerHTML='<div style="padding:12px;">'+
-      '<div style="font-size:11px;color:#4a7a9b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Active Rallies</div>'+
+      '<div style="font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Active Rallies</div>'+
       activeRallies.map(function(rally){
         var state=getRallyState(rally);
         var col=alColor(rally.alliance);
@@ -4477,7 +4473,7 @@ function renderCastleWarRallierView(app){
             '<div>'+
               '<div style="font-size:14px;font-weight:800;color:'+col+';">'+rally.alliance+'</div>'+
               '<div style="font-size:12px;color:#8ab4cc;">Coord: '+rally.coordinator_name+'</div>'+
-              '<div style="font-size:11px;color:#7ec8e3;font-weight:700;">March: '+rally.march_seconds+'s</div>'+
+              '<div style="font-size:11px;color:var(--ac);font-weight:700;">March: '+rally.march_seconds+'s</div>'+
             '</div>'+
             '<div style="font-size:11px;color:#8ab4cc;font-weight:700;">'+
               new Date(rally.commanded_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC'})+' UTC'+
@@ -4600,7 +4596,7 @@ function renderCastleWar(cw){
   var myAlliance=myCoord?myCoord.alliance:null;
   var myRalliers=myAlliance?warRalliers.filter(function(r){ return r.alliance===myAlliance; }):[];
 
-  function alColor(al){ return ALLIANCE_COLORS&&ALLIANCE_COLORS[al]?ALLIANCE_COLORS[al]:'#7ec8e3'; }
+  function alColor(al){ return ALLIANCE_COLORS&&ALLIANCE_COLORS[al]?ALLIANCE_COLORS[al]:'var(--ac)'; }
 
   // Check if I have a commanded rally from another coord (not my own alliance)
   var incomingCmd=activeRallies.find(function(r){
@@ -4610,13 +4606,13 @@ function renderCastleWar(cw){
   // Holding castle
   var partAlliances=(war.participant_alliances||['BST','FAL','SEA','HUM']);
   var holdingHtml='<div class="cw-header">'+
-    '<div style="font-size:11px;color:#4a7a9b;text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Castle held by</div>'+
+    '<div style="font-size:11px;color:var(--t2);text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Castle held by</div>'+
     '<div class="cw-holding" style="color:'+(war.holding_alliance?alColor(war.holding_alliance):'#2a4a65')+';">'+(war.holding_alliance||'—')+'</div>'+
     (isSuper||myCoord?
       '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:8px;">'+
         partAlliances.concat(['—']).map(function(al){
           var isNone=al==='—';
-          var col=isNone?'#4a7a9b':alColor(al);
+          var col=isNone?'var(--t2)':alColor(al);
           var isCurrent=war.holding_alliance===al||(isNone&&!war.holding_alliance);
           return '<button class="btn btn-sm set-holding" data-al="'+(isNone?'':al)+'" style="padding:5px 10px;font-size:11px;background:rgba('+hexToRgb(col)+',.'+( isCurrent?'25':'08')+')'+ (isCurrent?';border-width:2px':'')+';border-color:'+col+';color:'+col+';">'+al+'</button>';
         }).join('')+
@@ -4651,7 +4647,7 @@ function renderCastleWar(cw){
             '<div>'+
               '<div class="cw-rally-alliance" style="color:'+col+';">'+rally.alliance+'</div>'+
               '<div class="cw-rally-name">'+rally.rallier_name+'</div>'+
-              '<div style="font-size:10px;color:#7ec8e3;font-weight:700;">March: '+rally.march_seconds+'s</div>'+
+              '<div style="font-size:10px;color:var(--ac);font-weight:700;">March: '+rally.march_seconds+'s</div>'+
             '</div>'+
             '<div style="font-size:11px;color:#8ab4cc;font-weight:700;">'+
               new Date(rally.commanded_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC'})+' UTC'+
@@ -4763,10 +4759,10 @@ function renderCastleWar(cw){
   // Recent 5
   var histHtml=recentRallies.length?
     '<div style="margin-top:14px;background:rgba(13,31,53,.4);border-radius:12px;padding:12px;">'+
-      '<div style="font-size:11px;font-weight:800;color:#4a7a9b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Recent</div>'+
+      '<div style="font-size:11px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Recent</div>'+
       recentRallies.map(function(r){
         return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(100,160,220,.07);">'+
-          '<span style="font-size:12px;color:#4a7a9b;">❌ '+r.alliance+' — '+r.rallier_name+'</span>'+
+          '<span style="font-size:12px;color:var(--t2);">❌ '+r.alliance+' — '+r.rallier_name+'</span>'+
           '<span style="font-size:11px;color:#2a4a65;">'+new Date(r.commanded_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+'</span>'+
         '</div>';
       }).join('')+
@@ -4776,7 +4772,7 @@ function renderCastleWar(cw){
     holdingHtml+
     '<div style="font-size:11px;font-weight:800;color:#ff453a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:12px;">🔴 Active Rallies ('+activeRallies.length+')</div>'+
     activeHtml+
-    '<div style="font-size:11px;font-weight:800;color:#7ec8e3;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px;">⚔️ Ralliers</div>'+
+    '<div style="font-size:11px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px;">⚔️ Ralliers</div>'+
     '<div>'+cmdHtml+'</div>'+
     histHtml;
 
@@ -4999,13 +4995,13 @@ function renderCastleSetup(cw){
 
   cw.innerHTML=
     '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">⚙️ War Setup</div>'+
+      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">⚙️ War Setup</div>'+
       '<div style="margin-bottom:10px;">'+
-        '<label style="font-size:11px;color:#4a7a9b;">War Name</label>'+
+        '<label style="font-size:11px;color:var(--t2);">War Name</label>'+
         '<input class="inp" id="cwName" value="'+(war?war.name:'Castle War')+'" style="margin-top:4px;">'+
       '</div>'+
       '<div style="margin-bottom:10px;">'+
-        '<label style="font-size:11px;color:#4a7a9b;">Participating Alliances (castle holders — comma separated)</label>'+
+        '<label style="font-size:11px;color:var(--t2);">Participating Alliances (castle holders — comma separated)</label>'+
         '<input class="inp" id="cwAlliances" value="'+((war&&war.participant_alliances)||['BST','FAL','SEA','HUM']).join(',')+'" style="margin-top:4px;" placeholder="BST,FAL,SEA,HUM">'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'+
@@ -5018,8 +5014,8 @@ function renderCastleSetup(cw){
     '</div>'+
     (war?
       '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-        '<div style="font-size:12px;font-weight:800;color:#7ec8e3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">👥 Coordinators</div>'+
-        '<div style="font-size:11px;color:#4a7a9b;margin-bottom:8px;">Assign coordinators per alliance. Each coordinator sets their own march time after joining.</div>'+
+        '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">👥 Coordinators</div>'+
+        '<div style="font-size:11px;color:var(--t2);margin-bottom:8px;">Assign coordinators per alliance. Each coordinator sets their own march time after joining.</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;align-items:end;">'+
           '<select class="sel" id="cwCoordPlayer">'+groupedPlayerOpts(ALL_PLAYERS)+'</select>'+
           '<select class="sel" id="cwCoordAlliance">'+
@@ -5029,12 +5025,12 @@ function renderCastleSetup(cw){
         '<button class="btn btn-g" id="cwAddCoord" style="margin-bottom:12px;">➕ Add Coordinator</button>'+
         Object.keys(groups).map(function(al){
           return '<div style="margin-bottom:10px;">'+
-            '<div style="font-size:11px;font-weight:800;color:'+(ALLIANCE_COLORS[al]||'#7ec8e3')+';margin-bottom:6px;">'+al+'</div>'+
+            '<div style="font-size:11px;font-weight:800;color:'+(ALLIANCE_COLORS[al]||'var(--ac)')+';margin-bottom:6px;">'+al+'</div>'+
             groups[al].map(function(c){
               return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:rgba(7,20,38,.5);border-radius:8px;margin-bottom:4px;">'+
                 '<div>'+
                   '<div style="font-size:13px;font-weight:700;color:#d4eaf7;">'+c.player_name+'</div>'+
-                  '<div style="font-size:11px;color:#4a7a9b;">Coordinator</div>'+
+                  '<div style="font-size:11px;color:var(--t2);">Coordinator</div>'+
                 '</div>'+
                 '<button class="btn btn-d btn-sm del-coord" data-id="'+c.id+'" style="padding:5px 10px;font-size:11px;">🗑</button>'+
               '</div>';
@@ -5110,7 +5106,7 @@ function renderCastleHistory(cw){
   cw.innerHTML=
     '<div style="background:rgba(13,31,53,.6);border:1px solid rgba(100,160,220,.1);border-radius:14px;padding:14px;">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'+
-        '<div style="font-size:12px;font-weight:800;color:#7ec8e3;text-transform:uppercase;letter-spacing:.5px;">📋 Rally History ('+allRallies.length+')</div>'+
+        '<div style="font-size:12px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;">📋 Rally History ('+allRallies.length+')</div>'+
         (isSuper?'<button class="btn btn-d btn-sm" id="clearHistory" style="padding:5px 12px;font-size:11px;background:rgba(255,69,58,.12);border-color:rgba(255,69,58,.3);color:#ff453a;">🗑 Clear All</button>':'')+
       '</div>'+
       (allRallies.length?
@@ -5121,7 +5117,7 @@ function renderCastleHistory(cw){
           return '<div style="background:'+bg+';border-radius:8px;padding:8px 10px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">'+
             '<div>'+
               '<div style="font-size:12px;font-weight:700;color:#d4eaf7;">'+statusIcon+' '+r.alliance+' — '+r.coordinator_name+'</div>'+
-              '<div style="font-size:10px;color:#4a7a9b;">By: '+r.commanded_by+' · '+new Date(r.commanded_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'</div>'+
+              '<div style="font-size:10px;color:var(--t2);">By: '+r.commanded_by+' · '+new Date(r.commanded_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'</div>'+
             '</div>'+
             (r.opened_at?'<div style="font-size:10px;color:#52c759;">March: '+r.march_seconds+'s</div>':'')+
           '</div>';
