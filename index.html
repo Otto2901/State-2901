@@ -694,8 +694,6 @@ async function loadAll(){
   if(!rCJM.error&&rCJM.data) CJ_MEMBERS=rCJM.data;
   if(!rRUL.error&&rRUL.data) RULES_TOPICS=rRUL.data;
   if(!rLIB.error&&rLIB.data) LIBRARY_ENTRIES=rLIB.data;
-
-  LOADING=false; LAST_REF=new Date();
 }
 
 // AUTH
@@ -747,7 +745,7 @@ function pushPin(k){
 }
 function logout(){
   SESSION=null; localStorage.removeItem('wos-session');
-  AUTH_STEP='name'; NAME_INP=''; PIN_INP=''; AUTH_ERR=''; TAB='board';
+  AUTH_STEP='name'; NAME_INP=''; PIN_INP=''; AUTH_ERR='';
   if(REALTIME) sb.removeChannel(REALTIME); render();
 }
 
