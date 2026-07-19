@@ -3162,7 +3162,7 @@ function renderAdminPanel(app){
 
   // Build tabs based on role
   var tabs=[];
-  if(isSuper||isMod)       tabs.push({id:'players',icon:'👥',label:'Players'});
+  if(isSuper)              tabs.push({id:'players',icon:'👥',label:'Players'});
   if(isSuper)              tabs.push({id:'roles',icon:'👑',label:'Roles'});
 
   if(isSuper||isSvsAdm)   tabs.push({id:'svs',icon:'⚔️',label:'SvS'});
@@ -3212,7 +3212,7 @@ function renderAdminPanel(app){
 
 // ── PLAYERS TAB ──────────────────────────────────────────
 function renderAdminPlayers(ac){
-  if(!isSuperAdmin(SESSION.name)&&getRole(SESSION.name)!=='moderator'){
+  if(!isSuperAdmin(SESSION.name)){
     ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
     return;
   }
