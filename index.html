@@ -2886,6 +2886,10 @@ function renderTransferList(tc){
 }
 
 function renderTransferAdmin(tc){
+  if(!isSuperAdmin(SESSION.name)){
+    tc.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
+    return;
+  }
   if(!TRANSFER_PERIOD){ tc.innerHTML='<div style="color:var(--t2);padding:20px;text-align:center;">Loading...</div>'; return; }
   var p=TRANSFER_PERIOD;
 
@@ -3169,7 +3173,7 @@ function renderAdminPanel(app){
   if(isSuper)              tabs.push({id:'stats',icon:'📊',label:'Stats'});
 
   // Ensure ADMIN_TAB is valid
-  if(!tabs.find(function(t){ return t.id===ADMIN_TAB; })) ADMIN_TAB=tabs[0]?tabs[0].id:'players';
+  if(!tabs.find(function(t){ return t.id===ADMIN_TAB; })) ADMIN_TAB=tabs[0]?tabs[0].id:null;
 
   var navHtml=tabs.map(function(t){
     return '<button class="nav-btn '+(ADMIN_TAB===t.id?'on':'')+'" data-tab="'+t.id+'">'+
@@ -3195,6 +3199,7 @@ function renderAdminPanel(app){
   });
 
   var ac=document.getElementById('adminContent');
+  if(!ADMIN_TAB){ ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
   if(ADMIN_TAB==='players')  renderAdminPlayers(ac);
   if(ADMIN_TAB==='roles')    renderAdminRoles(ac);
 
@@ -3207,6 +3212,10 @@ function renderAdminPanel(app){
 
 // ── PLAYERS TAB ──────────────────────────────────────────
 function renderAdminPlayers(ac){
+  if(!isSuperAdmin(SESSION.name)&&getRole(SESSION.name)!=='moderator'){
+    ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
+    return;
+  }
   var pending=ALL_PLAYERS.filter(function(p){ return p.status==='pending'; });
   var approved=ALL_PLAYERS.filter(function(p){ return p.status!=='pending'; });
   var counts={};
@@ -3429,6 +3438,10 @@ function renderAdminPlayers(ac){
 
 // ── ROLES TAB ────────────────────────────────────────────
 function renderAdminRoles(ac){
+  if(!isSuperAdmin(SESSION.name)){
+    ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
+    return;
+  }
   // Group by player name
   var byPlayer={};
   ADMIN_ROLES.filter(function(r){ return r.player_name!==ADMIN_NAME; }).forEach(function(r){
@@ -3499,6 +3512,10 @@ function renderAdminRoles(ac){
 
 // ── STATS TAB ────────────────────────────────────────────
 function renderAdminStats(ac){
+  if(!isSuperAdmin(SESSION.name)){
+    ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
+    return;
+  }
   var total=ALL_PLAYERS.filter(function(p){ return p.status!=='pending'; }).length;
   var pending=ALL_PLAYERS.filter(function(p){ return p.status==='pending'; }).length;
   var noId=ALL_PLAYERS.filter(function(p){ return !p.player_id&&p.status!=='pending'; }).length;
