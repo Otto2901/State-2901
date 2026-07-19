@@ -482,7 +482,12 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 const SUPABASE_URL = 'https://yhtdbyebtfbclvfcfrbm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_yhowZDWjfVPu8ZeaB24mGQ_D1dDaHJf';
 const ADMIN_NAME   = 'Otto';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+function createSb(token){
+  return token
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {global:{headers:{'x-session-token':token}}})
+    : window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+let sb = createSb();
 
 function getRoles(name){
   // Returns array of all roles for this player
@@ -502,6 +507,7 @@ function isLibraryAdmin(name){ return isSuperAdmin(name)||hasRole(name,'library_
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
+if(SESSION&&SESSION.token) sb=createSb(SESSION.token);
 var AUTH_STEP = 'name';
 var NAME_INP  = '';
 var PIN_INP   = '';
@@ -711,20 +717,20 @@ async function doConfirmPin(){
     // Don't insert yet - go to profile step
     AUTH_STEP='pin-profile'; render(); return;
   } else {
-    var pl=await sb.from('players').select('pin').eq('name',name).maybeSingle();
-    if(!pl.data){ AUTH_ERR='Player not found.'; PIN_INP=''; render(); return; }
-    var stored=pl.data.pin;
-    var inputHash=await hashPin(PIN_INP);
-    if(isHashed(stored)){
-      if(stored!==inputHash){ AUTH_ERR='Wrong PIN. Try again.'; PIN_INP=''; render(); return; }
-    } else {
-      if(stored!==PIN_INP){ AUTH_ERR='Wrong PIN. Try again.'; PIN_INP=''; render(); return; }
-      // Migrate plaintext PIN to hash silently
-      sb.from('players').update({pin:inputHash}).eq('name',name);
-    }
+    var loginRes;
+    try{
+      var resp=await fetch(SUPABASE_URL+'/functions/v1/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY},
+        body:JSON.stringify({name:name,pin:PIN_INP})
+      });
+      loginRes=await resp.json();
+    }catch(e){ AUTH_ERR='Network error. Try again.'; PIN_INP=''; render(); return; }
+    if(!resp.ok||!loginRes.token){ AUTH_ERR=loginRes.error||'Wrong PIN. Try again.'; PIN_INP=''; render(); return; }
+    SESSION={name:loginRes.name,token:loginRes.token,isAdmin:loginRes.name===ADMIN_NAME};
+    sb=createSb(SESSION.token);
+    localStorage.setItem('wos-session',JSON.stringify(SESSION));
   }
-  SESSION={name:name,isAdmin:name===ADMIN_NAME};
-  localStorage.setItem('wos-session',JSON.stringify(SESSION));
   // Show loading screen while data fetches
   document.getElementById('app').innerHTML=
     '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;">'+
@@ -744,7 +750,7 @@ function pushPin(k){
   if(PIN_INP.length===6) setTimeout(doConfirmPin,120);
 }
 function logout(){
-  SESSION=null; localStorage.removeItem('wos-session');
+  SESSION=null; localStorage.removeItem('wos-session'); sb=createSb();
   AUTH_STEP='name'; NAME_INP=''; PIN_INP=''; AUTH_ERR='';
   if(REALTIME) sb.removeChannel(REALTIME); render();
 }
