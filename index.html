@@ -1598,7 +1598,7 @@ function svsRatioEditor(prefix, inf, lanc, mark){
   }).join('');
 
   var isCustom = !SVS_PRESETS.some(function(p){ return p.inf===inf&&p.lanc===lanc&&p.mark===mark; });
-  presetHtml += '<button class="svs-preset-btn'+(isCustom?' active':'')+'" data-pcustom="1" data-prefix="'+prefix+'">Özel</button>';
+  presetHtml += '<button class="svs-preset-btn'+(isCustom?' active':'')+'" data-pcustom="1" data-prefix="'+prefix+'">Custom</button>';
 
   var customHtml = isCustom?
     '<div class="svs-custom-ratio">'+
@@ -2533,18 +2533,21 @@ function renderRotAdmin(rc){
   // Reset week
   document.getElementById('forceOpenBtn').addEventListener('click',async function(){
     if(!confirm('Force open selections? Players can select outside normal Wed-Fri window.')) return;
-    await sb.from('rotation_state').update({force_open:true,force_closed:false}).eq('id',1);
+    var r=await sb.from('rotation_state').update({force_open:true,force_closed:false}).eq('id',1);
+    if(r.error){ toast('Error: '+r.error.message); return; }
     if(ROT_STATE){ ROT_STATE.force_open=true; ROT_STATE.force_closed=false; }
     toast('🔓 Selections forced open!'); render();
   });
   document.getElementById('forceCloseBtn').addEventListener('click',async function(){
     if(!confirm('Force close selections?')) return;
-    await sb.from('rotation_state').update({force_open:false,force_closed:true}).eq('id',1);
+    var r=await sb.from('rotation_state').update({force_open:false,force_closed:true}).eq('id',1);
+    if(r.error){ toast('Error: '+r.error.message); return; }
     if(ROT_STATE){ ROT_STATE.force_open=false; ROT_STATE.force_closed=true; }
     toast('🔒 Selections force closed!'); render();
   });
   document.getElementById('clearOverrideBtn').addEventListener('click',async function(){
-    await sb.from('rotation_state').update({force_open:false,force_closed:false}).eq('id',1);
+    var r=await sb.from('rotation_state').update({force_open:false,force_closed:false}).eq('id',1);
+    if(r.error){ toast('Error: '+r.error.message); return; }
     if(ROT_STATE){ ROT_STATE.force_open=false; ROT_STATE.force_closed=false; }
     toast('↩ Normal schedule restored'); render();
   });
@@ -2603,7 +2606,8 @@ function renderRotAdmin(rc){
       // Update reps in DB and memory
       var repUpdates=ALLIANCE_REPS.filter(function(r){ return r.alliance===al; });
       for(var ri=0;ri<repUpdates.length;ri++){
-        await sb.from('alliance_reps').update({alliance:newName}).eq('player_name',repUpdates[ri].player_name);
+        var rr=await sb.from('alliance_reps').update({alliance:newName}).eq('player_name',repUpdates[ri].player_name);
+        if(rr.error){ toast('Error: '+rr.error.message); return; }
         repUpdates[ri].alliance=newName;
       }
       // Update MY_ALLIANCE if current user's alliance was renamed
@@ -2612,7 +2616,8 @@ function renderRotAdmin(rc){
       // Update selections in DB and memory
       var selUpdates=ROT_SELS.filter(function(s){ return s.alliance===al; });
       for(var si=0;si<selUpdates.length;si++){
-        await sb.from('rotation_selections').update({alliance:newName}).eq('id',selUpdates[si].id);
+        var sr=await sb.from('rotation_selections').update({alliance:newName}).eq('id',selUpdates[si].id);
+        if(sr.error){ toast('Error: '+sr.error.message); return; }
         selUpdates[si].alliance=newName;
       }
       // Update rotation_state orders
@@ -3487,22 +3492,28 @@ function renderAdminPlayers(ac){
       var player=btn.dataset.player; var newId=btn.dataset.newid; var reqType=btn.dataset.type||'id';
       if(reqType==='name'){
         // Name change - update all tables
-        await sb.from('players').update({name:newId}).eq('name',player);
-          await sb.from('alliance_reps').update({player_name:newId}).eq('player_name',player);
-        await sb.from('admin_roles').update({player_name:newId}).eq('player_name',player);
-        await sb.from('svs_rally_leaders').update({name:newId}).eq('name',player);
+        var r1=await sb.from('players').update({name:newId}).eq('name',player);
+        if(r1.error){ toast('Error: '+r1.error.message); return; }
+        var r2=await sb.from('alliance_reps').update({player_name:newId}).eq('player_name',player);
+        if(r2.error){ toast('Error: '+r2.error.message); return; }
+        var r3=await sb.from('admin_roles').update({player_name:newId}).eq('player_name',player);
+        if(r3.error){ toast('Error: '+r3.error.message); return; }
+        var r4=await sb.from('svs_rally_leaders').update({name:newId}).eq('name',player);
+        if(r4.error){ toast('Error: '+r4.error.message); return; }
         var p=ALL_PLAYERS.find(function(x){ return x.name===player; });
         if(p) p.name=newId;
         ALLIANCE_REPS.forEach(function(r){ if(r.player_name===player) r.player_name=newId; });
         if(SESSION.name===player){ SESSION.name=newId; localStorage.setItem('wos-session',JSON.stringify(SESSION)); }
         toast('✅ Name changed: '+player+' → '+newId);
       } else {
-        await sb.from('players').update({player_id:newId}).eq('name',player);
+        var r5=await sb.from('players').update({player_id:newId}).eq('name',player);
+        if(r5.error){ toast('Error: '+r5.error.message); return; }
         var p2=ALL_PLAYERS.find(function(x){ return x.name===player; });
         if(p2) p2.player_id=newId;
         toast('✅ ID updated for '+player);
       }
-      await sb.from('id_change_requests').update({status:'approved',reviewed_by:SESSION.name,reviewed_at:new Date().toISOString()}).eq('id',btn.dataset.id);
+      var r6=await sb.from('id_change_requests').update({status:'approved',reviewed_by:SESSION.name,reviewed_at:new Date().toISOString()}).eq('id',btn.dataset.id);
+      if(r6.error){ toast('Error: '+r6.error.message); return; }
       ID_REQUESTS=ID_REQUESTS.filter(function(r){ return r.id!==btn.dataset.id; });
       render();
     });
@@ -3510,7 +3521,8 @@ function renderAdminPlayers(ac){
   ac.querySelectorAll('.reject-id-req').forEach(function(btn){
     btn.addEventListener('click',async function(){
       if(!confirm('Reject this ID change request?')) return;
-      await sb.from('id_change_requests').update({status:'rejected',reviewed_by:SESSION.name,reviewed_at:new Date().toISOString()}).eq('id',btn.dataset.id);
+      var r=await sb.from('id_change_requests').update({status:'rejected',reviewed_by:SESSION.name,reviewed_at:new Date().toISOString()}).eq('id',btn.dataset.id);
+      if(r.error){ toast('Error: '+r.error.message); return; }
       ID_REQUESTS=ID_REQUESTS.filter(function(r){ return r.id!==btn.dataset.id; });
       toast('❌ Request rejected'); render();
     });
@@ -3555,11 +3567,14 @@ function renderAdminPlayers(ac){
       if(!confirm('Delete account for '+pl+'?')) return;
       var typed=prompt('Type DELETE to confirm:');
       if(typed!=='DELETE'){ toast('Cancelled'); return; }
-      await sb.from('admin_roles').delete().eq('player_name',pl);
+      var r1=await sb.from('admin_roles').delete().eq('player_name',pl);
+      if(r1.error){ toast('Error: '+r1.error.message); return; }
       ADMIN_ROLES=ADMIN_ROLES.filter(function(x){ return x.player_name!==pl; });
-      await sb.from('alliance_reps').delete().eq('player_name',pl);
+      var r2=await sb.from('alliance_reps').delete().eq('player_name',pl);
+      if(r2.error){ toast('Error: '+r2.error.message); return; }
       ALLIANCE_REPS=ALLIANCE_REPS.filter(function(x){ return x.player_name!==pl; });
-      await sb.from('players').delete().eq('name',pl);
+      var r3=await sb.from('players').delete().eq('name',pl);
+      if(r3.error){ toast('Error: '+r3.error.message); return; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
       toast(pl+' deleted'); render();
     });
@@ -5585,8 +5600,9 @@ function renderRulesAdmin(el){
       if(idx<=0) return;
       var a=RULES_TOPICS[idx],b=RULES_TOPICS[idx-1];
       var tmpO=a.order_index; a.order_index=b.order_index; b.order_index=tmpO;
-      await sb.from('rules_topics').update({order_index:a.order_index}).eq('id',a.id);
-      await sb.from('rules_topics').update({order_index:b.order_index}).eq('id',b.id);
+      var r1=await sb.from('rules_topics').update({order_index:a.order_index}).eq('id',a.id);
+      var r2=await sb.from('rules_topics').update({order_index:b.order_index}).eq('id',b.id);
+      if(r1.error||r2.error){ toast('Error: '+(r1.error||r2.error).message); }
       RULES_TOPICS.sort(function(x,y){ return x.order_index-y.order_index; });
       renderRulesContent();
     });
@@ -5597,8 +5613,9 @@ function renderRulesAdmin(el){
       if(idx<0||idx>=RULES_TOPICS.length-1) return;
       var a=RULES_TOPICS[idx],b=RULES_TOPICS[idx+1];
       var tmpO=a.order_index; a.order_index=b.order_index; b.order_index=tmpO;
-      await sb.from('rules_topics').update({order_index:a.order_index}).eq('id',a.id);
-      await sb.from('rules_topics').update({order_index:b.order_index}).eq('id',b.id);
+      var r1=await sb.from('rules_topics').update({order_index:a.order_index}).eq('id',a.id);
+      var r2=await sb.from('rules_topics').update({order_index:b.order_index}).eq('id',b.id);
+      if(r1.error||r2.error){ toast('Error: '+(r1.error||r2.error).message); }
       RULES_TOPICS.sort(function(x,y){ return x.order_index-y.order_index; });
       renderRulesContent();
     });
@@ -6194,11 +6211,12 @@ async function subscribePush(){
 
 async function savePushSub(sub){
   if(!SESSION) return;
-  await sb.from('push_subscriptions').upsert({
+  var r=await sb.from('push_subscriptions').upsert({
     player_name: SESSION.name,
     endpoint:    sub.endpoint,
     subscription: sub.toJSON()
   },{onConflict:'endpoint'});
+  if(r.error) console.warn('Push subscription save failed:',r.error.message);
 }
 
 async function requestPushPermission(){
