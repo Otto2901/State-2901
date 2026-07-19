@@ -629,6 +629,7 @@ function isSvsAdmin(name){ return isSuperAdmin(name)||hasRole(name,'svs_admin');
 function isAlbumAdmin(name){ return isSuperAdmin(name)||hasRole(name,'album_admin'); }
 function isModerator(name){ return isSuperAdmin(name)||hasRole(name,'moderator'); }
 function isCjAdmin(name){ return isSuperAdmin(name)||hasRole(name,'cj_admin'); }
+function isLibraryAdmin(name){ return isSuperAdmin(name)||hasRole(name,'library_admin'); }
 function troopStr(reg){
   if(!reg) return '';
   var parts=[];
@@ -716,6 +717,9 @@ var RULES_TOPICS   = []; // rules_topics
 var RULES_TAB      = 'board'; // board | admin
 var RULES_SELECTED = null; // selected topic obj
 var RULES_EDIT     = undefined; // undefined=hidden, {}=new, obj=editing
+var LIBRARY_ENTRIES  = []; // library_entries
+var LIBRARY_SELECTED = null; // selected entry obj
+var LIBRARY_EDIT     = undefined; // undefined=hidden, {}=new, obj=editing
 var SVS_EDIT_WHICH  = null; // which section open: 'leader'|'guide'
 // SvS form buffers
 var SVS_FORM = {};
@@ -729,7 +733,8 @@ var MOD_COLORS = {
   svsprep:   {grad:'linear-gradient(90deg,#fc8181,#feb2b2)', icon:'linear-gradient(135deg,rgba(252,129,129,.3),rgba(254,178,178,.2))', text:'#feb2b2'},
   castlewar: {grad:'linear-gradient(90deg,#fc8181,#f6ad55)', icon:'linear-gradient(135deg,rgba(252,129,129,.3),rgba(246,173,85,.2))', text:'#fc8181'},
   adminpanel:{grad:'linear-gradient(90deg,#f6e05e,#fef08a)', icon:'linear-gradient(135deg,rgba(246,224,94,.3),rgba(254,240,138,.2))', text:'#f6e05e'},
-  rules:     {grad:'linear-gradient(90deg,#4fd1c5,#81e6d9)', icon:'linear-gradient(135deg,rgba(79,209,197,.3),rgba(129,230,217,.2))', text:'#4fd1c5'}
+  rules:     {grad:'linear-gradient(90deg,#4fd1c5,#81e6d9)', icon:'linear-gradient(135deg,rgba(79,209,197,.3),rgba(129,230,217,.2))', text:'#4fd1c5'},
+  library:   {grad:'linear-gradient(90deg,#f6ad55,#fbd38d)', icon:'linear-gradient(135deg,rgba(246,173,85,.3),rgba(251,211,141,.2))', text:'#f6ad55'}
 };
 
 function buildModuleHeader(moduleKey, icon, title, sub){
@@ -812,7 +817,8 @@ async function loadAll(){
     sb.from('castle_ralliers').select('*').order('created_at'),
     sb.from('cj_teams').select('*').order('created_at'),
     sb.from('cj_team_members').select('*').order('position'),
-    sb.from('rules_topics').select('*').order('order_index')
+    sb.from('rules_topics').select('*').order('order_index'),
+    sb.from('library_entries').select('*').order('order_index')
   ]);
   var r3=results[0],r4=results[1],r5=results[2],r6=results[3];
   var r7=results[4],r8=results[5],r9=results[6],r10=results[7];
@@ -842,10 +848,11 @@ async function loadAll(){
   if(!rCC.error&&rCC.data) CASTLE_COORDS=rCC.data;
   if(!rCR.error&&rCR.data) CASTLE_RALLIES=rCR.data;
   if(!rCRR.error&&rCRR.data) CASTLE_RALLIERS=rCRR.data;
-  var rCJT=results[18],rCJM=results[19],rRUL=results[20];
+  var rCJT=results[18],rCJM=results[19],rRUL=results[20],rLIB=results[21];
   if(!rCJT.error&&rCJT.data) CJ_TEAMS=rCJT.data;
   if(!rCJM.error&&rCJM.data) CJ_MEMBERS=rCJM.data;
   if(!rRUL.error&&rRUL.data) RULES_TOPICS=rRUL.data;
+  if(!rLIB.error&&rLIB.data) LIBRARY_ENTRIES=rLIB.data;
 
   LOADING=false; LAST_REF=new Date();
 }
@@ -926,6 +933,7 @@ function render(){
   if(MODULE==='castlewar') renderCastleWarApp(app);
   if(MODULE==='crazyjoe')  renderCrazyJoeApp(app);
   if(MODULE==='rules')     renderRulesApp(app);
+  if(MODULE==='library')   renderLibraryApp(app);
   if(MODULE==='adminpanel') renderAdminPanel(app);
 }
 
@@ -945,7 +953,7 @@ function renderHome(app){
   }
   var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super">Super Admin</span>':
     getRoles(SESSION.name).map(function(r){
-      var cls=r==='svs_admin'||r==='prep_admin'||r==='cj_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
+      var cls=r==='svs_admin'||r==='prep_admin'||r==='cj_admin'||r==='library_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
       return '<span class="role-badge '+cls+'">'+r.replace(/_/g,' ')+'</span>';
     }).join(' ');
 
@@ -1049,6 +1057,11 @@ function renderHome(app){
           '<div class="home-card-title" style="color:#4fd1c5;">State Rules</div>'+
           '<div class="home-card-sub">State rules & regulations</div>'+
         '</div>'+
+        '<div class="home-card" id="goLibrary" style="border-color:rgba(246,173,85,.18);">'+
+          '<div class="home-card-icon">📚</div>'+
+          '<div class="home-card-title" style="color:#f6ad55;">Bilgi Kütüphanesi</div>'+
+          '<div class="home-card-sub">Duyuru & bilgi arşivi</div>'+
+        '</div>'+
         (isSuperAdmin(SESSION.name)||getRole(SESSION.name)?
         '<div class="home-card" id="goAdmin" style="'+cardAdmin+'">'+
           '<div class="home-card-icon">🏛️</div>'+
@@ -1085,6 +1098,7 @@ function renderHome(app){
   var goCastleBtn=document.getElementById('goCastle');
   if(goCastleBtn) goCastleBtn.addEventListener('click',function(){ MODULE='castlewar'; CASTLE_TAB='war'; render(); });
   document.getElementById('goRules').addEventListener('click', function(){ MODULE='rules'; RULES_TAB='board'; RULES_SELECTED=null; render(); });
+  document.getElementById('goLibrary').addEventListener('click', function(){ MODULE='library'; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
   var goAdminBtn=document.getElementById('goAdmin');
   if(goAdminBtn) goAdminBtn.addEventListener('click', function(){ MODULE='adminpanel'; ADMIN_TAB='players'; render(); });
 }
@@ -3400,7 +3414,7 @@ function renderAdminPlayers(ac){
 
   function playerRowHtml(p){
     var role=getRole(p.name);
-    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":role==="svs_admin"?"role-svs":role==="prep_admin"?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
+    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":role==="svs_admin"?"role-svs":role==="prep_admin"?"role-svs":role==="library_admin"?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
     var playerReps=ALLIANCE_REPS.filter(function(r){ return r.player_name===p.name; });
     var repTags=playerReps.map(function(r){
       if(r.alliance==='TRANSFER') return '<span style="font-size:9px;background:rgba(183,148,244,.1);color:#d6bcfa;border:1px solid rgba(183,148,244,.3);border-radius:5px;padding:1px 5px;">✈️ Transfer Rep</span>';
@@ -3563,7 +3577,7 @@ function renderAdminRoles(ac){
   var rolesHtml=Object.keys(byPlayer).sort().map(function(pname){
     var roles=byPlayer[pname];
     var badgesHtml=roles.map(function(r){
-      var badgeCls=r.role==='svs_admin'?'role-svs':r.role==='cj_admin'?'role-svs':r.role==='album_admin'?'role-album':r.role==='prep_admin'?'role-svs':'role-mod';
+      var badgeCls=r.role==='svs_admin'?'role-svs':r.role==='cj_admin'?'role-svs':r.role==='album_admin'?'role-album':r.role==='prep_admin'?'role-svs':r.role==='library_admin'?'role-svs':'role-mod';
       return '<span class="role-badge '+badgeCls+'" style="margin-right:4px;">'+r.role.replace(/_/g," ")+'</span>'+
         '<button class="btn btn-d btn-sm revoke-role" data-player="'+pname+'" data-role="'+r.role+'" style="padding:3px 8px;font-size:10px;margin-right:4px;">✕</button>';
     }).join('');
@@ -3590,6 +3604,7 @@ function renderAdminRoles(ac){
           '<option value="cj_admin">🤪 Crazy Joe Admin</option>'+
           '<option value="moderator">🛡️ Moderator</option>'+
           '<option value="prep_admin">⚔️ SvS Prep Admin</option>'+
+          '<option value="library_admin">📚 Library Admin</option>'+
         '</select>'+
         '<button class="btn btn-g btn-sm" id="grantRoleBtn">Grant</button>'+
       '</div>'+
@@ -5587,6 +5602,157 @@ function renderRulesAdmin(el){
       RULES_TOPICS.sort(function(x,y){ return x.order_index-y.order_index; });
       renderRulesContent();
     });
+  });
+}
+
+// ── BİLGİ KÜTÜPHANESİ ────────────────────────────────────────
+function renderLibraryApp(app){
+  if(!isLibraryAdmin(SESSION.name)){
+    app.innerHTML =
+      buildModuleHeader('library','📚','Bilgi Kütüphanesi','Bilgi & duyuru arşivi')+
+      '<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
+    document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+    return;
+  }
+  app.innerHTML =
+    buildModuleHeader('library','📚','Bilgi Kütüphanesi','Bilgi & duyuru arşivi')+
+    '<div id="libraryContent"></div>';
+  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
+  renderLibraryContent();
+}
+
+function renderLibraryContent(){
+  var el = document.getElementById('libraryContent'); if(!el) return;
+  if(LIBRARY_EDIT!==undefined) renderLibraryForm(el);
+  else if(LIBRARY_SELECTED) renderLibraryDetail(el);
+  else renderLibraryGrid(el);
+}
+
+function renderLibraryDetail(el){
+  var t = LIBRARY_SELECTED;
+  el.innerHTML =
+    '<div class="rules-detail">'+
+      '<button class="rules-detail-back" id="libraryBack">← Back</button>'+
+      '<div class="rules-detail-header">'+
+        '<div class="rules-detail-icon">'+t.emoji+'</div>'+
+        '<div>'+
+          '<div class="rules-detail-title">'+escHtml(t.title)+'</div>'+
+          (t.description?'<div class="rules-detail-desc">'+escHtml(t.description)+'</div>':'')+
+        '</div>'+
+      '</div>'+
+      '<div class="rules-md">'+
+        (t.content ? simpleMarkdown(t.content) : '<p style="color:var(--t2);font-style:italic;">No content yet.</p>')+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:16px;">'+
+        '<button class="btn btn-g btn-sm" id="libraryEditBtn" style="flex:1;">Edit</button>'+
+        '<button class="btn btn-d btn-sm" id="libraryDelBtn" style="flex:1;">Delete</button>'+
+      '</div>'+
+    '</div>';
+  document.getElementById('libraryBack').addEventListener('click',function(){ LIBRARY_SELECTED=null; renderLibraryContent(); });
+  document.getElementById('libraryEditBtn').addEventListener('click',function(){ LIBRARY_EDIT=LIBRARY_SELECTED; renderLibraryContent(); });
+  document.getElementById('libraryDelBtn').addEventListener('click',async function(){
+    if(!confirm('Delete this entry?')) return;
+    var tid=t.id;
+    var r=await sb.from('library_entries').delete().eq('id',tid);
+    if(r.error){ toast('Error: '+r.error.message); return; }
+    LIBRARY_ENTRIES=LIBRARY_ENTRIES.filter(function(x){ return x.id!==tid; });
+    LIBRARY_SELECTED=null;
+    toast('🗑️ Deleted'); renderLibraryContent();
+  });
+}
+
+function renderLibraryGrid(el){
+  var newBtnHtml = '<button class="btn btn-p" id="libraryNewBtn" style="margin-bottom:14px;">+ Yeni Giriş</button>';
+  if(!LIBRARY_ENTRIES.length){
+    el.innerHTML = newBtnHtml +
+      '<div class="rules-empty">'+
+        '<div class="rules-empty-icon">📚</div>'+
+        '<div class="rules-empty-text">Henüz giriş yok.<br>Yukarıdaki butonla ekleyebilirsin.</div>'+
+      '</div>';
+  } else {
+    var cards = LIBRARY_ENTRIES.map(function(t){
+      return '<div class="rules-topic-card" data-tid="'+t.id+'">'+
+        '<div class="rules-topic-icon">'+t.emoji+'</div>'+
+        '<div class="rules-topic-title">'+escHtml(t.title)+'</div>'+
+        (t.description?'<div class="rules-topic-desc">'+escHtml(t.description)+'</div>':'')+
+      '</div>';
+    }).join('');
+    el.innerHTML = newBtnHtml + '<div class="rules-grid">'+cards+'</div>';
+  }
+  document.getElementById('libraryNewBtn').addEventListener('click',function(){ LIBRARY_EDIT={}; renderLibraryContent(); });
+  el.querySelectorAll('.rules-topic-card').forEach(function(card){
+    card.addEventListener('click',function(){
+      var tid=card.dataset.tid;
+      LIBRARY_SELECTED=LIBRARY_ENTRIES.find(function(x){ return x.id===tid; });
+      renderLibraryContent();
+    });
+  });
+}
+
+function renderLibraryForm(el){
+  var e = LIBRARY_EDIT || {};
+  var isNew = !e.id;
+  el.innerHTML =
+    '<div id="libraryEditForm" style="background:var(--surface);border:1px solid var(--b);border-radius:16px;padding:16px;margin-bottom:14px;">'+
+      '<div style="font-size:12px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">'+
+        (isNew?'Yeni Giriş':'Girişi Düzenle')+
+      '</div>'+
+      '<div class="field">'+
+        '<label class="lbl">Emoji</label>'+
+        '<input class="inp" id="libraryEmoji" value="'+(e.emoji||'📌')+'" placeholder="📌" style="font-size:22px;max-width:80px;">'+
+      '</div>'+
+      '<div class="field">'+
+        '<label class="lbl">Başlık</label>'+
+        '<input class="inp" id="libraryTitle" value="'+(e.title?escHtml(e.title):'')+'" placeholder="e.g. Etkinlik Duyurusu">'+
+      '</div>'+
+      '<div class="field">'+
+        '<label class="lbl">Kısa Açıklama (opsiyonel)</label>'+
+        '<input class="inp" id="libraryDesc" value="'+(e.description?escHtml(e.description):'')+'" placeholder="Tek satır özet">'+
+      '</div>'+
+      '<div class="field">'+
+        '<label class="lbl">İçerik (Markdown)</label>'+
+        '<textarea class="inp" id="libraryContentField" rows="10" style="resize:vertical;font-family:monospace;font-size:12px;line-height:1.6;" placeholder="# Başlık&#10;&#10;## Bölüm&#10;&#10;- Madde 1&#10;- Madde 2">'+(e.content?e.content.replace(/</g,'&lt;'):'')+'</textarea>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button class="btn btn-p" id="librarySaveBtn" style="flex:1;">'+(isNew?'Ekle':'Kaydet')+'</button>'+
+        '<button class="btn btn-g btn-sm" id="libraryCancelBtn" style="width:auto;padding:13px 18px;">İptal</button>'+
+      '</div>'+
+      (e.id?'<div style="margin-top:10px;">'+
+        '<div style="height:1px;background:var(--b);margin-bottom:10px;"></div>'+
+        '<div style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Önizleme</div>'+
+        '<div class="rules-md" id="libraryMdPreview" style="font-size:12px;">'+simpleMarkdown(e.content||'')+'</div>'+
+      '</div>':'')+
+    '</div>';
+
+  document.getElementById('libraryCancelBtn').addEventListener('click',function(){ LIBRARY_EDIT=undefined; renderLibraryContent(); });
+
+  var contentTa = document.getElementById('libraryContentField');
+  var previewEl = document.getElementById('libraryMdPreview');
+  if(contentTa && previewEl){
+    contentTa.addEventListener('input',function(){ previewEl.innerHTML=simpleMarkdown(contentTa.value); });
+  }
+
+  document.getElementById('librarySaveBtn').addEventListener('click',async function(){
+    var emoji = (document.getElementById('libraryEmoji').value.trim()||'📌');
+    var title = document.getElementById('libraryTitle').value.trim();
+    var desc  = document.getElementById('libraryDesc').value.trim();
+    var content = document.getElementById('libraryContentField').value;
+    if(!title){ toast('⚠️ Başlık gerekli'); return; }
+    var saveBtn=document.getElementById('librarySaveBtn');
+    saveBtn.disabled=true; saveBtn.textContent='Kaydediliyor...';
+    if(LIBRARY_EDIT&&LIBRARY_EDIT.id){
+      var r=await sb.from('library_entries').update({emoji,title,description:desc,content}).eq('id',LIBRARY_EDIT.id).select().single();
+      if(r.error){ toast('Error: '+r.error.message); saveBtn.disabled=false; saveBtn.textContent='Kaydet'; return; }
+      LIBRARY_ENTRIES=LIBRARY_ENTRIES.map(function(x){ return x.id===r.data.id?r.data:x; });
+      LIBRARY_SELECTED=r.data;
+    } else {
+      var maxOrder = LIBRARY_ENTRIES.length ? Math.max.apply(null,LIBRARY_ENTRIES.map(function(x){ return x.order_index||0; }))+1 : 0;
+      var r=await sb.from('library_entries').insert({emoji,title,description:desc,content,order_index:maxOrder}).select().single();
+      if(r.error){ toast('Error: '+r.error.message); saveBtn.disabled=false; saveBtn.textContent='Ekle'; return; }
+      LIBRARY_ENTRIES.push(r.data);
+      LIBRARY_SELECTED=null;
+    }
+    LIBRARY_EDIT=undefined; toast('✅ Kaydedildi!'); renderLibraryContent();
   });
 }
 
