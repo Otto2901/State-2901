@@ -1059,8 +1059,8 @@ function renderHome(app){
         '</div>'+
         '<div class="home-card" id="goLibrary" style="border-color:rgba(246,173,85,.18);">'+
           '<div class="home-card-icon">📚</div>'+
-          '<div class="home-card-title" style="color:#f6ad55;">Bilgi Kütüphanesi</div>'+
-          '<div class="home-card-sub">Duyuru & bilgi arşivi</div>'+
+          '<div class="home-card-title" style="color:#f6ad55;">Library</div>'+
+          '<div class="home-card-sub">Announcements & knowledge archive</div>'+
         '</div>'+
         (isSuperAdmin(SESSION.name)||getRole(SESSION.name)?
         '<div class="home-card" id="goAdmin" style="'+cardAdmin+'">'+
@@ -5605,17 +5605,17 @@ function renderRulesAdmin(el){
   });
 }
 
-// ── BİLGİ KÜTÜPHANESİ ────────────────────────────────────────
+// ── LIBRARY ───────────────────────────────────────────────────
 function renderLibraryApp(app){
   if(!isLibraryAdmin(SESSION.name)){
     app.innerHTML =
-      buildModuleHeader('library','📚','Bilgi Kütüphanesi','Bilgi & duyuru arşivi')+
+      buildModuleHeader('library','📚','Library','Announcements & knowledge archive')+
       '<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
     document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
     return;
   }
   app.innerHTML =
-    buildModuleHeader('library','📚','Bilgi Kütüphanesi','Bilgi & duyuru arşivi')+
+    buildModuleHeader('library','📚','Library','Announcements & knowledge archive')+
     '<div id="libraryContent"></div>';
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
   renderLibraryContent();
@@ -5662,12 +5662,12 @@ function renderLibraryDetail(el){
 }
 
 function renderLibraryGrid(el){
-  var newBtnHtml = '<button class="btn btn-p" id="libraryNewBtn" style="margin-bottom:14px;">+ Yeni Giriş</button>';
+  var newBtnHtml = '<button class="btn btn-p" id="libraryNewBtn" style="margin-bottom:14px;">+ New Entry</button>';
   if(!LIBRARY_ENTRIES.length){
     el.innerHTML = newBtnHtml +
       '<div class="rules-empty">'+
         '<div class="rules-empty-icon">📚</div>'+
-        '<div class="rules-empty-text">Henüz giriş yok.<br>Yukarıdaki butonla ekleyebilirsin.</div>'+
+        '<div class="rules-empty-text">No entries yet.<br>Add one with the button above.</div>'+
       '</div>';
   } else {
     var cards = LIBRARY_ENTRIES.map(function(t){
@@ -5695,31 +5695,31 @@ function renderLibraryForm(el){
   el.innerHTML =
     '<div id="libraryEditForm" style="background:var(--surface);border:1px solid var(--b);border-radius:16px;padding:16px;margin-bottom:14px;">'+
       '<div style="font-size:12px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">'+
-        (isNew?'Yeni Giriş':'Girişi Düzenle')+
+        (isNew?'New Entry':'Edit Entry')+
       '</div>'+
       '<div class="field">'+
         '<label class="lbl">Emoji</label>'+
         '<input class="inp" id="libraryEmoji" value="'+(e.emoji||'📌')+'" placeholder="📌" style="font-size:22px;max-width:80px;">'+
       '</div>'+
       '<div class="field">'+
-        '<label class="lbl">Başlık</label>'+
-        '<input class="inp" id="libraryTitle" value="'+(e.title?escHtml(e.title):'')+'" placeholder="e.g. Etkinlik Duyurusu">'+
+        '<label class="lbl">Title</label>'+
+        '<input class="inp" id="libraryTitle" value="'+(e.title?escHtml(e.title):'')+'" placeholder="e.g. Event Announcement">'+
       '</div>'+
       '<div class="field">'+
-        '<label class="lbl">Kısa Açıklama (opsiyonel)</label>'+
-        '<input class="inp" id="libraryDesc" value="'+(e.description?escHtml(e.description):'')+'" placeholder="Tek satır özet">'+
+        '<label class="lbl">Short Description (optional)</label>'+
+        '<input class="inp" id="libraryDesc" value="'+(e.description?escHtml(e.description):'')+'" placeholder="One-line summary">'+
       '</div>'+
       '<div class="field">'+
-        '<label class="lbl">İçerik (Markdown)</label>'+
-        '<textarea class="inp" id="libraryContentField" rows="10" style="resize:vertical;font-family:monospace;font-size:12px;line-height:1.6;" placeholder="# Başlık&#10;&#10;## Bölüm&#10;&#10;- Madde 1&#10;- Madde 2">'+(e.content?e.content.replace(/</g,'&lt;'):'')+'</textarea>'+
+        '<label class="lbl">Content (Markdown)</label>'+
+        '<textarea class="inp" id="libraryContentField" rows="10" style="resize:vertical;font-family:monospace;font-size:12px;line-height:1.6;" placeholder="# Title&#10;&#10;## Section&#10;&#10;- Item 1&#10;- Item 2">'+(e.content?e.content.replace(/</g,'&lt;'):'')+'</textarea>'+
       '</div>'+
       '<div style="display:flex;gap:8px;">'+
-        '<button class="btn btn-p" id="librarySaveBtn" style="flex:1;">'+(isNew?'Ekle':'Kaydet')+'</button>'+
-        '<button class="btn btn-g btn-sm" id="libraryCancelBtn" style="width:auto;padding:13px 18px;">İptal</button>'+
+        '<button class="btn btn-p" id="librarySaveBtn" style="flex:1;">'+(isNew?'Add Entry':'Save Changes')+'</button>'+
+        '<button class="btn btn-g btn-sm" id="libraryCancelBtn" style="width:auto;padding:13px 18px;">Cancel</button>'+
       '</div>'+
       (e.id?'<div style="margin-top:10px;">'+
         '<div style="height:1px;background:var(--b);margin-bottom:10px;"></div>'+
-        '<div style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Önizleme</div>'+
+        '<div style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Markdown Preview</div>'+
         '<div class="rules-md" id="libraryMdPreview" style="font-size:12px;">'+simpleMarkdown(e.content||'')+'</div>'+
       '</div>':'')+
     '</div>';
@@ -5737,22 +5737,22 @@ function renderLibraryForm(el){
     var title = document.getElementById('libraryTitle').value.trim();
     var desc  = document.getElementById('libraryDesc').value.trim();
     var content = document.getElementById('libraryContentField').value;
-    if(!title){ toast('⚠️ Başlık gerekli'); return; }
+    if(!title){ toast('⚠️ Title required'); return; }
     var saveBtn=document.getElementById('librarySaveBtn');
-    saveBtn.disabled=true; saveBtn.textContent='Kaydediliyor...';
+    saveBtn.disabled=true; saveBtn.textContent='Saving...';
     if(LIBRARY_EDIT&&LIBRARY_EDIT.id){
       var r=await sb.from('library_entries').update({emoji,title,description:desc,content}).eq('id',LIBRARY_EDIT.id).select().single();
-      if(r.error){ toast('Error: '+r.error.message); saveBtn.disabled=false; saveBtn.textContent='Kaydet'; return; }
+      if(r.error){ toast('Error: '+r.error.message); saveBtn.disabled=false; saveBtn.textContent='Save Changes'; return; }
       LIBRARY_ENTRIES=LIBRARY_ENTRIES.map(function(x){ return x.id===r.data.id?r.data:x; });
       LIBRARY_SELECTED=r.data;
     } else {
       var maxOrder = LIBRARY_ENTRIES.length ? Math.max.apply(null,LIBRARY_ENTRIES.map(function(x){ return x.order_index||0; }))+1 : 0;
       var r=await sb.from('library_entries').insert({emoji,title,description:desc,content,order_index:maxOrder}).select().single();
-      if(r.error){ toast('Error: '+r.error.message); saveBtn.disabled=false; saveBtn.textContent='Ekle'; return; }
+      if(r.error){ toast('Error: '+r.error.message); saveBtn.disabled=false; saveBtn.textContent='Add Entry'; return; }
       LIBRARY_ENTRIES.push(r.data);
       LIBRARY_SELECTED=null;
     }
-    LIBRARY_EDIT=undefined; toast('✅ Kaydedildi!'); renderLibraryContent();
+    LIBRARY_EDIT=undefined; toast('✅ Saved!'); renderLibraryContent();
   });
 }
 
