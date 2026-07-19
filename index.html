@@ -73,15 +73,11 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .btn-g:hover{background:rgba(99,179,237,.1);}
 .btn-d{background:rgba(252,129,129,.08);border:1px solid rgba(252,129,129,.22);color:var(--red);}
 .btn-d:hover{background:rgba(252,129,129,.14);}
-.btn-warn{background:rgba(246,173,85,.08);border:1px solid rgba(246,173,85,.22);color:var(--orange);}
 .btn-sm{padding:8px 14px;font-size:12px;width:auto;display:inline-block;border-radius:10px;}
 
 /* TOGGLE */
-.toggle-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .tog{padding:13px;border-radius:11px;border:1px solid;font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:all .18s;text-align:center;background:transparent;}
-.tog-h{border-color:rgba(104,211,145,.22);color:var(--green);}
 .tog-h.on{border-color:rgba(104,211,145,.6);background:rgba(104,211,145,.1);}
-.tog-n{border-color:rgba(246,173,85,.22);color:var(--orange);}
 .tog-n.on{border-color:rgba(246,173,85,.6);background:rgba(246,173,85,.1);}
 
 /* CARD */
@@ -89,15 +85,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.035) 0%,transparent 55%);pointer-events:none;}
 
 /* PIECE GRID */
-.piece-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:6px;}
-.piece-cb input[type=checkbox]{display:none;}
-.piece-lbl{width:100%;aspect-ratio:1;border-radius:9px;border:1px solid var(--b2);background:var(--input);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--t3);cursor:pointer;transition:all .15s;user-select:none;}
-.piece-cb input:checked + .piece-lbl.have-lbl{border-color:rgba(104,211,145,.7);background:rgba(104,211,145,.15);color:var(--green);}
-.piece-cb input:checked + .piece-lbl.need-lbl{border-color:rgba(246,173,85,.7);background:rgba(246,173,85,.15);color:var(--orange);}
 .piece-cb.disabled .piece-lbl{opacity:.3;cursor:not-allowed;}
-.sel-all-row{display:flex;gap:8px;margin-bottom:8px;}
-.sel-all-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--b2);background:transparent;color:var(--t2);font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer;}
-.piece-count-badge{font-size:11px;color:var(--ac);font-weight:700;margin-left:auto;padding:3px 10px;background:rgba(99,179,237,.1);border-radius:20px;}
 
 /* AUTH */
 .auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:28px 24px;gap:20px;}
@@ -124,120 +112,37 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .stat-l{font-size:9px;color:var(--t2);margin-top:3px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;}
 
 /* LIMIT BAR */
-.limit-bar{background:var(--surface);border:1px solid var(--b);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;}
-.limit-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
-.limit-row:last-child{margin-bottom:0;}
-.limit-label{font-size:10px;font-weight:700;color:var(--t2);width:90px;flex-shrink:0;text-transform:uppercase;letter-spacing:.4px;}
-.limit-track{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
-.limit-fill{height:100%;border-radius:3px;transition:width .3s;}
-.limit-fill.send{background:var(--grad);}
-.limit-fill.recv{background:linear-gradient(90deg,#38a169,#68d391);}
 .limit-fill.empty{background:rgba(252,129,129,.5);}
-.limit-num{font-size:11px;font-weight:700;color:var(--t);width:32px;text-align:right;flex-shrink:0;}
-.limit-reset{font-size:10px;color:var(--t3);text-align:center;margin-top:8px;}
 
 /* FILTER */
-.filter-bar{display:flex;gap:8px;margin-bottom:10px;}
 .filter-bar .sel{flex:1;}
-.rfsh{padding:11px 14px;background:var(--surface2);border:1px solid var(--b2);border-radius:10px;color:var(--ac);font-size:17px;cursor:pointer;flex-shrink:0;transition:background .15s;}
-.rfsh:hover{background:rgba(99,179,237,.1);}
 .rfsh.spin{animation:spin .7s linear;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.filter-pills{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
-.tpill{padding:5px 11px;border-radius:20px;border:1px solid var(--b2);font-size:11px;font-weight:600;cursor:pointer;background:transparent;font-family:'Inter',sans-serif;color:var(--t2);white-space:nowrap;transition:all .15s;}
 .tpill.on,.tpill:hover{border-color:rgba(99,179,237,.4);color:var(--ac);background:rgba(99,179,237,.08);}
 
 /* SUB FILTER */
-.sub-filter{display:flex;gap:8px;margin-bottom:10px;}
-.sub-pill{flex:1;padding:9px;border-radius:10px;border:1px solid;font-size:12px;font-weight:700;cursor:pointer;background:transparent;font-family:'Inter',sans-serif;text-align:center;transition:all .2s;}
-.sub-need{border-color:rgba(246,173,85,.25);color:var(--orange);}
 .sub-need.on{border-color:rgba(246,173,85,.6);background:rgba(246,173,85,.1);}
-.sub-have{border-color:rgba(104,211,145,.25);color:var(--green);}
 .sub-have.on{border-color:rgba(104,211,145,.6);background:rgba(104,211,145,.1);}
-.sec-hd{font-family:'Cinzel',serif;font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;display:flex;align-items:center;gap:8px;}
-.sec-hd::after{content:'';flex:1;height:1px;background:var(--b);}
-.ref-info{font-size:10px;color:var(--t3);text-align:center;margin-bottom:10px;}
 
 /* ENTRY CARDS */
-.ecard{background:var(--surface);border:1px solid var(--b);border-left:3px solid transparent;border-radius:13px;padding:13px 14px;margin-bottom:8px;}
-.ecard.hv{border-left-color:rgba(104,211,145,.5);}
-.ecard.nd{border-left-color:rgba(246,173,85,.5);}
-.ecard.mx{border-color:rgba(246,224,94,.3);background:rgba(246,224,94,.04);}
-.ecard.mine-mx{border-color:rgba(99,179,237,.35);background:rgba(99,179,237,.04);}
-.ecard-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
-.ecard-player{font-weight:700;font-size:13px;color:var(--ac);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.ecard-right{display:flex;align-items:center;gap:5px;flex-shrink:0;}
-.ecard-badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
-.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;}
-.b-h{background:rgba(104,211,145,.12);color:#9ae6b4;border:1px solid rgba(104,211,145,.25);}
-.b-n{background:rgba(246,173,85,.12);color:#fbd38d;border:1px solid rgba(246,173,85,.25);}
-.b-m{background:rgba(246,224,94,.12);color:#fef08a;border:1px solid rgba(246,224,94,.3);animation:pulse 2s infinite;}
-.b-mine{background:rgba(99,179,237,.12);color:#90cdf4;border:1px solid rgba(99,179,237,.25);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.edel{background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:5px;transition:color .2s;line-height:1;flex-shrink:0;}
-.edel:hover{color:var(--red);}
-.ecard-album{font-size:11px;color:var(--t2);margin-bottom:2px;}
-.ecard-puzzle{font-size:13px;color:var(--t);font-weight:700;}
-.ecard-piece{font-size:11px;color:var(--t2);margin-top:3px;}
-.ecard-minfo{font-size:11px;color:var(--gold);margin-top:5px;font-weight:700;}
-.ecard-mine-info{font-size:11px;color:var(--ac);margin-top:5px;font-weight:700;}
 
 /* UNDO BAR */
-.undo-bar{background:rgba(104,211,145,.08);border:1px solid rgba(104,211,145,.25);border-radius:12px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
-.undo-text{flex:1;font-size:12px;color:var(--green);font-weight:700;}
-.undo-btn{padding:5px 14px;border-radius:20px;border:1px solid rgba(104,211,145,.4);background:rgba(104,211,145,.12);color:var(--green);font-family:'Inter',sans-serif;font-size:11px;font-weight:700;cursor:pointer;}
-.undo-timer{font-size:11px;color:var(--t2);flex-shrink:0;}
 
 /* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
-.modal{background:#0d1a2e;border:1px solid var(--b2);border-radius:20px;padding:24px;width:100%;max-width:340px;}
-.modal-title{font-family:'Cinzel',serif;font-size:15px;color:var(--ac);margin-bottom:6px;}
-.modal-sub{font-size:12px;color:var(--t2);margin-bottom:20px;line-height:1.55;}
-.modal-btns{display:flex;flex-direction:column;gap:10px;}
 
 /* EMPTY/LOADING */
 .empty{text-align:center;padding:52px 20px;color:var(--t3);}
 .empty-icon{font-size:40px;margin-bottom:12px;opacity:.5;}
 .empty p{font-size:13px;line-height:1.7;}
-.loading-wrap{display:flex;align-items:center;justify-content:center;padding:52px 20px;gap:10px;color:var(--t2);font-size:13px;}
-.spinner{width:22px;height:22px;border:2px solid var(--b2);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;}
 
 /* LOOKUP */
-.lookup-results{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
-.lk-panel{background:var(--surface);border:1px solid var(--b);border-radius:13px;overflow:hidden;}
-.lk-hdr{padding:10px 12px;font-size:11px;font-weight:700;text-align:center;}
-.lk-hv{background:rgba(104,211,145,.1);color:var(--green);border-bottom:1px solid rgba(104,211,145,.2);}
-.lk-nd{background:rgba(246,173,85,.1);color:var(--orange);border-bottom:1px solid rgba(246,173,85,.2);}
-.lk-name{padding:9px 12px;font-size:12px;font-weight:600;border-bottom:1px solid rgba(255,255,255,.05);color:var(--t);}
-.lk-name:last-child{border-bottom:none;}
-.lk-empty{padding:16px 12px;text-align:center;font-size:11px;color:var(--t3);}
 
 /* ADMIN */
-.adm-card{background:rgba(246,224,94,.04);border:1px solid rgba(246,224,94,.14);border-radius:var(--r2);padding:18px;margin-bottom:12px;}
-.adm-title{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);margin-bottom:16px;}
-.divider{height:1px;background:var(--b);margin:14px 0;}
 
 /* GUIDE */
-.guide-btn{display:inline-flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--b2);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;margin-top:6px;transition:all .2s;font-family:'Inter',sans-serif;}
-.guide-btn:hover{background:var(--surface2);color:var(--ac);}
-.guide-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);}
-.guide-sheet{background:#0a1929;border:1px solid var(--b2);border-radius:22px 22px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:24px 20px 40px;}
-.guide-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-.guide-title{font-family:'Cinzel',serif;font-size:17px;color:var(--ac);}
-.guide-close{background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;padding:4px 8px;border-radius:8px;}
-.guide-close:hover{color:var(--ac);}
-.guide-section{margin-bottom:22px;}
-.guide-section-title{font-size:13px;font-weight:700;color:var(--t);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.guide-step{display:flex;gap:12px;margin-bottom:10px;align-items:flex-start;}
-.guide-step-num{width:24px;height:24px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px;}
-.guide-step-text{font-size:13px;color:var(--t2);line-height:1.55;flex:1;}
-.guide-step-text strong{color:var(--t);}
-.guide-tip{background:rgba(246,224,94,.06);border:1px solid rgba(246,224,94,.15);border-radius:10px;padding:10px 12px;font-size:12px;color:#c8a800;line-height:1.55;margin-top:8px;}
-.guide-divider{height:1px;background:var(--b);margin:18px 0;}
 
 /* HOME SCREEN */
-.home-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;padding:28px 20px;gap:22px;}
-.home-title{font-family:'Cinzel',serif;font-size:23px;color:var(--t);text-align:center;letter-spacing:.5px;}
 .home-sub{font-size:11px;color:var(--t2);text-align:center;letter-spacing:3px;text-transform:uppercase;}
 .home-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:400px;margin:0 auto;}
 .home-card{background:var(--surface);border:1px solid var(--b);border-radius:20px;padding:22px 14px 20px;display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;transition:all .2s var(--ease);position:relative;overflow:hidden;}
@@ -264,8 +169,6 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .svs-ratio-chip-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;}
 .svs-ratio-chip-val{font-size:15px;font-weight:800;color:var(--t);}
 .svs-heroes-text{font-size:12px;color:var(--t2);line-height:1.5;}
-.svs-guide-card{background:rgba(99,179,237,.05);border:1px solid rgba(99,179,237,.2);border-radius:16px;padding:16px;margin-bottom:16px;}
-.svs-guide-title{font-family:'Cinzel',serif;font-size:14px;font-weight:700;color:var(--ac);margin-bottom:12px;}
 .svs-copy-btn{width:100%;padding:10px;border-radius:10px;border:1px solid var(--b2);background:var(--surface2);color:var(--ac);font-family:'Inter',sans-serif;font-weight:700;font-size:12px;cursor:pointer;margin-top:10px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
 .svs-copy-btn:hover{background:rgba(99,179,237,.1);}
 .svs-copy-all-btn{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(246,173,85,.3);background:rgba(246,173,85,.06);color:var(--orange);font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:16px;transition:all .2s;}
@@ -298,13 +201,11 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .role-mod{background:rgba(104,211,145,.12);color:var(--green);border:1px solid rgba(104,211,145,.28);}
 
 /* ROTATION */
-.rot-board{display:flex;flex-direction:column;gap:12px;}
 .rot-section-title{font-family:'Cinzel',serif;font-size:13px;color:var(--ac);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
 .rot-section-title::after{content:'';flex:1;height:1px;background:var(--b);}
 .rot-turn-banner{background:linear-gradient(135deg,rgba(246,224,94,.08),rgba(246,173,85,.08));border:1px solid rgba(246,224,94,.28);border-radius:14px;padding:14px;text-align:center;margin-bottom:4px;}
 .rot-turn-alliance{font-family:'Cinzel',serif;font-size:20px;font-weight:700;color:var(--gold);}
 .rot-turn-sub{font-size:12px;color:var(--t2);margin-top:4px;}
-.rot-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .rot-grid-4{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .rot-grid-12{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 .rot-loc{border-radius:12px;padding:10px;cursor:pointer;transition:all .2s;border:1px solid;text-align:center;}
@@ -350,7 +251,6 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .tr-stat-l{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
 .tr-bar{height:6px;background:rgba(255,255,255,.06);border-radius:3px;margin-top:8px;overflow:hidden;}
 .tr-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
-.tr-row{background:var(--surface);border:1px solid var(--b);border-radius:var(--r);padding:12px;margin-bottom:8px;}
 .tr-row-top{display:flex;align-items:flex-start;gap:10px;}
 .tr-row-rank{font-size:11px;color:var(--t3);font-weight:700;width:20px;flex-shrink:0;padding-top:2px;}
 .tr-row-info{flex:1;}
@@ -383,13 +283,6 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .svsp-field-title{font-size:11px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
 .svsp-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;}
 .svsp-note{font-size:10px;color:var(--t2);font-style:italic;margin-top:4px;line-height:1.4;}
-.svsp-slot{border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
-.svsp-slot-a{background:var(--surface);border:1px solid var(--b);}
-.svsp-slot-b{background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.05);}
-.svsp-slot-done{opacity:.45;}
-.svsp-slot-time{font-size:14px;font-weight:800;color:var(--gold);width:50px;flex-shrink:0;}
-.svsp-slot-name{font-size:13px;font-weight:700;color:var(--t);flex:1;}
-.svsp-slot-id{font-size:10px;color:var(--t2);font-family:monospace;}
 .svsp-copy-btn{background:var(--surface2);border:1px solid var(--b2);border-radius:6px;color:var(--ac);font-size:11px;cursor:pointer;padding:3px 8px;}
 .svsp-done-btn{background:transparent;border:1px solid var(--b2);border-radius:6px;color:var(--t2);font-size:11px;cursor:pointer;padding:3px 8px;}
 .svsp-done-btn.done{border-color:rgba(104,211,145,.3);color:var(--green);}
@@ -400,34 +293,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .svsp-locked{background:rgba(246,173,85,.1);color:var(--orange);border:1px solid rgba(246,173,85,.28);}
 
 /* NOTIFICATIONS */
-.notif-btn{position:relative;background:var(--surface2);border:1px solid var(--b2);border-radius:10px;color:var(--ac);font-size:18px;cursor:pointer;padding:6px 10px;transition:all .2s;}
-.notif-btn:hover{background:rgba(99,179,237,.1);}
-.notif-badge{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:10px;font-weight:800;border-radius:10px;padding:2px 5px;min-width:18px;text-align:center;font-family:'Inter',sans-serif;}
-.notif-panel{position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;display:flex;flex-direction:column;justify-content:flex-end;}
-.notif-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);}
-.notif-sheet{position:relative;background:#0d1a2e;border-top:1px solid var(--b2);border-radius:22px 22px 0 0;padding:20px;max-height:72vh;overflow-y:auto;z-index:1;}
-.notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
-.notif-title{font-family:'Cinzel',serif;font-size:15px;color:var(--ac);}
-.notif-close{background:none;border:none;color:var(--t2);font-size:18px;cursor:pointer;}
-.notif-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:all .15s;border:1px solid var(--b);}
-.notif-item:hover{background:rgba(99,179,237,.07);border-color:rgba(99,179,237,.2);}
-.notif-item-icon{font-size:18px;flex-shrink:0;}
-.notif-item-text{flex:1;}
-.notif-item-title{font-size:13px;font-weight:700;color:var(--t);}
-.notif-item-sub{font-size:11px;color:var(--t2);margin-top:2px;}
-.notif-item-count{font-size:12px;font-weight:700;color:var(--red);background:rgba(252,129,129,.1);border-radius:7px;padding:2px 8px;}
-.notif-empty{text-align:center;padding:20px;font-size:13px;color:var(--t3);}
 
 /* CASTLE WAR */
 .cw-header{background:rgba(252,129,129,.07);border:1px solid rgba(252,129,129,.2);border-radius:14px;padding:14px;margin-bottom:12px;}
-.cw-status-live{color:var(--red);font-weight:800;font-size:13px;animation:pulse 1.5s infinite;}
-.cw-status-setup{color:var(--orange);font-weight:800;font-size:13px;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 .cw-holding{font-size:28px;font-weight:800;font-family:'Cinzel',serif;text-align:center;margin:8px 0;}
 .cw-rally-card{border-radius:14px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden;}
 .cw-rally-commanded{background:rgba(246,173,85,.09);border:2px solid rgba(246,173,85,.38);}
 .cw-rally-opened{background:rgba(252,129,129,.07);border:2px solid rgba(252,129,129,.28);}
-.cw-rally-cancelled{background:rgba(100,100,120,.07);border:1px solid rgba(100,100,120,.2);opacity:.55;}
 .cw-rally-name{font-size:15px;font-weight:800;color:var(--t);}
 .cw-rally-alliance{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
 .cw-timer{font-size:32px;font-weight:800;font-family:monospace;text-align:center;margin:8px 0;}
@@ -443,7 +316,6 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .cw-alert{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(220,38,38,.94);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;}
 .cw-alert-text{font-size:32px;font-weight:800;font-family:'Cinzel',serif;color:#fff;text-align:center;animation:pulse .5s infinite;}
 .cw-alert-sub{font-size:16px;color:rgba(255,255,255,.8);margin-top:8px;}
-.notif-flash{animation:flashRed .5s 3;}
 @keyframes flashRed{0%,100%{background:rgba(99,179,237,.07);}50%{background:rgba(252,129,129,.28);}}
 
 /* TOAST */
@@ -610,8 +482,6 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 const SUPABASE_URL = 'https://yhtdbyebtfbclvfcfrbm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_yhowZDWjfVPu8ZeaB24mGQ_D1dDaHJf';
 const ADMIN_NAME   = 'Otto';
-const MAX_SENDS    = 5;
-const MAX_RECVS    = 3;
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function getRoles(name){
@@ -626,42 +496,19 @@ function getRole(name){
 function hasRole(name,role){ return getRoles(name).indexOf(role)>=0; }
 function isSuperAdmin(name){ return name===ADMIN_NAME||hasRole(name,'super_admin'); }
 function isSvsAdmin(name){ return isSuperAdmin(name)||hasRole(name,'svs_admin'); }
-function isAlbumAdmin(name){ return isSuperAdmin(name)||hasRole(name,'album_admin'); }
 function isModerator(name){ return isSuperAdmin(name)||hasRole(name,'moderator'); }
 function isCjAdmin(name){ return isSuperAdmin(name)||hasRole(name,'cj_admin'); }
 function isLibraryAdmin(name){ return isSuperAdmin(name)||hasRole(name,'library_admin'); }
-function troopStr(reg){
-  if(!reg) return '';
-  var parts=[];
-  if(reg.inf_level) parts.push('INF:'+reg.inf_level+(reg.inf_helios?'+⚡':''));
-  if(reg.mark_level) parts.push('MRK:'+reg.mark_level+(reg.mark_helios?'+⚡':''));
-  if(reg.lanc_level) parts.push('LNC:'+reg.lanc_level+(reg.lanc_helios?'+⚡':''));
-  return parts.join(' · ');
-}
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
-var TAB       = 'board';
-var LOADING   = false;
-var SPINNING  = false;
-var LAST_REF  = null;
 var AUTH_STEP = 'name';
 var NAME_INP  = '';
 var PIN_INP   = '';
 var AUTH_ERR  = '';
 
 var REALTIME  = null;
-var F_ALBUM   = 'all';
-var F_TYPE    = 'all'; // all|have|need|mine-matches
-var MM_SUB    = 'need'; // mine-matches sub: need|have
-
-var LK_ALBUM  = '';
-var LK_PUZ    = '';
-var LK_PIECE  = '';
-var UNDO_LIST = []; // [{id, type, label, timer, ts}]
 var ALL_PLAYERS = []; // all registered players from DB
- // albums closed by admin
-var MODAL      = null; // {entry, matchedPlayer}
 
 // TRANSFER STATE
 var TRANSFER_PERIOD = null;
@@ -670,8 +517,6 @@ var TR_TAB = 'list'; // list | admin
 
 // ID CHANGE REQUESTS
 var ID_REQUESTS = [];
-// NOTIFICATIONS
-var SHOW_NOTIF = false;
 
 // CASTLE WAR STATE
 var CASTLE_WAR = null;
@@ -723,7 +568,6 @@ var LIBRARY_EDIT     = undefined; // undefined=hidden, {}=new, obj=editing
 var SVS_EDIT_WHICH  = null; // which section open: 'leader'|'guide'
 // SvS form buffers
 var SVS_FORM = {};
-var SHOW_GUIDE = false;
 
 // MODULE HEADER CONFIGS
 var MOD_COLORS = {
@@ -790,10 +634,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // HELPERS
 function toast(msg){ var o=document.querySelector('.toast'); if(o) o.remove(); var t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(function(){ t.remove(); },3300); }
 function fmt(d){ return d?d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):''; }
-function getPuzzles(a){ return ALBUMS.find(function(x){ return x.name===a; })?.puzzles||[]; }
-function getPieces(a,p){ var z=getPuzzles(a).find(function(x){ return x.name===p; }); return z?z.pieces:0; }
 function sameName(a,b){ return a&&b&&a.trim().toLowerCase()===b.trim().toLowerCase(); }
-function recvsLeft(){ return Math.max(0,MAX_RECVS-myRecvs()); }
 async function loadAll(){
   // All requests fire in parallel — reduces 3-5s to ~0.5s
   var results = await Promise.all([
@@ -938,6 +779,13 @@ function render(){
 }
 
 
+// Home card visibility, at a glance:
+//   SvS / Rotation / Transfer / SvS Prep / State Rules / Library — always shown
+//     (SvS Prep sub is dimmed via cardPrep when hidden+non-super; Library gates its
+//     content internally with isLibraryAdmin, see renderLibraryApp)
+//   Crazy Joe        — only if super admin or player has an alliance
+//   Castle War       — only if super admin, coordinator, or rallier, and CASTLE_WAR exists
+//   Admin Panel      — only if super admin or player has any admin_roles row
 function renderHome(app){
   var role = getRole(SESSION.name);
   var myPlayer=ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
@@ -1336,7 +1184,7 @@ function renderProfile(app){
   if(saveAlBtn) saveAlBtn.addEventListener('click',async function(){
     var pal=document.getElementById('allianceInp').value.trim();
     var r=await sb.from('players').update({alliance:pal}).eq('name',SESSION.name);
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     if(myPlayer) myPlayer.alliance=pal;
     toast('✅ Alliance saved!');
   });
@@ -1380,7 +1228,7 @@ function renderProfile(app){
     btn.addEventListener('click',async function(){
       var lvl=parseInt(btn.dataset.lvl);
       var r=await sb.from('players').update({valeria_level:lvl}).eq('name',SESSION.name);
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       if(myPlayer) myPlayer.valeria_level=lvl;
       toast('✅ Valeria level updated!'); render();
     });
@@ -2816,12 +2664,6 @@ function parsePower(s){
   return parseInt(s)||0;
 }
 
-function fcOrder(fc){
-  var order=['FC-30','FC-1','FC-2','FC-3','FC-4','FC-5','FC-6','FC-7','FC-8'];
-  var i=order.indexOf(fc);
-  return i===-1?0:i;
-}
-
 function renderTransferApp(app){
   if(!isTransferAdmin(SESSION.name)&&!isSuperAdmin(SESSION.name)){
     app.innerHTML=
@@ -3019,7 +2861,7 @@ function renderTransferList(tc){
   tc.querySelectorAll('.tr-accept').forEach(function(btn){
     btn.addEventListener('click',async function(){
       var r=await sb.from('transfer_invites').update({status:'accepted',updated_by:SESSION.name,updated_at:new Date().toISOString()}).eq('id',btn.dataset.id).select().single();
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       var idx=TRANSFER_INVITES.findIndex(function(i){ return i.id===btn.dataset.id; });
       if(idx>=0) TRANSFER_INVITES[idx]=r.data;
       toast('✅ Marked as accepted'); render();
@@ -3031,7 +2873,7 @@ function renderTransferList(tc){
     btn.addEventListener('click',async function(){
       if(!confirm('Mark as rejected?')) return;
       var r=await sb.from('transfer_invites').update({status:'rejected',updated_by:SESSION.name,updated_at:new Date().toISOString()}).eq('id',btn.dataset.id).select().single();
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       var idx=TRANSFER_INVITES.findIndex(function(i){ return i.id===btn.dataset.id; });
       if(idx>=0) TRANSFER_INVITES[idx]=r.data;
       toast('❌ Marked as rejected'); render();
@@ -3095,7 +2937,7 @@ function renderTransferAdmin(tc){
       special_limit:p.special_limit,power_cap:p.power_cap,
       is_active:true,created_by:SESSION.name
     }]).select().single();
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     TRANSFER_PERIOD=r.data;
     TRANSFER_INVITES=[];
     toast('✅ New period started!'); render();
@@ -3107,7 +2949,7 @@ function renderTransferAdmin(tc){
     var existsTr=ALLIANCE_REPS.find(function(x){ return x.player_name===pl&&x.alliance==='TRANSFER'; });
     if(existsTr){ toast(pl+' is already a transfer manager'); return; }
     var r=await sb.from('alliance_reps').insert([{player_name:pl,alliance:'TRANSFER',granted_by:SESSION.name}]).select().single();
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     var idx=ALLIANCE_REPS.findIndex(function(x){ return x.player_name===pl&&x.alliance==='TRANSFER'; });
     if(idx>=0) ALLIANCE_REPS[idx]=r.data; else ALLIANCE_REPS.push(r.data);
     toast('✅ Manager added: '+pl); render();
@@ -3195,7 +3037,7 @@ function renderTransferEdit(tc){
   document.getElementById('edDelete').addEventListener('click',async function(){
     if(!confirm('Delete invite for '+inv.player_name+'? This cannot be undone.')) return;
     var r=await sb.from('transfer_invites').delete().eq('id',inv.id);
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     TRANSFER_INVITES=TRANSFER_INVITES.filter(function(i){ return i.id!==inv.id; });
     toast('🗑 Deleted');
     window._trEditing=null;
@@ -3439,7 +3281,7 @@ function renderAdminPlayers(ac){
         '</div>'+
         '<div style="display:flex;gap:4px;flex-shrink:0;">'+
           '<button class="btn btn-d btn-sm reset-pin" data-player="'+p.name+'" title="Reset PIN" style="padding:4px 8px;font-size:11px;">🔑</button>'+
-          '<button class="btn btn-d btn-sm del-account" data-player="'+p.name+'" title="Delete" style="padding:4px 8px;font-size:11px;">🗑️</button>'+
+          '<button class="btn btn-d btn-sm del-account" data-player="'+p.name+'" title="Delete" style="padding:4px 8px;font-size:11px;">🗑</button>'+
         '</div>'+
       '</div>'+
     '</div>';
@@ -3533,7 +3375,7 @@ function renderAdminPlayers(ac){
     btn.addEventListener('click',async function(){
       var name=btn.dataset.name;
       var r=await sb.from('players').update({status:'approved'}).eq('name',name);
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       ALL_PLAYERS=ALL_PLAYERS.map(function(p){ return p.name===name?Object.assign({},p,{status:'approved'}):p; });
       toast('✅ '+name+' approved!'); render();
     });
@@ -3555,7 +3397,7 @@ function renderAdminPlayers(ac){
       var newPin=prompt('Set new 6-digit PIN for '+pl+':');
       if(!newPin||newPin.length!==6||!/^\d{6}$/.test(newPin)){ toast('PIN must be exactly 6 digits'); return; }
       var r=await sb.from('players').update({pin:newPin}).eq('name',pl);
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       toast('🔑 PIN reset for '+pl);
     });
   });
@@ -4003,7 +3845,7 @@ function renderSvspForm(sc, day, isLocked, isOpen){
     btn.addEventListener('click',async function(){
       var lvl=parseInt(btn.dataset.lvl);
       var r=await sb.from('players').update({valeria_level:lvl}).eq('name',SESSION.name);
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       if(myPlayer) myPlayer.valeria_level=lvl;
       valeria=lvl;
       render();
@@ -4268,7 +4110,7 @@ function renderSvspResults(sc){
         done_at:!isDone?new Date().toISOString():null,
         done_by:!isDone?SESSION.name:null
       }).eq('id',btn.dataset.subid).select().single();
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       var idx=SVSP_SUBS.findIndex(function(x){ return x.id===btn.dataset.subid; });
       if(idx>=0) SVSP_SUBS[idx]=r.data;
       render();
@@ -4286,7 +4128,7 @@ function renderSvspResults(sc){
       var newSlot=isUp?(idx>0?slots[idx-1]:curSlot):(idx<slots.length-1?slots[idx+1]:curSlot);
       if(newSlot===curSlot) return;
       var r=await sb.from('svsprep_submissions').update({assigned_slot:newSlot,assigned_by:SESSION.name}).eq('id',btn.dataset.subid).select().single();
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       var si=SVSP_SUBS.findIndex(function(x){ return x.id===btn.dataset.subid; });
       if(si>=0) SVSP_SUBS[si]=r.data;
       toast('Slot updated: '+newSlot); render();
@@ -4356,7 +4198,7 @@ function renderSvspAdminSetup(ac){
   var createBtn=document.getElementById('spCreate');
   if(createBtn) createBtn.addEventListener('click',async function(){
     var r=await sb.from('svsprep_sessions').insert([{name:'SvS Prep',status:'hidden',created_by:SESSION.name}]).select().single();
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     SVSP_SESSION=r.data; toast('✅ Session created'); render();
   });
 
@@ -4368,7 +4210,7 @@ function renderSvspAdminSetup(ac){
       status:document.getElementById('spStatus').value,
       updated_at:new Date().toISOString()
     }).eq('id',session.id).select().single();
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     SVSP_SESSION=r.data; toast('✅ Saved'); render();
   });
 
@@ -4380,7 +4222,7 @@ function renderSvspAdminSetup(ac){
     if(typed!=='NEW'){ toast('Cancelled'); return; }
     await sb.from('svsprep_sessions').update({status:'closed'}).eq('id',session.id);
     var r=await sb.from('svsprep_sessions').insert([{name:'SvS Prep',status:'hidden',created_by:SESSION.name}]).select().single();
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     SVSP_SESSION=r.data; SVSP_DAYS=[]; SVSP_SUBS=[];
     toast('✅ New session started'); render();
   });
@@ -4811,7 +4653,7 @@ function renderCastleWar(cw){
     btn.addEventListener('click',async function(){
       var al=btn.dataset.al;
       var r=await sb.from('castle_wars').update({holding_alliance:al||null}).eq('id',war.id).select().single();
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       CASTLE_WAR=r.data; render();
     });
   });
@@ -4871,7 +4713,7 @@ function renderCastleWar(cw){
         opened_at:new Date().toISOString(),
         opened_by:SESSION.name
       }).eq('id',btn.dataset.id).select().single();
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       var idx=CASTLE_RALLIES.findIndex(function(x){ return x.id===btn.dataset.id; });
       if(idx>=0) CASTLE_RALLIES[idx]=r.data;
       if(navigator.vibrate) navigator.vibrate(200);
@@ -4893,7 +4735,7 @@ function renderCastleWar(cw){
         cancelled_at:new Date().toISOString(),
         cancelled_by:SESSION.name
       }).eq('id',btn.dataset.id).select().single();
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       var idx=CASTLE_RALLIES.findIndex(function(x){ return x.id===btn.dataset.id; });
       if(idx>=0) CASTLE_RALLIES[idx]=r.data;
       if(_cwTimers[btn.dataset.id]){ clearInterval(_cwTimers[btn.dataset.id]); delete _cwTimers[btn.dataset.id]; }
@@ -4907,7 +4749,7 @@ function renderCastleWar(cw){
     btn.addEventListener('click',async function(){
       if(!confirm('Remove rallier: '+btn.dataset.name+'?')) return;
       var r=await sb.from('castle_ralliers').delete().eq('id',btn.dataset.id);
-      if(r.error){ toast('Error'); return; }
+      if(r.error){ toast('Error: '+r.error.message); return; }
       CASTLE_RALLIERS=CASTLE_RALLIERS.filter(function(x){ return x.id!==btn.dataset.id; });
       toast('🗑 '+btn.dataset.name+' removed'); render();
     });
@@ -5073,7 +4915,7 @@ function renderCastleSetup(cw){
   var createBtn=document.getElementById('cwCreate');
   if(createBtn) createBtn.addEventListener('click',async function(){
     var r=await sb.from('castle_wars').insert([{name:'Castle War',status:'setup',created_by:SESSION.name}]).select().single();
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     CASTLE_WAR=r.data; toast('✅ War created'); render();
   });
 
@@ -5084,7 +4926,7 @@ function renderCastleSetup(cw){
     var alStr=document.getElementById('cwAlliances').value;
     var alArr=alStr.split(',').map(function(a){ return a.trim().toUpperCase(); }).filter(Boolean);
     var r=await sb.from('castle_wars').update({name:document.getElementById('cwName').value,participant_alliances:alArr}).eq('id',war.id).select().single();
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     CASTLE_WAR=r.data; toast('✅ Saved'); render();
   });
 
@@ -5099,7 +4941,7 @@ function renderCastleSetup(cw){
       started_at:newStatus==='active'?new Date().toISOString():war.started_at,
       ended_at:newStatus==='ended'?new Date().toISOString():null
     }).eq('id',war.id).select().single();
-    if(r.error){ toast('Error'); return; }
+    if(r.error){ toast('Error: '+r.error.message); return; }
     CASTLE_WAR=r.data; toast(newStatus==='active'?'🔴 War started!':'⏹ War ended'); render();
   });
 
@@ -5259,7 +5101,7 @@ function renderRotNotifGuide(rc){
     enableBtn.textContent='...'; enableBtn.disabled=true;
     var result=await requestPushPermission();
     if(result==='granted') toast('✅ Notifications enabled!');
-    else if(result==='denied') toast('Blocked — check browser settings');
+    else if(result==='denied') toast('Notifications blocked — check browser settings');
     localStorage.setItem('push-dismissed','1');
     ROT_TAB='guide'; render();
   });
@@ -5333,7 +5175,7 @@ function renderCastleNotifGuide(cw){
     enableBtn.textContent='...'; enableBtn.disabled=true;
     var result=await requestPushPermission();
     if(result==='granted') toast('✅ Notifications enabled!');
-    else if(result==='denied') toast('Blocked — check browser settings');
+    else if(result==='denied') toast('Notifications blocked — check browser settings');
     localStorage.setItem('push-dismissed','1');
     CASTLE_TAB='guide'; render();
   });
@@ -5589,7 +5431,7 @@ function renderRulesAdmin(el){
       var r=await sb.from('rules_topics').delete().eq('id',tid);
       if(r.error){ toast('Error: '+r.error.message); return; }
       RULES_TOPICS=RULES_TOPICS.filter(function(x){ return x.id!==tid; });
-      toast('🗑️ Deleted'); renderRulesContent();
+      toast('🗑 Deleted'); renderRulesContent();
     });
   });
 
@@ -5647,6 +5489,7 @@ function renderLibraryContent(){
 
 function renderLibraryDetail(el){
   var t = LIBRARY_SELECTED;
+  var idx = LIBRARY_ENTRIES.findIndex(function(x){ return x.id===t.id; });
   el.innerHTML =
     '<div class="rules-detail">'+
       '<button class="rules-detail-back" id="libraryBack">← Back</button>'+
@@ -5661,6 +5504,8 @@ function renderLibraryDetail(el){
         (t.content ? simpleMarkdown(t.content) : '<p style="color:var(--t2);font-style:italic;">No content yet.</p>')+
       '</div>'+
       '<div style="display:flex;gap:8px;margin-top:16px;">'+
+        (idx>0?'<button class="btn btn-g btn-sm" id="libraryMoveUpBtn" style="width:auto;padding:13px 16px;">▲</button>':'')+
+        (idx<LIBRARY_ENTRIES.length-1?'<button class="btn btn-g btn-sm" id="libraryMoveDnBtn" style="width:auto;padding:13px 16px;">▼</button>':'')+
         '<button class="btn btn-g btn-sm" id="libraryEditBtn" style="flex:1;">Edit</button>'+
         '<button class="btn btn-d btn-sm" id="libraryDelBtn" style="flex:1;">Delete</button>'+
       '</div>'+
@@ -5674,7 +5519,27 @@ function renderLibraryDetail(el){
     if(r.error){ toast('Error: '+r.error.message); return; }
     LIBRARY_ENTRIES=LIBRARY_ENTRIES.filter(function(x){ return x.id!==tid; });
     LIBRARY_SELECTED=null;
-    toast('🗑️ Deleted'); renderLibraryContent();
+    toast('🗑 Deleted'); renderLibraryContent();
+  });
+  var moveUpBtn=document.getElementById('libraryMoveUpBtn');
+  if(moveUpBtn) moveUpBtn.addEventListener('click',async function(){
+    var a=LIBRARY_ENTRIES[idx],b=LIBRARY_ENTRIES[idx-1];
+    var tmpO=a.order_index; a.order_index=b.order_index; b.order_index=tmpO;
+    var r1=await sb.from('library_entries').update({order_index:a.order_index}).eq('id',a.id);
+    var r2=await sb.from('library_entries').update({order_index:b.order_index}).eq('id',b.id);
+    if(r1.error||r2.error){ toast('Error: '+(r1.error||r2.error).message); }
+    LIBRARY_ENTRIES.sort(function(x,y){ return x.order_index-y.order_index; });
+    renderLibraryContent();
+  });
+  var moveDnBtn=document.getElementById('libraryMoveDnBtn');
+  if(moveDnBtn) moveDnBtn.addEventListener('click',async function(){
+    var a=LIBRARY_ENTRIES[idx],b=LIBRARY_ENTRIES[idx+1];
+    var tmpO=a.order_index; a.order_index=b.order_index; b.order_index=tmpO;
+    var r1=await sb.from('library_entries').update({order_index:a.order_index}).eq('id',a.id);
+    var r2=await sb.from('library_entries').update({order_index:b.order_index}).eq('id',b.id);
+    if(r1.error||r2.error){ toast('Error: '+(r1.error||r2.error).message); }
+    LIBRARY_ENTRIES.sort(function(x,y){ return x.order_index-y.order_index; });
+    renderLibraryContent();
   });
 }
 
@@ -5977,7 +5842,7 @@ function renderCjAdmin(el, isSuper, myAlliance){
             '</div>'+
             '<div style="display:flex;gap:6px;">'+
               '<button class="btn btn-g btn-sm cjEditTeamBtn" data-id="'+team.id+'" style="font-size:11px;">✏️ Edit</button>'+
-              '<button class="btn btn-d btn-sm cjDelTeamBtn" data-id="'+team.id+'" style="font-size:11px;">🗑️</button>'+
+              '<button class="btn btn-d btn-sm cjDelTeamBtn" data-id="'+team.id+'" style="font-size:11px;">🗑</button>'+
             '</div>'+
           '</div>'+
           '<div style="font-size:11px;color:var(--t3);">'+members.length+'/6 members — '+
@@ -6228,8 +6093,6 @@ async function requestPushPermission(){
   return perm;
 }
 
-// ── Undo timer refresh
-setInterval(function(){ if(UNDO_LIST.length>0&&SESSION&&!MODAL) { var tc=document.getElementById('tabContent'); if(tc&&TAB==='board') { var undoZone=tc.querySelector('.undo-bar'); if(undoZone){ var parent=undoZone.parentNode; var newBars=document.createElement('div'); newBars.innerHTML=renderUndoBars(); parent.querySelectorAll('.undo-bar').forEach(function(b){ b.remove(); }); Array.from(newBars.children).forEach(function(c){ parent.insertBefore(c,parent.querySelector('.filter-bar')); }); tc.querySelectorAll('.undo-btn').forEach(function(btn){ btn.addEventListener('click',function(){ var u=UNDO_LIST.find(function(x){ return x.id===btn.dataset.undoId; }); if(u) doUndo(u); }); }); } } } },10000);
 </script>
 </body>
 </html>
