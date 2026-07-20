@@ -515,7 +515,7 @@ var RULES_EDIT     = undefined; // undefined=hidden, {}=new, obj=editing
 var LIBRARY_ENTRIES  = []; // library_entries
 var LIBRARY_SELECTED = null; // selected entry obj
 var LIBRARY_EDIT     = undefined; // undefined=hidden, {}=new, obj=editing
-var SVS_EDIT_WHICH  = null; // which section open: 'leader'|'guide'
+var SVS_EDIT_WHICH  = null; // which section open: 'leader'
 // SvS form buffers
 var SVS_FORM = {};
 
@@ -1544,31 +1544,6 @@ function renderSvsAdmin(sc){
     if(editing){ SVS_LEADERS=SVS_LEADERS.map(function(x){ return x.id===editing.id?r.data:x; }); }
     else { SVS_LEADERS.push(r.data); }
     toast('✅ Saved!'); SVS_EDIT_LEADER=null; SVS_EDIT_WHICH=null; SVS_FORM={}; render();
-  });
-
-  // Save guide
-  var saveGuideBtn=document.getElementById('svsSaveGuide');
-  if(saveGuideBtn) saveGuideBtn.addEventListener('click',async function(){
-    var gi=SVS_FORM.g_atk_inf!=null?SVS_FORM.g_atk_inf:g_atk_inf;
-    var gl=SVS_FORM.g_atk_lanc!=null?SVS_FORM.g_atk_lanc:g_atk_lanc;
-    var gm=SVS_FORM.g_atk_mark!=null?SVS_FORM.g_atk_mark:g_atk_mark;
-    var gdi=SVS_FORM.g_def_inf!=null?SVS_FORM.g_def_inf:g_def_inf;
-    var gdl=SVS_FORM.g_def_lanc!=null?SVS_FORM.g_def_lanc:g_def_lanc;
-    var gdm=SVS_FORM.g_def_mark!=null?SVS_FORM.g_def_mark:g_def_mark;
-    if(gi+gl+gm!==100){ toast('Attack ratio must total 100%'); return; }
-    if(gdi+gdl+gdm!==100){ toast('Defense ratio must total 100%'); return; }
-    var payload={
-      id:1,
-      atk_inf:gi, atk_lanc:gl, atk_mark:gm,
-      atk_heroes:(document.getElementById('svsGAtkHeroes')||{}).value||(SVS_FORM.g_atk_heroes||''),
-      def_inf:gdi, def_lanc:gdl, def_mark:gdm,
-      def_heroes:(document.getElementById('svsGDefHeroes')||{}).value||(SVS_FORM.g_def_heroes||''),
-      updated_at:new Date().toISOString()
-    };
-    var r=await sb.from('svs_participant_guide').upsert(payload,{onConflict:'id'}).select().single();
-    if(r.error){ toast('Error: '+r.error.message); return; }
-    SVS_GUIDE=r.data;
-    toast('✅ Guide saved!'); SVS_EDIT_WHICH=null; SVS_FORM={}; render();
   });
 
   // Edit/delete in list
@@ -3048,11 +3023,10 @@ function renderRotHistory(rc){
 // CENTRAL ADMIN PANEL
 // ═══════════════════════════════════════════════════════
 function renderAdminPanel(app){
-  var role = getRole(SESSION.name);
   var isSuper = isSuperAdmin(SESSION.name);
-  var isSvsAdm = role==='svs_admin';
+  var isSvsAdm = isSvsAdmin(SESSION.name);
   var isAlbAdm = false; // albums module removed
-  var isMod = role==='moderator';
+  var isMod = isModerator(SESSION.name);
   var isTrMgr = ALLIANCE_REPS.some(function(r){ return r.player_name===SESSION.name&&r.alliance==='TRANSFER'; });
 
   // Build tabs based on role
@@ -3247,9 +3221,12 @@ function renderAdminPlayers(ac){
         if(r3.error){ toast('Error: '+r3.error.message); return; }
         var r4=await sb.from('svs_rally_leaders').update({name:newId}).eq('name',player);
         if(r4.error){ toast('Error: '+r4.error.message); return; }
+        var r7=await sb.from('push_subscriptions').update({player_name:newId}).eq('player_name',player);
+        if(r7.error){ toast('Error: '+r7.error.message); return; }
         var p=ALL_PLAYERS.find(function(x){ return x.name===player; });
         if(p) p.name=newId;
         ALLIANCE_REPS.forEach(function(r){ if(r.player_name===player) r.player_name=newId; });
+        SVS_LEADERS.forEach(function(l){ if(l.name===player) l.name=newId; });
         if(SESSION.name===player){ SESSION.name=newId; localStorage.setItem('wos-session',JSON.stringify(SESSION)); }
         toast('✅ Name changed: '+player+' → '+newId);
       } else {
@@ -3290,7 +3267,8 @@ function renderAdminPlayers(ac){
     btn.addEventListener('click',async function(){
       var name=btn.dataset.name;
       if(!confirm('Reject and delete: '+name+'?')) return;
-      await sb.from('players').delete().eq('name',name);
+      var r=await sb.from('players').delete().eq('name',name);
+      if(r.error){ toast('Error: '+r.error.message); return; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==name; });
       toast('❌ Rejected'); render();
     });
@@ -3320,6 +3298,14 @@ function renderAdminPlayers(ac){
       var r2=await sb.from('alliance_reps').delete().eq('player_name',pl);
       if(r2.error){ toast('Error: '+r2.error.message); return; }
       ALLIANCE_REPS=ALLIANCE_REPS.filter(function(x){ return x.player_name!==pl; });
+      var r4=await sb.from('svs_rally_leaders').delete().eq('name',pl);
+      if(r4.error){ toast('Error: '+r4.error.message); return; }
+      SVS_LEADERS=SVS_LEADERS.filter(function(x){ return x.name!==pl; });
+      var r5=await sb.from('id_change_requests').delete().eq('player_name',pl);
+      if(r5.error){ toast('Error: '+r5.error.message); return; }
+      ID_REQUESTS=ID_REQUESTS.filter(function(x){ return x.player_name!==pl; });
+      var r6=await sb.from('push_subscriptions').delete().eq('player_name',pl);
+      if(r6.error){ toast('Error: '+r6.error.message); return; }
       var r3=await sb.from('players').delete().eq('name',pl);
       if(r3.error){ toast('Error: '+r3.error.message); return; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
