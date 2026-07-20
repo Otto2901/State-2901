@@ -30,6 +30,34 @@ function randomToken(): string {
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000;
+
+async function recordFailedAttempt(name: string): Promise<void> {
+  const { data: existing } = await db
+    .from('login_failures')
+    .select('attempt_count')
+    .eq('player_name', name)
+    .maybeSingle();
+
+  const count = (existing?.attempt_count || 0) + 1;
+  if (count >= MAX_ATTEMPTS) {
+    await db.from('login_failures').upsert({
+      player_name: name,
+      attempt_count: 0,
+      locked_until: new Date(Date.now() + LOCKOUT_MS).toISOString(),
+      updated_at: new Date().toISOString()
+    });
+  } else {
+    await db.from('login_failures').upsert({
+      player_name: name,
+      attempt_count: count,
+      locked_until: null,
+      updated_at: new Date().toISOString()
+    });
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
   if (req.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -40,6 +68,17 @@ Deno.serve(async (req) => {
   const name = String(body?.name || '').trim();
   const pin = String(body?.pin || '');
   if (!name || !pin) return json({ error: 'Name and PIN required.' }, 400);
+
+  const { data: fail } = await db
+    .from('login_failures')
+    .select('locked_until')
+    .eq('player_name', name)
+    .maybeSingle();
+
+  if (fail?.locked_until && new Date(fail.locked_until as string) > new Date()) {
+    const mins = Math.ceil((new Date(fail.locked_until as string).getTime() - Date.now()) / 60000);
+    return json({ error: `Too many attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.` }, 429);
+  }
 
   const { data: player, error: findErr } = await db
     .from('players')
@@ -65,7 +104,12 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (!ok) return json({ error: 'Wrong PIN. Try again.' }, 401);
+  if (!ok) {
+    await recordFailedAttempt(name);
+    return json({ error: 'Wrong PIN. Try again.' }, 401);
+  }
+
+  await db.from('login_failures').delete().eq('player_name', name);
 
   const token = randomToken();
   const { error: insErr } = await db.from('sessions').insert({
