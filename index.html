@@ -83,22 +83,11 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 /* CARD */
 .card{background:var(--surface);border:1px solid var(--b);border-radius:var(--r2);padding:18px;position:relative;overflow:hidden;}
 .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(232,210,168,.04) 0%,transparent 55%);pointer-events:none;}
-.card::after,.home-card::after,.mod-hdr::after{content:'';position:absolute;inset:2px;border-radius:calc(var(--r2) - 2px);pointer-events:none;background:
-  linear-gradient(90deg,#e3bc6a 0 22px,transparent 22px) top left/26px 2.5px no-repeat,
-  linear-gradient(180deg,#e3bc6a 0 22px,transparent 22px) top left/2.5px 26px no-repeat,
-  linear-gradient(270deg,#e3bc6a 0 22px,transparent 22px) top right/26px 2.5px no-repeat,
-  linear-gradient(180deg,#e3bc6a 0 22px,transparent 22px) top right/2.5px 26px no-repeat,
-  linear-gradient(90deg,#e3bc6a 0 22px,transparent 22px) bottom left/26px 2.5px no-repeat,
-  linear-gradient(0deg,#e3bc6a 0 22px,transparent 22px) bottom left/2.5px 26px no-repeat,
-  linear-gradient(270deg,#e3bc6a 0 22px,transparent 22px) bottom right/26px 2.5px no-repeat,
-  linear-gradient(0deg,#e3bc6a 0 22px,transparent 22px) bottom right/2.5px 26px no-repeat,
-  radial-gradient(circle 3.5px at top left,#f6e2ab,transparent 70%) top left/100% 100% no-repeat,
-  radial-gradient(circle 3.5px at top right,#f6e2ab,transparent 70%) top right/100% 100% no-repeat,
-  radial-gradient(circle 3.5px at bottom left,#f6e2ab,transparent 70%) bottom left/100% 100% no-repeat,
-  radial-gradient(circle 3.5px at bottom right,#f6e2ab,transparent 70%) bottom right/100% 100% no-repeat;
-  opacity:0;filter:drop-shadow(0 0 3px rgba(227,188,106,.5));transition:opacity .3s var(--ease);
+.card::after,.home-card::after,.mod-hdr::after{content:'';position:absolute;top:0;left:14px;right:14px;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(227,188,106,.7) 15%,rgba(246,226,171,.9) 50%,rgba(227,188,106,.7) 85%,transparent);
+  opacity:0;transition:opacity .3s var(--ease);
 }
-.card.brk::after,.home-card.brk::after,.mod-hdr.brk::after{opacity:.92;}
+.card.brk::after,.home-card.brk::after,.mod-hdr.brk::after{opacity:.85;}
 
 /* PIECE GRID */
 .piece-cb.disabled .piece-lbl{opacity:.3;cursor:not-allowed;}
