@@ -98,7 +98,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .piece-cb.disabled .piece-lbl{opacity:.3;cursor:not-allowed;}
 
 /* AUTH */
-.auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:28px 24px;gap:20px;animation:gateIn .5s var(--ease);}
+.auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:28px 24px;gap:20px;}
+.auth.gate-in{animation:gateIn .5s var(--ease);}
 @keyframes gateIn{0%{opacity:0;transform:scale(.94) translateY(6px);}100%{opacity:1;transform:scale(1) translateY(0);}}
 .auth-title{font-family:'Cinzel',serif;font-size:22px;color:var(--ac);text-align:center;}
 .auth-state{font-size:10px;color:var(--t2);letter-spacing:3.5px;text-transform:uppercase;text-align:center;margin-top:-12px;}
@@ -1232,7 +1233,10 @@ function groupedPlayerOpts(players, excludeName){
   return html;
 }
 
+var _lastAuthStep=null;
 function renderAuth(app){
+  var stepChanged=(_lastAuthStep!==AUTH_STEP);
+  _lastAuthStep=AUTH_STEP;
   var inner='';
   if(AUTH_STEP==='name'){
     inner='<div class="home-hdr-seal"><div class="home-hdr-logo" style="font-size:44px;">🏰</div></div><div class="auth-title">State 2901</div><div class="auth-state">State Management System</div><div class="auth-sub">Enter your in-game name to continue.</div>'+
@@ -1250,7 +1254,7 @@ function renderAuth(app){
       '<div class="auth-sub">'+(isNew?'Hi <strong style="color:var(--ac)">'+NAME_INP+'</strong>! Set a 6-digit PIN.':'Welcome back, <strong style="color:var(--ac)">'+NAME_INP+'</strong>!')+'</div>'+
       '<div class="auth-card card"><div class="pin-dots">'+dots+'</div><div class="numpad">'+numpad+'</div><div class="err">'+AUTH_ERR+'</div><button class="btn btn-g" id="backBtn">← Back</button></div>';
   }
-  app.innerHTML='<div class="auth">'+inner+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
+  app.innerHTML='<div class="auth'+(stepChanged?' gate-in':'')+'">'+inner+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
   if(AUTH_STEP==='name'){
     var inp=document.getElementById('nameInp'); inp.value=NAME_INP;
     inp.addEventListener('input',function(e){ NAME_INP=e.target.value; });
