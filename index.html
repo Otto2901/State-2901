@@ -562,6 +562,11 @@ var CJ_TAB     = 'board'; // board | admin
 var CJ_EDIT_TEAM = null; // null=new, obj=editing
 var CJ_VIEW_ALLIANCE = null; // super admin selected alliance filter
 
+// ALLIANCE ORG CHART STATE
+var ORGCHART_DATA = []; // alliance_org_chart
+var ORGCHART_VIEW_ALLIANCE = null; // super admin selected alliance
+var ORGCHART_EDIT = undefined; // undefined=hidden, {}=new, obj=editing
+
 // STATE RULES
 var RULES_TOPICS   = []; // rules_topics
 var RULES_TAB      = 'board'; // board | admin
@@ -582,7 +587,8 @@ var MOD_COLORS = {
   adminpanel:{grad:'linear-gradient(90deg,#c9974b,#e3bc6a)', icon:'linear-gradient(135deg,rgba(201,151,75,.3),rgba(227,188,106,.2))', text:'#e3bc6a'},
   rules:     {grad:'linear-gradient(90deg,#5c8a7a,#8fb8a8)', icon:'linear-gradient(135deg,rgba(92,138,122,.3),rgba(143,184,168,.2))', text:'#8fb8a8'},
   library:   {grad:'linear-gradient(90deg,#a08556,#c4a876)', icon:'linear-gradient(135deg,rgba(160,133,86,.3),rgba(196,168,118,.2))', text:'#c4a876'},
-  crazyjoe:  {grad:'linear-gradient(90deg,#9c6b4f,#c48f6a)', icon:'linear-gradient(135deg,rgba(156,107,79,.3),rgba(196,143,106,.2))', text:'#c48f6a'}
+  crazyjoe:  {grad:'linear-gradient(90deg,#9c6b4f,#c48f6a)', icon:'linear-gradient(135deg,rgba(156,107,79,.3),rgba(196,143,106,.2))', text:'#c48f6a'},
+  orgchart:  {grad:'linear-gradient(90deg,#7a6b4a,#b8a06a)', icon:'linear-gradient(135deg,rgba(122,107,74,.3),rgba(184,160,106,.2))', text:'#b8a06a'}
 };
 
 function buildModuleHeader(moduleKey, icon, title, sub){
@@ -656,7 +662,8 @@ async function loadAll(){
     sb.from('cj_teams').select('*').order('created_at'),
     sb.from('cj_team_members').select('*').order('position'),
     sb.from('rules_topics').select('*').order('order_index'),
-    sb.from('library_entries').select('*').order('order_index')
+    sb.from('library_entries').select('*').order('order_index'),
+    sb.from('alliance_org_chart').select('*').order('created_at')
   ]);
   var r3=results[0],r4=results[1],r5=results[2],r6=results[3];
   var r7=results[4],r8=results[5],r9=results[6],r10=results[7];
@@ -677,11 +684,12 @@ async function loadAll(){
   if(!rTR.error&&rTR.data) TRANSFER_PERIOD=rTR.data;
   if(!rTRi.error&&rTRi.data) TRANSFER_INVITES=rTRi.data;
   if(!rIDR.error&&rIDR.data) ID_REQUESTS=rIDR.data;
-  var rCJT=results[11],rCJM=results[12],rRUL=results[13],rLIB=results[14];
+  var rCJT=results[11],rCJM=results[12],rRUL=results[13],rLIB=results[14],rORG=results[15];
   if(!rCJT.error&&rCJT.data) CJ_TEAMS=rCJT.data;
   if(!rCJM.error&&rCJM.data) CJ_MEMBERS=rCJM.data;
   if(!rRUL.error&&rRUL.data) RULES_TOPICS=rRUL.data;
   if(!rLIB.error&&rLIB.data) LIBRARY_ENTRIES=rLIB.data;
+  if(!rORG.error&&rORG.data) ORGCHART_DATA=rORG.data;
 }
 
 // AUTH
@@ -760,6 +768,7 @@ function render(){
   if(MODULE==='rules')     renderRulesApp(app);
   if(MODULE==='library')   renderLibraryApp(app);
   if(MODULE==='adminpanel') renderAdminPanel(app);
+  if(MODULE==='orgchart')  renderOrgChartApp(app);
 }
 
 
@@ -868,6 +877,15 @@ function renderHome(app){
             '<div class="home-card-chev">›</div>'+
           '</div>';
         })()+
+        (function(){
+          if(!isSuperAdmin(SESSION.name)&&!MY_ALLIANCES.length) return '';
+          return '<div class="home-card brk" id="goOrgChart" style="border-color:rgba(184,160,106,.28);background:rgba(184,160,106,.04);">'+
+            '<div class="home-card-icon-badge"><div class="home-card-icon">🎖️</div></div>'+
+            '<div class="home-card-text"><span class="home-card-title" style="color:#b8a06a;">Alliance Org Chart</span>'+
+            '<div class="home-card-sub">R5 / R4 responsibility assignments</div></div>'+
+            '<div class="home-card-chev">›</div>'+
+          '</div>';
+        })()+
         '<div class="home-card brk" id="goRules" style="border-color:rgba(92,138,122,.25);">'+
           '<div class="home-card-icon-badge"><div class="home-card-icon">📜</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#8fb8a8;">State Rules</span>'+
@@ -912,6 +930,8 @@ function renderHome(app){
   document.getElementById('goTransfer').addEventListener('click', function(){ MODULE='transfer'; TR_TAB='list'; render(); });
   var goCjBtn=document.getElementById('goCj');
   if(goCjBtn) goCjBtn.addEventListener('click',function(){ MODULE='crazyjoe'; CJ_TAB='board'; CJ_VIEW_ALLIANCE=null; render(); });
+  var goOrgChartBtn=document.getElementById('goOrgChart');
+  if(goOrgChartBtn) goOrgChartBtn.addEventListener('click',function(){ MODULE='orgchart'; ORGCHART_VIEW_ALLIANCE=null; ORGCHART_EDIT=undefined; render(); });
   document.getElementById('goRules').addEventListener('click', function(){ MODULE='rules'; RULES_TAB='board'; RULES_SELECTED=null; render(); });
   document.getElementById('goLibrary').addEventListener('click', function(){ MODULE='library'; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
   var goAdminBtn=document.getElementById('goAdmin');
@@ -3292,10 +3312,13 @@ function renderAdminPlayers(ac){
         if(r4.error){ toast('Error: '+r4.error.message); return; }
         var r7=await sb.from('push_subscriptions').update({player_name:newId}).eq('player_name',player);
         if(r7.error){ toast('Error: '+r7.error.message); return; }
+        var r8=await sb.from('alliance_org_chart').update({player_name:newId}).eq('player_name',player);
+        if(r8.error){ toast('Error: '+r8.error.message); return; }
         var p=ALL_PLAYERS.find(function(x){ return x.name===player; });
         if(p) p.name=newId;
         ALLIANCE_REPS.forEach(function(r){ if(r.player_name===player) r.player_name=newId; });
         SVS_LEADERS.forEach(function(l){ if(l.name===player) l.name=newId; });
+        ORGCHART_DATA.forEach(function(o){ if(o.player_name===player) o.player_name=newId; });
         if(SESSION.name===player){ SESSION.name=newId; localStorage.setItem('wos-session',JSON.stringify(SESSION)); }
         toast('✅ Name changed: '+player+' → '+newId);
       } else {
@@ -3375,6 +3398,9 @@ function renderAdminPlayers(ac){
       ID_REQUESTS=ID_REQUESTS.filter(function(x){ return x.player_name!==pl; });
       var r6=await sb.from('push_subscriptions').delete().eq('player_name',pl);
       if(r6.error){ toast('Error: '+r6.error.message); return; }
+      var r7=await sb.from('alliance_org_chart').delete().eq('player_name',pl);
+      if(r7.error){ toast('Error: '+r7.error.message); return; }
+      ORGCHART_DATA=ORGCHART_DATA.filter(function(x){ return x.player_name!==pl; });
       var r3=await sb.from('players').delete().eq('name',pl);
       if(r3.error){ toast('Error: '+r3.error.message); return; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
@@ -4399,6 +4425,224 @@ function renderCjAdmin(el, isSuper, myAlliance){
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── CRAZY JOE END ──────────────────────────────────────────────
+
+// ── ALLIANCE ORG CHART ───────────────────────────────────────────
+function canEditOrgChart(alliance){
+  return isSuperAdmin(SESSION.name)||MY_ALLIANCES.includes(alliance);
+}
+
+function orgChartCopyText(alliance, rows){
+  var lines=['🎖️ '+alliance+' — LEADERSHIP ORG CHART','━━━━━━━━━━━━━━━━'];
+  ['R5','R4'].forEach(function(role){
+    var group=rows.filter(function(r){ return r.role===role; });
+    if(!group.length) return;
+    lines.push('');
+    lines.push(role==='R5'?'👑 R5':'🛡 R4');
+    group.forEach(function(r){
+      lines.push('• '+r.player_name+' — '+r.title);
+      if(r.description) lines.push('   '+r.description);
+    });
+  });
+  return lines.join('\n');
+}
+
+function renderOrgChartApp(app){
+  var isSuper=isSuperAdmin(SESSION.name);
+
+  if(!isSuper&&!MY_ALLIANCES.length){
+    app.innerHTML=
+      buildModuleHeader('orgchart','🎖️','Alliance Org Chart','R5 / R4 Responsibilities')+
+      '<div class="empty"><div class="empty-icon">🔒</div><p>You are not registered as an alliance representative.<br>Contact the admin.</p></div>';
+    document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+    return;
+  }
+
+  // Multi-alliance rep: pick which alliance to view
+  var myAlliances=MY_ALLIANCES.filter(function(a){ return a!=='TRANSFER'; });
+  if(!isSuper&&myAlliances.length>1&&!ORGCHART_VIEW_ALLIANCE){
+    app.innerHTML=
+      buildModuleHeader('orgchart','🎖️','Alliance Org Chart','R5 / R4 Responsibilities')+
+      '<div class="content">'+
+        '<div class="card">'+
+          '<div style="font-family:Cinzel,serif;font-size:15px;color:#b8a06a;margin-bottom:6px;">Select Alliance</div>'+
+          '<div style="font-size:12px;color:var(--t2);margin-bottom:14px;">You represent multiple alliances. Which one do you want to manage?</div>'+
+          myAlliances.map(function(al){
+            return '<button class="rot-alliance-pick-btn" data-al="'+al+'" style="display:block;width:100%;margin-bottom:8px;padding:14px;background:rgba(184,160,106,.1);border:2px solid #b8a06a;border-radius:12px;color:#b8a06a;font-size:14px;font-weight:800;font-family:Cinzel,sans-serif;cursor:pointer;">'+al+'</button>';
+          }).join('')+
+        '</div>'+
+      '</div>';
+    document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+    app.querySelectorAll('.rot-alliance-pick-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){ ORGCHART_VIEW_ALLIANCE=btn.dataset.al; render(); });
+    });
+    return;
+  }
+
+  // Super admin: alliance picker dropdown
+  var viewAlliance = isSuper ? ORGCHART_VIEW_ALLIANCE : (myAlliances.length===1?myAlliances[0]:ORGCHART_VIEW_ALLIANCE);
+
+  app.innerHTML=
+    buildModuleHeader('orgchart','🎖️','Alliance Org Chart','R5 / R4 Responsibilities')+
+    '<div class="content" id="orgContent"></div>'+
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
+
+  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+
+  var oc=document.getElementById('orgContent');
+  renderOrgChartContent(oc, viewAlliance, isSuper, myAlliances);
+}
+
+function renderOrgChartContent(oc, viewAlliance, isSuper, myAlliances){
+  var superPicker='';
+  if(isSuper){
+    var alOpts='<option value="">— Select alliance —</option>'+
+      getAllAlliances().map(function(al){
+        return '<option value="'+al+'"'+(viewAlliance===al?' selected':'')+'>'+al+'</option>';
+      }).join('');
+    superPicker=
+      '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">'+
+        '<label style="font-size:11px;font-weight:700;color:rgba(230,213,180,.5);text-transform:uppercase;letter-spacing:.8px;flex-shrink:0;">Alliance</label>'+
+        '<select class="sel" id="orgAllianceSel" style="flex:1;">'+alOpts+'</select>'+
+      '</div>';
+  } else if(myAlliances.length>1){
+    superPicker=
+      '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">'+
+        '<label style="font-size:11px;font-weight:700;color:rgba(230,213,180,.5);text-transform:uppercase;letter-spacing:.8px;flex-shrink:0;">Alliance</label>'+
+        '<select class="sel" id="orgAllianceSel" style="flex:1;">'+
+          myAlliances.map(function(al){ return '<option value="'+al+'"'+(viewAlliance===al?' selected':'')+'>'+al+'</option>'; }).join('')+
+        '</select>'+
+      '</div>';
+  }
+
+  if(!viewAlliance){
+    oc.innerHTML=superPicker+'<div class="empty"><div class="empty-icon">🎖️</div><p>Select an alliance to view its org chart.</p></div>';
+    var sel0=document.getElementById('orgAllianceSel');
+    if(sel0) sel0.addEventListener('change',function(){ ORGCHART_VIEW_ALLIANCE=this.value||null; renderOrgChartContent(oc,ORGCHART_VIEW_ALLIANCE,isSuper,myAlliances); });
+    return;
+  }
+
+  var canEdit=canEditOrgChart(viewAlliance);
+  var rows=ORGCHART_DATA.filter(function(r){ return r.alliance===viewAlliance; });
+
+  if(ORGCHART_EDIT!==undefined){
+    oc.innerHTML=superPicker+orgChartFormHtml(ORGCHART_EDIT, viewAlliance);
+    wireOrgChartForm(oc, viewAlliance, isSuper, myAlliances);
+    return;
+  }
+
+  var html=superPicker;
+  html+='<button class="copy-btn" id="orgCopyBtn"'+(rows.length?'':' disabled style="opacity:.4;cursor:default;"')+'>📋 Copy Org Chart</button>';
+  if(canEdit) html+='<button class="btn btn-g" id="orgAddBtn" style="width:100%;margin-top:10px;margin-bottom:16px;">➕ Add Responsibility</button>';
+  else html+='<div style="height:16px;"></div>';
+
+  ['R5','R4'].forEach(function(role){
+    var group=rows.filter(function(r){ return r.role===role; });
+    html+='<div class="rot-section-title" style="margin-top:14px;">'+(role==='R5'?'👑 R5 — Leader':'🛡 R4 — Co-Leaders')+'</div>';
+    if(!group.length){
+      html+='<div style="text-align:center;padding:20px 0;color:var(--t3);font-size:12px;">No entries yet.</div>';
+      return;
+    }
+    group.forEach(function(r){
+      html+='<div class="card" style="margin-bottom:10px;">'+
+        '<div style="font-family:Cinzel,serif;font-size:14px;color:#b8a06a;margin-bottom:2px;">'+escHtml(r.player_name)+'</div>'+
+        '<div style="font-size:13px;font-weight:700;color:var(--t);margin-bottom:6px;">'+escHtml(r.title)+'</div>'+
+        (r.description?'<div style="font-size:12px;color:var(--t2);line-height:1.5;white-space:pre-wrap;">'+escHtml(r.description)+'</div>':'')+
+        (canEdit?
+          '<div style="display:flex;gap:6px;margin-top:10px;">'+
+            '<button class="btn btn-g btn-sm org-edit" data-id="'+r.id+'" style="flex:1;">✏️ Edit</button>'+
+            '<button class="btn btn-d btn-sm org-del" data-id="'+r.id+'" style="padding:8px 14px;">🗑</button>'+
+          '</div>':'')+
+      '</div>';
+    });
+  });
+
+  oc.innerHTML=html;
+
+  var sel=document.getElementById('orgAllianceSel');
+  if(sel) sel.addEventListener('change',function(){ ORGCHART_VIEW_ALLIANCE=this.value||null; renderOrgChartContent(oc,ORGCHART_VIEW_ALLIANCE,isSuper,myAlliances); });
+
+  var copyBtn=document.getElementById('orgCopyBtn');
+  if(copyBtn&&rows.length) copyBtn.addEventListener('click',function(){
+    navigator.clipboard.writeText(orgChartCopyText(viewAlliance,rows)).then(function(){ toast('📋 Copied!'); });
+  });
+
+  var addBtn=document.getElementById('orgAddBtn');
+  if(addBtn) addBtn.addEventListener('click',function(){ ORGCHART_EDIT={}; renderOrgChartContent(oc,viewAlliance,isSuper,myAlliances); });
+
+  if(canEdit){
+    oc.querySelectorAll('.org-edit').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var id=btn.dataset.id;
+        var r=ORGCHART_DATA.find(function(x){ return String(x.id)===String(id); });
+        if(r) ORGCHART_EDIT=r;
+        renderOrgChartContent(oc,viewAlliance,isSuper,myAlliances);
+      });
+    });
+    oc.querySelectorAll('.org-del').forEach(function(btn){
+      btn.addEventListener('click',async function(){
+        var id=btn.dataset.id;
+        var r=ORGCHART_DATA.find(function(x){ return String(x.id)===String(id); });
+        if(!confirm('Delete entry for '+(r?r.player_name:'')+'?')) return;
+        var res=await sb.from('alliance_org_chart').delete().eq('id',id);
+        if(res.error){ toast('Error: '+res.error.message); return; }
+        ORGCHART_DATA=ORGCHART_DATA.filter(function(x){ return String(x.id)!==String(id); });
+        toast('🗑 Deleted');
+        renderOrgChartContent(oc,viewAlliance,isSuper,myAlliances);
+      });
+    });
+  }
+}
+
+function orgChartFormHtml(e, alliance){
+  var isNew=!e.id;
+  return '<div class="card">'+
+    '<div style="font-family:Cinzel,serif;font-size:15px;color:#b8a06a;margin-bottom:14px;">'+(isNew?'➕ Add':'✏️ Edit')+' Responsibility — '+escHtml(alliance)+'</div>'+
+    '<label style="font-size:11px;font-weight:700;color:rgba(230,213,180,.5);text-transform:uppercase;letter-spacing:.8px;">Role</label>'+
+    '<select class="sel" id="orgFormRole" style="margin:6px 0 12px;">'+
+      '<option value="R5"'+(e.role==='R5'?' selected':'')+'>R5 — Leader</option>'+
+      '<option value="R4"'+(e.role!=='R5'?' selected':'')+'>R4 — Co-Leader</option>'+
+    '</select>'+
+    '<label style="font-size:11px;font-weight:700;color:rgba(230,213,180,.5);text-transform:uppercase;letter-spacing:.8px;">Player Name</label>'+
+    '<input class="inp" id="orgFormName" style="margin:6px 0 12px;" value="'+escHtml(e.player_name||'')+'" placeholder="Player name">'+
+    '<label style="font-size:11px;font-weight:700;color:rgba(230,213,180,.5);text-transform:uppercase;letter-spacing:.8px;">Responsibility Title</label>'+
+    '<input class="inp" id="orgFormTitle" style="margin:6px 0 12px;" value="'+escHtml(e.title||'')+'" placeholder="e.g. Military Coordination">'+
+    '<label style="font-size:11px;font-weight:700;color:rgba(230,213,180,.5);text-transform:uppercase;letter-spacing:.8px;">Details</label>'+
+    '<textarea class="inp" id="orgFormDesc" rows="4" style="margin:6px 0 16px;resize:vertical;" placeholder="Describe the responsibilities in detail...">'+escHtml(e.description||'')+'</textarea>'+
+    '<div style="display:flex;gap:8px;">'+
+      '<button class="btn btn-g" id="orgFormCancel" style="flex:1;">Cancel</button>'+
+      '<button class="btn" id="orgFormSave" style="flex:2;">'+(isNew?'Add':'Save')+'</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function wireOrgChartForm(oc, viewAlliance, isSuper, myAlliances){
+  document.getElementById('orgFormCancel').addEventListener('click',function(){
+    ORGCHART_EDIT=undefined; renderOrgChartContent(oc,viewAlliance,isSuper,myAlliances);
+  });
+  document.getElementById('orgFormSave').addEventListener('click',async function(){
+    var role=document.getElementById('orgFormRole').value;
+    var name=document.getElementById('orgFormName').value.trim();
+    var title=document.getElementById('orgFormTitle').value.trim();
+    var desc=document.getElementById('orgFormDesc').value.trim();
+    if(!name||!title){ toast('Player name and title are required'); return; }
+    var isNew=!ORGCHART_EDIT.id;
+    if(isNew){
+      var res=await sb.from('alliance_org_chart').insert([{alliance:viewAlliance,role:role,player_name:name,title:title,description:desc,granted_by:SESSION.name}]).select().single();
+      if(res.error){ toast('Error: '+res.error.message); return; }
+      ORGCHART_DATA.push(res.data);
+      toast('✅ Added');
+    } else {
+      var res2=await sb.from('alliance_org_chart').update({role:role,player_name:name,title:title,description:desc}).eq('id',ORGCHART_EDIT.id).select().single();
+      if(res2.error){ toast('Error: '+res2.error.message); return; }
+      var idx=ORGCHART_DATA.findIndex(function(x){ return String(x.id)===String(ORGCHART_EDIT.id); });
+      if(idx>=0) ORGCHART_DATA[idx]=res2.data;
+      toast('✅ Saved');
+    }
+    ORGCHART_EDIT=undefined;
+    renderOrgChartContent(oc,viewAlliance,isSuper,myAlliances);
+  });
+}
+// ── ALLIANCE ORG CHART END ───────────────────────────────────────
 
 async function init(){
   if(SESSION){
