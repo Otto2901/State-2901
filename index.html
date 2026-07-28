@@ -459,6 +459,15 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 const SUPABASE_URL = 'https://yhtdbyebtfbclvfcfrbm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_yhowZDWjfVPu8ZeaB24mGQ_D1dDaHJf';
 const ADMIN_NAME   = 'Otto';
+// What each admin_roles value actually grants — used for the role-grant
+// notification text and to decide whether a "View Guide" link applies.
+var ROLE_INFO = {
+  super_admin:      { label:'Super Admin',     guideKey:null,       desc:'You have full administrative access to every module.' },
+  stronghold_admin: { label:'Stronghold Admin',guideKey:'rotation', desc:'You can manage Alliance Representatives and edit the weekly Stronghold/Fort rewards in the Rotation module\'s Admin tab.' },
+  library_admin:    { label:'Library Admin',   guideKey:'library',  desc:'You can view the Library and add, edit, reorder, or delete entries.' },
+  cj_admin:         { label:'Crazy Joe Admin', guideKey:null,       desc:'You can manage Crazy Joe team assignments.' },
+  moderator:        { label:'Moderator',       guideKey:null,       desc:'You have moderator status.' }
+};
 function createSb(token){
   return token
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {global:{headers:{'x-session-token':token}}})
@@ -542,15 +551,17 @@ var MOD_COLORS = {
   crazyjoe:  {grad:'linear-gradient(90deg,#9c6b4f,#c48f6a)', icon:'linear-gradient(135deg,rgba(156,107,79,.3),rgba(196,143,106,.2))', text:'#c48f6a'}
 };
 
-function buildModuleHeader(moduleKey, icon, title, sub){
+function buildModuleHeader(moduleKey, icon, title, sub, guideKey){
   var c = MOD_COLORS[moduleKey] || MOD_COLORS.rotation;
   var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super" style="font-size:9px;">Super Admin</span>':
     getRole(SESSION.name)?'<span class="role-badge role-svs" style="font-size:9px;">'+getRole(SESSION.name).replace(/_/g,' ')+'</span>':'';
+  var guideBtnHtml = guideKey?'<button class="mod-hdr-back" id="guideBtn" title="How to use" style="margin-left:6px;">❓</button>':'';
   return '<div class="mod-hdr brk">'+
     '<div class="mod-hdr-accent" style="background:'+c.grad+';"></div>'+
     '<div class="mod-hdr-inner">'+
       '<div class="mod-hdr-top">'+
         '<button class="mod-hdr-back" id="backHome">←</button>'+
+        guideBtnHtml+
         '<div class="mod-hdr-icon" style="background:'+c.icon+';">'+icon+'</div>'+
         '<div class="mod-hdr-text">'+
           '<div class="mod-hdr-title" style="color:'+c.text+';">'+title+'</div>'+
@@ -746,6 +757,8 @@ function render(){
 function showPendingRoleNotifs(){
   if(!PENDING_NOTIFS.length||document.getElementById('roleNotifOverlay')) return;
   var n=PENDING_NOTIFS[0];
+  var info=n.role?ROLE_INFO[n.role]:null;
+  var guideBtnHtml=(info&&info.guideKey)?'<button id="roleNotifGuide" style="background:rgba(201,151,75,.15);border:1px solid rgba(201,151,75,.4);color:#c9974b;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-right:8px;">📖 View Guide</button>':'';
   var overlay=document.createElement('div');
   overlay.id='roleNotifOverlay';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -754,10 +767,12 @@ function showPendingRoleNotifs(){
       '<div style="font-size:36px;margin-bottom:12px;">🔔</div>'+
       '<div style="font-family:Cinzel,serif;font-size:15px;color:#c9974b;margin-bottom:12px;">Notification</div>'+
       '<div style="font-size:13px;color:#e6d5b4;line-height:1.6;margin-bottom:20px;">'+n.message+'</div>'+
-      '<button id="roleNotifOk" style="background:rgba(82,199,89,.18);border:1px solid rgba(82,199,89,.4);color:#52c759;padding:10px 28px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">OK</button>'+
+      '<div>'+guideBtnHtml+'<button id="roleNotifOk" style="background:rgba(82,199,89,.18);border:1px solid rgba(82,199,89,.4);color:#52c759;padding:10px 28px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">OK</button></div>'+
     '</div>';
   document.body.appendChild(overlay);
   document.getElementById('roleNotifOk').addEventListener('click',function(){ dismissRoleNotif(n.id); });
+  var guideBtn=document.getElementById('roleNotifGuide');
+  if(guideBtn) guideBtn.addEventListener('click',function(){ dismissRoleNotif(n.id); openGuideModal(info.guideKey); });
 }
 async function dismissRoleNotif(id){
   var o=document.getElementById('roleNotifOverlay'); if(o) o.remove();
@@ -1285,9 +1300,11 @@ async function grantRole(playerName, role){
   var r = await sb.from('admin_roles').insert({player_name:playerName,role:role,granted_by:SESSION.name});
   if(r.error){ toast('Error: '+r.error.message); return; }
   ADMIN_ROLES.push({player_name:playerName,role:role,granted_by:SESSION.name});
+  var info = ROLE_INFO[role] || { label: role.replace(/_/g,' '), desc:'' };
   sb.from('notifications').insert({
     player_name: playerName,
-    message: 'You were granted the "'+role.replace(/_/g,' ')+'" role by '+SESSION.name+'.'
+    role: role,
+    message: 'You were granted the "'+info.label+'" role by '+SESSION.name+'.'+(info.desc?' '+info.desc:'')
   }).then(function(nr){ if(nr.error) console.warn('Notification insert failed:',nr.error.message); });
   toast('✅ Role granted!'); render();
 }
@@ -1379,12 +1396,13 @@ function renderRotApp(app){
   }).join('');
 
   app.innerHTML=
-    buildModuleHeader('rotation','🏯','Stronghold Rotation','Weekly Fort & Stronghold Selection')+
+    buildModuleHeader('rotation','🏯','Stronghold Rotation','Weekly Fort & Stronghold Selection','rotation')+
     '<div class="content" id="rotContent"></div>'+
     '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
     '<div class="nav">'+navHtml+'</div>';
 
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('rotation'); });
   app.querySelectorAll('.nav-btn').forEach(function(btn){ btn.addEventListener('click',function(){ ROT_TAB=btn.dataset.tab; if(btn.dataset.tab!=='register') window._superAdminAlliance=null; render(); }); });
   // Auto-refresh countdown every second
   if(window._rotTimer) clearInterval(window._rotTimer);
@@ -3130,6 +3148,63 @@ function renderAdminStats(ac){
 }
 
 
+// ── "HOW TO USE" GUIDE MODAL (generic, reused per module) ────────────
+var GUIDE_CONTENT = {
+  rotation: { title:'🏯 Stronghold Rotation — How to use', render: renderRotationGuideContent },
+  library:  { title:'📚 Library — How to use',            render: renderLibraryGuideContent }
+};
+function openGuideModal(key){
+  var g=GUIDE_CONTENT[key]; if(!g) return;
+  var overlay=document.createElement('div');
+  overlay.id='guideModalOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML=
+    '<div style="background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;padding:18px;position:relative;">'+
+      '<button id="guideModalClose" style="position:absolute;top:10px;right:10px;background:none;border:none;color:rgba(230,213,180,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px;">✕</button>'+
+      '<div style="font-family:Cinzel,serif;font-size:15px;color:#c9974b;margin-bottom:14px;padding-right:24px;">'+g.title+'</div>'+
+      '<div id="guideModalBody"></div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) closeGuideModal(); });
+  document.getElementById('guideModalClose').addEventListener('click',closeGuideModal);
+  g.render(document.getElementById('guideModalBody'));
+}
+function closeGuideModal(){
+  var o=document.getElementById('guideModalOverlay');
+  if(o) o.remove();
+}
+function guideStep(n,text){ return '<div style="font-size:12px;color:#e6d5b4;line-height:1.8;margin-bottom:4px;"><strong style="color:#c9974b;">'+n+'.</strong> '+text+'</div>'; }
+function guideSection(title,color){ return '<div style="font-size:11px;font-weight:800;color:'+(color||'#c9974b')+';text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">'+title+'</div>'; }
+function renderRotationGuideContent(rc){
+  var html=
+    guideSection('How it works')+
+    guideStep(1,'Every week, alliances take turns picking a slot in a fixed order — the <strong>Top 4</strong> alliances pick a Stronghold + Fort, the <strong>Bot 5</strong> pick a Fort only.')+
+    guideStep(2,'The <strong>Board</strong> tab shows what\'s taken, what\'s free, and whose turn it is right now.')+
+    guideStep(3,'When it\'s your alliance\'s turn, go to <strong>My Selection</strong> to pick your Stronghold/Fort before the selection window closes.')+
+    guideStep(4,'<strong>History</strong> shows past weeks\' final boards.')+
+    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Selections are only open on the scheduled window (see the countdown banner) unless an admin force-opens it.</div>';
+  if(isStrongholdAdmin(SESSION.name)||isSuperAdmin(SESSION.name)){
+    html+=guideSection('As a Stronghold Admin, in the Admin tab you can:','#52c759');
+    html+=guideStep('•','Add or remove <strong>Alliance Representatives</strong>.');
+    html+=guideStep('•','Edit the <strong>weekly rewards</strong> shown for each Stronghold/Fort slot.');
+  }
+  if(isSuperAdmin(SESSION.name)){
+    html+=guideSection('Super Admin only','#ffd60a');
+    html+=guideStep('•','Reorder alliances between Top 4 / Bot 5, rename/add/remove alliances.');
+    html+=guideStep('•','Force-open/close the selection window, clear selections, and reset & rotate the week.');
+  }
+  rc.innerHTML=html;
+}
+function renderLibraryGuideContent(rc){
+  var html=
+    guideSection('How it works')+
+    guideStep(1,'The Library is a knowledge archive for announcements, guides, and reference material — only players with the <strong>Library Admin</strong> role (or Super Admin) can open it.')+
+    guideStep(2,'Use <strong>+ New Entry</strong> to add a page: pick an emoji icon, a title, an optional short description, and write the content in Markdown.')+
+    guideStep(3,'Open any entry to <strong>Edit</strong>, <strong>Delete</strong>, or move it <strong>▲/▼</strong> to reorder the list.')+
+    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Entries are shown to everyone who can open the Library, in the order you set here.</div>';
+  rc.innerHTML=html;
+}
+
 function openNotifModal(){
   var overlay=document.createElement('div');
   overlay.id='notifModalOverlay';
@@ -3514,9 +3589,10 @@ function renderLibraryApp(app){
     return;
   }
   app.innerHTML =
-    buildModuleHeader('library','📚','Library','Announcements & knowledge archive')+
+    buildModuleHeader('library','📚','Library','Announcements & knowledge archive','library')+
     '<div id="libraryContent"></div>';
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('library'); });
   renderLibraryContent();
 }
 
