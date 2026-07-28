@@ -480,6 +480,7 @@ function isSuperAdmin(name){ return name===ADMIN_NAME||hasRole(name,'super_admin
 function isModerator(name){ return isSuperAdmin(name)||hasRole(name,'moderator'); }
 function isCjAdmin(name){ return isSuperAdmin(name)||hasRole(name,'cj_admin'); }
 function isLibraryAdmin(name){ return isSuperAdmin(name)||hasRole(name,'library_admin'); }
+function isStrongholdAdmin(name){ return isSuperAdmin(name)||hasRole(name,'stronghold_admin'); }
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
@@ -636,6 +637,26 @@ async function loadAll(){
   if(!rCJM.error&&rCJM.data) CJ_MEMBERS=rCJM.data;
   if(!rRUL.error&&rRUL.data) RULES_TOPICS=rRUL.data;
   if(!rLIB.error&&rLIB.data) LIBRARY_ENTRIES=rLIB.data;
+  maybeAutoResetRotation();
+}
+
+// Silently rotates the alliance order once the selection window has closed
+// and nobody has reset the week yet — removes the need for a superadmin to
+// remember to click "Reset & Rotate Order" every Friday.
+async function maybeAutoResetRotation(){
+  if(window._autoResetTried) return;
+  if(!ROT_STATE) return;
+  if(getSelectionWindowStatus().open) return;
+  if(ROT_STATE.week_start.slice(0,10)===getCurrentWeekStart().slice(0,10)) return;
+  window._autoResetTried=true;
+  try{
+    var r=await sb.functions.invoke('rotation-auto-reset',{body:{}});
+    if(r.data&&r.data.ok&&!r.data.skipped&&r.data.state){
+      ROT_STATE=r.data.state;
+      ROT_SELS=ROT_SELS.filter(function(s){ return s.week_start.slice(0,10)!==ROT_STATE.week_start.slice(0,10); });
+      if(MODULE==='rotation') render();
+    }
+  }catch(e){ console.warn('auto-reset failed:',e); }
 }
 
 // AUTH
@@ -735,9 +756,16 @@ function renderHome(app){
   }
   var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super">Super Admin</span>':
     getRoles(SESSION.name).map(function(r){
-      var cls=r==='cj_admin'||r==='library_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
+      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
       return '<span class="role-badge '+cls+'">'+r.replace(/_/g,' ')+'</span>';
     }).join(' ');
+
+  var notifState = typeof Notification!=='undefined'?Notification.permission:'unsupported';
+  var bellDotColor = notifState==='granted'?'#52c759':notifState==='denied'?'#6b5a42':'#ffd60a';
+  var bellHtml = notifState==='unsupported'?'':
+    '<button id="notifBellBtn" class="home-hdr-signout" style="position:relative;padding:6px 9px;" title="Notifications">🔔'+
+      '<span style="position:absolute;top:3px;right:4px;width:7px;height:7px;border-radius:50%;background:'+bellDotColor+';border:1.5px solid #1a120a;"></span>'+
+    '</button>';
 
   // Card accent colors
   var cardRot   = 'border-color:rgba(107,122,143,.28);';
@@ -757,6 +785,7 @@ function renderHome(app){
           '<div class="player-chip'+(isSuperAdmin(SESSION.name)?' adm':'')+'" id="logoutBtn">'+
             (isSuperAdmin(SESSION.name)?'👑':'👤')+' '+SESSION.name+' '+roleLabel+
           '</div>'+
+          bellHtml+
           '<button id="logoutIconBtn" class="home-hdr-signout">Sign Out</button>'+
         '</div>'+
       '</div>'+
@@ -839,6 +868,8 @@ function renderHome(app){
 
   document.getElementById('logoutBtn').addEventListener('click', function(){ PROFILE_OPEN=true; render(); });
   document.getElementById('logoutIconBtn').addEventListener('click', function(){ if(confirm('Sign out?')) logout(); });
+  var nbb=document.getElementById('notifBellBtn');
+  if(nbb) nbb.addEventListener('click', openNotifModal);
   var mbb=document.getElementById('missingBannerBtn');
   if(mbb) mbb.addEventListener('click',function(){ PROFILE_OPEN=true; render(); });
   var epb=document.getElementById('enablePushBtn');
@@ -1302,13 +1333,12 @@ function allSelsDone(){
 
 // -- RENDER ROTATION APP ---------------------------------
 function renderRotApp(app){
-  var canAdmin=isSuperAdmin(SESSION.name);
+  var canAdmin=isSuperAdmin(SESSION.name)||isStrongholdAdmin(SESSION.name);
   var isRep=MY_ALLIANCES.length>0||MY_ALLIANCE!==null;
   var chipCls=isSuperAdmin(SESSION.name)?'player-chip adm':'player-chip';
   var tabs=[{id:'board',icon:'🏰',label:'Board'},{id:'register',icon:'📝',label:'My Selection'}];
   if(canAdmin) tabs.push({id:'admin',icon:'👑',label:'Admin'});
   if(canAdmin||MY_ALLIANCES.length) tabs.push({id:'history',icon:'📅',label:'History'});
-  tabs.push({id:'guide',icon:'📲',label:'Notifications'});
   var navHtml=tabs.map(function(t){
     return '<button class="nav-btn '+(t.id==='admin'?'adm-btn ':'')+( ROT_TAB===t.id?'on':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>';
   }).join('');
@@ -1345,7 +1375,6 @@ function renderRotApp(app){
   if(ROT_TAB==='register') renderRotSelect(rc);
   if(ROT_TAB==='admin'&&canAdmin) renderRotAdmin(rc);
   if(ROT_TAB==='history'&&(canAdmin||MY_ALLIANCES.length)) renderRotHistory(rc);
-  if(ROT_TAB==='guide')   renderRotNotifGuide(rc);
 }
 
 // -- BOARD ------------------------------------------------
@@ -1785,7 +1814,8 @@ function renderRotSelect(rc){
 
 // -- ROTATION ADMIN ---------------------------------------
 function renderRotAdmin(rc){
-  if(!isSuperAdmin(SESSION.name)){ rc.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
+  if(!isSuperAdmin(SESSION.name)&&!isStrongholdAdmin(SESSION.name)){ rc.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
+  var isFullAdmin=isSuperAdmin(SESSION.name);
 
   var ro=getRotOrder();
   var top4str=ro.top4.join(', ');
@@ -1858,7 +1888,7 @@ function renderRotAdmin(rc){
       '</div>'+
     '</div>';
 
-  rc.innerHTML=
+  var currentWeekHtml=!isFullAdmin?'':
     '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-bottom:12px;">'+
       '<div class="rot-section-title">📅 Current Week</div>'+
       '<div style="font-size:13px;color:#f2e6d0;margin-bottom:12px;">Week of: <strong>'+weekStart+'</strong></div>'+
@@ -1867,8 +1897,8 @@ function renderRotAdmin(rc){
         '<button class="btn btn-d" id="resetWeekBtn" style="font-size:12px;margin-bottom:8px;">🔄 Reset & Rotate Order</button>'+
       '<div style="background:rgba(255,214,10,.06);border:1px solid rgba(255,214,10,.2);border-radius:10px;padding:10px;">'+
         '<div style="font-size:11px;font-weight:800;color:#ffd60a;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">⚡ Manual Override</div>'+
-        (ROT_STATE&&ROT_STATE.force_open?'<div style="font-size:11px;color:#52c759;margin-bottom:6px;font-weight:700;">✅ Selections currently force open</div>':'')+ 
-        (ROT_STATE&&ROT_STATE.force_closed?'<div style="font-size:11px;color:#ff453a;margin-bottom:6px;font-weight:700;">🔒 Selections currently force closed</div>':'')+ 
+        (ROT_STATE&&ROT_STATE.force_open?'<div style="font-size:11px;color:#52c759;margin-bottom:6px;font-weight:700;">✅ Selections currently force open</div>':'')+
+        (ROT_STATE&&ROT_STATE.force_closed?'<div style="font-size:11px;color:#ff453a;margin-bottom:6px;font-weight:700;">🔒 Selections currently force closed</div>':'')+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">'+
           '<button class="btn btn-g" id="forceOpenBtn" style="font-size:11px;padding:8px;">🔓 Force Open</button>'+
           '<button class="btn btn-d" id="forceCloseBtn" style="font-size:11px;padding:8px;">🔒 Force Close</button>'+
@@ -1876,7 +1906,8 @@ function renderRotAdmin(rc){
         '<button class="btn btn-d" id="clearOverrideBtn" style="font-size:11px;padding:8px;width:100%;">↩ Normal Schedule</button>'+
       '</div>'+
       '</div>'+
-    '</div>'+
+    '</div>';
+  var allianceOrderHtml=!isFullAdmin?'':
     '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-bottom:12px;">'+
       '<div class="rot-section-title">⚔️ Alliance Order & Groups</div>'+
       '<div style="margin-bottom:8px;">'+
@@ -1888,7 +1919,11 @@ function renderRotAdmin(rc){
         bot5Rows+
       '</div>'+
       addAllianceHtml+
-    '</div>'+
+    '</div>';
+
+  rc.innerHTML=
+    currentWeekHtml+
+    allianceOrderHtml+
     '<div style="background:rgba(255,214,10,.04);border:1px solid rgba(255,214,10,.13);border-radius:14px;padding:14px;margin-bottom:12px;">'+
       '<div class="rot-section-title">🏳️ Alliance Representatives</div>'+
       '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
@@ -1906,6 +1941,7 @@ function renderRotAdmin(rc){
       '<button class="btn btn-p" id="saveRewardsBtn" style="margin-top:8px;">💾 Save All Rewards</button>'+
     '</div>';
 
+  if(isFullAdmin){
   // Reset week
   document.getElementById('forceOpenBtn').addEventListener('click',async function(){
     if(!confirm('Force open selections? Players can select outside normal Wed-Fri window.')) return;
@@ -2073,6 +2109,7 @@ function renderRotAdmin(rc){
       if(ok){ toast('✅ '+name+' added to '+(group==='top4'?'Top 4':'Bot 5')); render(); }
     });
   }
+  } // end isFullAdmin-only handlers
 
   // Add rep
   document.getElementById('addRepBtn').addEventListener('click',async function(){
@@ -2676,13 +2713,14 @@ function renderAdminPanel(app){
   var isAlbAdm = false; // albums module removed
   var isMod = isModerator(SESSION.name);
   var isTrMgr = ALLIANCE_REPS.some(function(r){ return r.player_name===SESSION.name&&r.alliance==='TRANSFER'; });
+  var isStrAdm = isStrongholdAdmin(SESSION.name);
 
   // Build tabs based on role
   var tabs=[];
   if(isSuper)              tabs.push({id:'players',icon:'👥',label:'Players'});
   if(isSuper)              tabs.push({id:'roles',icon:'👑',label:'Roles'});
 
-  if(isSuper)              tabs.push({id:'rotation',icon:'🏰',label:'Rotation'});
+  if(isSuper||isStrAdm)   tabs.push({id:'rotation',icon:'🏰',label:'Rotation'});
   if(isSuper||isTrMgr)    tabs.push({id:'transfer',icon:'✈️',label:'Transfer'});
   if(isSuper)              tabs.push({id:'stats',icon:'📊',label:'Stats'});
 
@@ -2698,7 +2736,8 @@ function renderAdminPanel(app){
   var roleLabel=isSuper?'<span class="role-badge role-super">Super Admin</span>':
     isAlbAdm?'<span class="role-badge role-album">Album Admin</span>':
     isMod?'<span class="role-badge role-mod">Moderator</span>':
-    isTrMgr?'<span class="role-badge" style="background:rgba(191,90,242,.15);color:#bf5af2;border:1px solid rgba(191,90,242,.3);">Transfer Mgr</span>':'';
+    isTrMgr?'<span class="role-badge" style="background:rgba(191,90,242,.15);color:#bf5af2;border:1px solid rgba(191,90,242,.3);">Transfer Mgr</span>':
+    isStrAdm?'<span class="role-badge role-svs">Stronghold Admin</span>':'';
 
   app.innerHTML=
     buildModuleHeader('adminpanel','🏛️','Admin Panel','System Management & Settings')+
@@ -2785,7 +2824,7 @@ function renderAdminPlayers(ac){
 
   function playerRowHtml(p){
     var role=getRole(p.name);
-    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":role==="library_admin"?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
+    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
     var playerReps=ALLIANCE_REPS.filter(function(r){ return r.player_name===p.name; });
     var repTags=playerReps.map(function(r){
       if(r.alliance==='TRANSFER') return '<span style="font-size:9px;background:rgba(143,122,168,.12);color:#b494c4;border:1px solid rgba(143,122,168,.35);border-radius:5px;padding:1px 5px;">✈️ Transfer Rep</span>';
@@ -2968,7 +3007,7 @@ function renderAdminRoles(ac){
   var rolesHtml=Object.keys(byPlayer).sort().map(function(pname){
     var roles=byPlayer[pname];
     var badgesHtml=roles.map(function(r){
-      var badgeCls=r.role==='cj_admin'?'role-svs':r.role==='album_admin'?'role-album':r.role==='library_admin'?'role-svs':'role-mod';
+      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
       return '<span class="role-badge '+badgeCls+'" style="margin-right:4px;">'+r.role.replace(/_/g," ")+'</span>'+
         '<button class="btn btn-d btn-sm revoke-role" data-player="'+pname+'" data-role="'+r.role+'" style="padding:3px 8px;font-size:10px;margin-right:4px;">✕</button>';
     }).join('');
@@ -2994,6 +3033,7 @@ function renderAdminRoles(ac){
           '<option value="cj_admin">🤪 Crazy Joe Admin</option>'+
           '<option value="moderator">🛡️ Moderator</option>'+
           '<option value="library_admin">📚 Library Admin</option>'+
+          '<option value="stronghold_admin">🏯 Stronghold Admin</option>'+
         '</select>'+
         '<button class="btn btn-g btn-sm" id="grantRoleBtn">Grant</button>'+
       '</div>'+
@@ -3055,7 +3095,27 @@ function renderAdminStats(ac){
 }
 
 
-function renderRotNotifGuide(rc){
+function openNotifModal(){
+  var overlay=document.createElement('div');
+  overlay.id='notifModalOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML=
+    '<div style="background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;padding:18px;position:relative;">'+
+      '<button id="notifModalClose" style="position:absolute;top:10px;right:10px;background:none;border:none;color:rgba(230,213,180,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px;">✕</button>'+
+      '<div style="font-family:Cinzel,serif;font-size:15px;color:#c9974b;margin-bottom:14px;padding-right:24px;">🔔 Rotation Notifications</div>'+
+      '<div id="notifModalBody"></div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) closeNotifModal(); });
+  document.getElementById('notifModalClose').addEventListener('click',closeNotifModal);
+  renderNotifGuideContent(document.getElementById('notifModalBody'));
+}
+function closeNotifModal(){
+  var o=document.getElementById('notifModalOverlay');
+  if(o) o.remove();
+}
+
+function renderNotifGuideContent(rc){
   var notifState=typeof Notification!=='undefined'?Notification.permission:'unsupported';
 
   var statusHtml='';
@@ -3122,7 +3182,7 @@ function renderRotNotifGuide(rc){
     if(result==='granted') toast('✅ Notifications enabled!');
     else if(result==='denied') toast('Notifications blocked — check browser settings');
     localStorage.setItem('push-dismissed','1');
-    ROT_TAB='guide'; render();
+    renderNotifGuideContent(rc);
   });
 }
 
