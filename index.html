@@ -514,6 +514,7 @@ var MY_ALLIANCE = null;  // primary alliance
 var MY_ALLIANCES = []; // all alliances (can be multiple)
 var MODULE     = null; // null=home | 'albums' | 'rotation' | 'transfer' | etc.
 var ADMIN_ROLES = []; // admin_roles
+var PENDING_NOTIFS = []; // unread rows from notifications table (e.g. "you were granted a role")
 
 // CRAZY JOE STATE
 var CJ_TEAMS   = []; // cj_teams
@@ -612,7 +613,8 @@ async function loadAll(){
     sb.from('cj_teams').select('*').order('created_at'),
     sb.from('cj_team_members').select('*').order('position'),
     sb.from('rules_topics').select('*').order('order_index'),
-    sb.from('library_entries').select('*').order('order_index')
+    sb.from('library_entries').select('*').order('order_index'),
+    sb.from('notifications').select('*').is('read_at',null).order('created_at')
   ]);
   var r3=results[0],r5=results[2],r6=results[3];
   var r7=results[4],r8=results[5],r9=results[6],r10=results[7];
@@ -632,11 +634,12 @@ async function loadAll(){
   if(!rTR.error&&rTR.data) TRANSFER_PERIOD=rTR.data;
   if(!rTRi.error&&rTRi.data) TRANSFER_INVITES=rTRi.data;
   if(!rIDR.error&&rIDR.data) ID_REQUESTS=rIDR.data;
-  var rCJT=results[11],rCJM=results[12],rRUL=results[13],rLIB=results[14];
+  var rCJT=results[11],rCJM=results[12],rRUL=results[13],rLIB=results[14],rNOT=results[15];
   if(!rCJT.error&&rCJT.data) CJ_TEAMS=rCJT.data;
   if(!rCJM.error&&rCJM.data) CJ_MEMBERS=rCJM.data;
   if(!rRUL.error&&rRUL.data) RULES_TOPICS=rRUL.data;
   if(!rLIB.error&&rLIB.data) LIBRARY_ENTRIES=rLIB.data;
+  if(!rNOT.error&&rNOT.data) PENDING_NOTIFS=rNOT.data;
   maybeAutoResetRotation();
 }
 
@@ -725,8 +728,8 @@ function render(){
     var myPlayer=ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
     if(myPlayer&&!myPlayer.player_id){ renderProfileComplete(app); return; }
   }
-  if(PROFILE_OPEN){ renderProfile(app); return; }
-  if(!MODULE){ renderHome(app); return; }
+  if(PROFILE_OPEN){ renderProfile(app); renderPendingRoleNotifs(app); return; }
+  if(!MODULE){ renderHome(app); renderPendingRoleNotifs(app); return; }
 
   if(MODULE==='rotation') renderRotApp(app);
   if(MODULE==='transfer') renderTransferApp(app);
@@ -734,6 +737,33 @@ function render(){
   if(MODULE==='rules')     renderRulesApp(app);
   if(MODULE==='library')   renderLibraryApp(app);
   if(MODULE==='adminpanel') renderAdminPanel(app);
+  renderPendingRoleNotifs(app);
+}
+
+// Shows a persistent (not auto-dismissing) banner for any unread "notifications"
+// row belonging to the current player — e.g. "you were granted a role" — stacked
+// on top of whatever module render() just drew. Cleared by dismissRoleNotif().
+function renderPendingRoleNotifs(app){
+  if(!PENDING_NOTIFS.length) return;
+  var html='<div id="roleNotifStack" style="position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;width:min(92vw,420px);">'+
+    PENDING_NOTIFS.map(function(n){
+      return '<div style="background:rgba(82,199,89,.14);border:1px solid rgba(82,199,89,.4);border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 18px rgba(0,0,0,.35);">'+
+        '<span style="font-size:18px;">🔔</span>'+
+        '<div style="flex:1;font-size:12px;color:#e6d5b4;">'+n.message+'</div>'+
+        '<button class="btn btn-sm roleNotifDismiss" data-id="'+n.id+'" style="flex-shrink:0;background:rgba(82,199,89,.18);border:1px solid rgba(82,199,89,.4);color:#52c759;font-size:11px;">OK</button>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+  app.insertAdjacentHTML('beforeend',html);
+  Array.prototype.forEach.call(document.querySelectorAll('.roleNotifDismiss'),function(btn){
+    btn.addEventListener('click',function(){ dismissRoleNotif(btn.getAttribute('data-id')); });
+  });
+}
+async function dismissRoleNotif(id){
+  PENDING_NOTIFS=PENDING_NOTIFS.filter(function(n){ return n.id!==id; });
+  render();
+  var r=await sb.from('notifications').update({read_at:new Date().toISOString()}).eq('id',id);
+  if(r.error) console.warn('Notification dismiss failed:',r.error.message);
 }
 
 
@@ -1254,6 +1284,10 @@ async function grantRole(playerName, role){
   var r = await sb.from('admin_roles').insert({player_name:playerName,role:role,granted_by:SESSION.name});
   if(r.error){ toast('Error: '+r.error.message); return; }
   ADMIN_ROLES.push({player_name:playerName,role:role,granted_by:SESSION.name});
+  sb.from('notifications').insert({
+    player_name: playerName,
+    message: 'You were granted the "'+role.replace(/_/g,' ')+'" role by '+SESSION.name+'.'
+  }).then(function(nr){ if(nr.error) console.warn('Notification insert failed:',nr.error.message); });
   toast('✅ Role granted!'); render();
 }
 async function revokeRole(playerName, role){
