@@ -1679,7 +1679,7 @@ function renderRotSelect(rc){
 
   var sels=getCurrentWeekSels();
   var currentTurn=getCurrentTurnAlliance();
-  var myAlliance=MY_ALLIANCE||(isSuperAdmin(SESSION.name)?window._superAdminAlliance:null);
+  var myAlliance=window._superAdminAlliance||MY_ALLIANCE;
   var mySel=sels.find(function(s){ return s.alliance===myAlliance; });
   var ro=getRotOrder();
   var isTop4=ro.top4.includes(myAlliance);
