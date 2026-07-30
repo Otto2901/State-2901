@@ -1254,7 +1254,8 @@ function renderAuth(app){
       '<div class="auth-sub">'+(isNew?'Hi <strong style="color:var(--ac)">'+NAME_INP+'</strong>! Set a 6-digit PIN.':'Welcome back, <strong style="color:var(--ac)">'+NAME_INP+'</strong>!')+'</div>'+
       '<div class="auth-card card"><div class="pin-dots">'+dots+'</div><div class="numpad">'+numpad+'</div><div class="err">'+AUTH_ERR+'</div><button class="btn btn-g" id="backBtn">← Back</button></div>';
   }
-  app.innerHTML='<div class="auth'+(stepChanged?' gate-in':'')+'">'+inner+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
+  var rulesLinkHtml='<div style="text-align:center;margin-top:14px;"><button id="stateRulesLink" style="background:none;border:none;color:rgba(196,155,92,.65);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:Manrope,sans-serif;">📜 View State Rules</button></div>';
+  app.innerHTML='<div class="auth'+(stepChanged?' gate-in':'')+'">'+inner+rulesLinkHtml+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
   if(AUTH_STEP==='name'){
     var inp=document.getElementById('nameInp'); inp.value=NAME_INP;
     inp.addEventListener('input',function(e){ NAME_INP=e.target.value; });
@@ -1266,6 +1267,7 @@ function renderAuth(app){
     app.querySelectorAll('.nk[data-k]').forEach(function(el){ el.addEventListener('click',function(){ pushPin(el.dataset.k); }); });
     document.getElementById('backBtn').addEventListener('click',function(){ AUTH_STEP='name'; PIN_INP=''; AUTH_ERR=''; render(); });
   }
+  document.getElementById('stateRulesLink').addEventListener('click',openStateRulesModal);
 }
 
 
@@ -3270,6 +3272,80 @@ function openNotifModal(){
 function closeNotifModal(){
   var o=document.getElementById('notifModalOverlay');
   if(o) o.remove();
+}
+
+// -- STATE RULES MODAL (pre-login, Auth screen) -------------------------
+var AUTH_RULES_TOPICS=null; // fetched lazily on first open, cached after
+var AUTH_RULES_SELECTED=null;
+async function openStateRulesModal(){
+  var overlay=document.createElement('div');
+  overlay.id='stateRulesModalOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML=
+    '<div style="background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;padding:18px;position:relative;">'+
+      '<button id="stateRulesModalClose" style="position:absolute;top:10px;right:10px;background:none;border:none;color:rgba(230,213,180,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px;">✕</button>'+
+      '<div style="font-family:Cinzel,serif;font-size:15px;color:#c9974b;margin-bottom:14px;padding-right:24px;">📜 State Rules</div>'+
+      '<div id="stateRulesModalBody"></div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) closeStateRulesModal(); });
+  document.getElementById('stateRulesModalClose').addEventListener('click',closeStateRulesModal);
+
+  if(AUTH_RULES_TOPICS===null){
+    document.getElementById('stateRulesModalBody').innerHTML='<div style="text-align:center;color:var(--t2);font-size:12px;padding:20px 0;">Loading...</div>';
+    var r=await sb.from('rules_topics').select('*').order('order_index');
+    AUTH_RULES_TOPICS=r.data||[];
+  }
+  renderStateRulesModalBody();
+}
+function closeStateRulesModal(){
+  var o=document.getElementById('stateRulesModalOverlay');
+  if(o) o.remove();
+  AUTH_RULES_SELECTED=null;
+}
+function renderStateRulesModalBody(){
+  var el=document.getElementById('stateRulesModalBody'); if(!el) return;
+
+  if(AUTH_RULES_SELECTED){
+    var t=AUTH_RULES_SELECTED;
+    el.innerHTML=
+      '<div class="rules-detail">'+
+        '<button class="rules-detail-back" id="stateRulesBack">← Back</button>'+
+        '<div class="rules-detail-header">'+
+          '<div class="rules-detail-icon">'+t.emoji+'</div>'+
+          '<div>'+
+            '<div class="rules-detail-title">'+escHtml(t.title)+'</div>'+
+            (t.description?'<div class="rules-detail-desc">'+escHtml(t.description)+'</div>':'')+
+          '</div>'+
+        '</div>'+
+        '<div class="rules-md">'+
+          (t.content?simpleMarkdown(t.content):'<p style="color:var(--t2);font-style:italic;">No content yet.</p>')+
+        '</div>'+
+      '</div>';
+    document.getElementById('stateRulesBack').addEventListener('click',function(){ AUTH_RULES_SELECTED=null; renderStateRulesModalBody(); });
+    return;
+  }
+
+  if(!AUTH_RULES_TOPICS.length){
+    el.innerHTML='<div class="rules-empty"><div class="rules-empty-icon">📜</div><div class="rules-empty-text">No rules topics yet.<br>Check back later.</div></div>';
+    return;
+  }
+
+  el.innerHTML='<div class="rules-grid">'+
+    AUTH_RULES_TOPICS.map(function(t){
+      return '<div class="rules-topic-card" data-tid="'+t.id+'">'+
+        '<div class="rules-topic-icon">'+t.emoji+'</div>'+
+        '<div class="rules-topic-title">'+escHtml(t.title)+'</div>'+
+        (t.description?'<div class="rules-topic-desc">'+escHtml(t.description)+'</div>':'')+
+      '</div>';
+    }).join('')+
+  '</div>';
+  el.querySelectorAll('.rules-topic-card').forEach(function(card){
+    card.addEventListener('click',function(){
+      AUTH_RULES_SELECTED=AUTH_RULES_TOPICS.find(function(x){ return x.id===card.dataset.tid; });
+      renderStateRulesModalBody();
+    });
+  });
 }
 
 function renderNotifGuideContent(rc){
