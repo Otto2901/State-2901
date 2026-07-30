@@ -57,4 +57,4 @@ create policy "admin_roles_delete" on admin_roles
 -- to revoke the table-level grant first, then grant back only the
 -- columns the app actually needs.
 revoke select on players from anon, authenticated, public;
-grant select (name, created_at, status, player_id, alliance, valeria_level) on players to anon;
+grant select (name, created_at, status, player_id, alliance) on players to anon;

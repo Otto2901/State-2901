@@ -610,7 +610,7 @@ function sameName(a,b){ return a&&b&&a.trim().toLowerCase()===b.trim().toLowerCa
 async function loadAll(){
   // All requests fire in parallel — reduces 3-5s to ~0.5s
   var results = await Promise.all([
-    sb.from('players').select('name,created_at,status,player_id,alliance,valeria_level').order('created_at',{ascending:false}),
+    sb.from('players').select('name,created_at,status,player_id,alliance').order('created_at',{ascending:false}),
     Promise.resolve({data:null,error:null}), // svs_rally_leaders removed
     Promise.resolve({data:null,error:null}),
     sb.from('admin_roles').select('*'),
@@ -1092,7 +1092,6 @@ var PROF_ID_REQ=''; // pending ID change request value
 function renderProfile(app){
   var myPlayer=ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
   var pendingReq=ID_REQUESTS.find(function(r){ return r.player_name===SESSION.name; });
-  var valeria=myPlayer?myPlayer.valeria_level||0:0;
 
   app.innerHTML=
     '<div class="hdr">'+
@@ -1148,16 +1147,6 @@ function renderProfile(app){
             '<button class="btn btn-g btn-sm" id="saveAlliance" style="flex-shrink:0;padding:8px 14px;">Save</button>'+
           '</div>'+
         '</div>'+
-        // Valeria
-        '<div style="margin-bottom:4px;">'+
-          '<label style="font-size:11px;color:var(--t2);">Valeria Expert Level <span style="color:#52c759;">(+'+Math.round(valeria*2)+'% SvS bonus)</span></label>'+
-          '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">'+
-            [0,1,2,3,4,5,6,7,8,9,10].map(function(l){
-              return '<button class="lvl-btn val-prof-lvl'+(valeria===l?' active':'')+'" data-lvl="'+l+'">'+
-                (l===0?'None':l)+'</button>';
-            }).join('')+
-          '</div>'+
-        '</div>'+
       '</div>'+
       // Member since
       '<div style="text-align:center;font-size:11px;color:#6b5a42;margin-top:8px;">'+
@@ -1210,17 +1199,6 @@ function renderProfile(app){
     ID_REQUESTS.push(r.data);
     toast('✅ Request sent! Awaiting admin approval.');
     render();
-  });
-
-  // Valeria level
-  document.querySelectorAll('.val-prof-lvl').forEach(function(btn){
-    btn.addEventListener('click',async function(){
-      var lvl=parseInt(btn.dataset.lvl);
-      var r=await sb.from('players').update({valeria_level:lvl}).eq('name',SESSION.name);
-      if(r.error){ toast('Error: '+r.error.message); return; }
-      if(myPlayer) myPlayer.valeria_level=lvl;
-      toast('✅ Valeria level updated!'); render();
-    });
   });
 }
 
