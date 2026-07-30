@@ -20,8 +20,16 @@ Deno.serve(async (req) => {
 
   let authorized = authHeader === `Bearer ${WEBHOOK_SECRET}`;
   if (!authorized) {
-    const { data: { user }, error } = await db.auth.getUser(authHeader.replace('Bearer ', ''));
-    authorized = !error && !!user;
+    // This app uses its own sessions table (x-session-token header), not Supabase Auth.
+    const sessionToken = req.headers.get('x-session-token') || '';
+    if (sessionToken) {
+      const { data: session } = await db
+        .from('sessions')
+        .select('player_name, expires_at')
+        .eq('token', sessionToken)
+        .maybeSingle();
+      authorized = !!session && new Date(session.expires_at as string) > new Date();
+    }
   }
   if (!authorized) return new Response('Unauthorized', { status: 401 });
 
