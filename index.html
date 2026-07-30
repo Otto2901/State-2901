@@ -1338,6 +1338,14 @@ var ALLIANCE_COLORS = {
   WLF:'#bf5af2',LHC:'#ffd60a',DND:'#30d158',FAM:'#ff6b6b',CHB:'#64d2ff'
 };
 
+function hexToRgb(hex){
+  hex=(hex||'').replace('#','');
+  if(hex.length===3) hex=hex.split('').map(function(c){ return c+c; }).join('');
+  var num=parseInt(hex,16);
+  if(isNaN(num)) return '196,155,92';
+  return ((num>>16)&255)+','+((num>>8)&255)+','+(num&255);
+}
+
 function isRotAdmin(name){ return isSuperAdmin(name)||ALLIANCE_REPS.some(function(r){ return r.player_name===name; }); }
 
 function getCurrentWeekStart(){
