@@ -2060,7 +2060,7 @@ function renderRotAdmin(rc){
       // Update reps in DB and memory
       var repUpdates=ALLIANCE_REPS.filter(function(r){ return r.alliance===al; });
       for(var ri=0;ri<repUpdates.length;ri++){
-        var rr=await sb.from('alliance_reps').update({alliance:newName}).eq('player_name',repUpdates[ri].player_name);
+        var rr=await sb.from('alliance_reps').update({alliance:newName}).eq('player_name',repUpdates[ri].player_name).eq('alliance',al);
         if(rr.error){ toast('Error: '+rr.error.message); return; }
         repUpdates[ri].alliance=newName;
       }
