@@ -22,7 +22,7 @@
   --t:#f2e6d0;--t2:rgba(230,213,180,.5);--t3:rgba(230,213,180,.25);
   --ac:#c9974b;--ac2:#9c6f30;--ac-glow:rgba(201,151,75,.25);
   --grad:linear-gradient(135deg,#8a5a26,#d9ab5c);
-  --green:#7a9c72;--orange:#c17a45;--red:#b5554a;--gold:#e3bc6a;--purple:#8f7aa8;
+  --green:#7a9c72;--orange:#c17a45;--red:#b5554a;--gold:#e3bc6a;--purple:#8f7aa8;--steel:#a3b3c2;
   --glass:blur(20px) saturate(130%);
   --r:12px;--r2:18px;--ease:cubic-bezier(.4,0,.2,1);
 }
@@ -224,6 +224,10 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .rot-loc-taken .rot-loc-name{color:var(--t2);}
 .rot-loc-mine .rot-loc-name{color:var(--gold);}
 .rot-loc-open .rot-loc-alliance{color:var(--green);}
+.rot-loc-sh{border-left:3px solid var(--gold);}
+.rot-loc-ft{border-left:3px solid var(--steel);}
+.rot-loc-sh .rot-loc-name{color:var(--gold);}
+.rot-loc-ft .rot-loc-name{color:var(--steel);}
 .rot-order{background:var(--surface);border:1px solid var(--b);border-radius:12px;padding:12px;}
 .rot-order-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(196,155,92,.06);}
 .rot-order-row:last-child{border-bottom:none;}
@@ -240,6 +244,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .final-slot-name{font-size:12px;font-weight:700;color:var(--ac);}
 .final-slot-open{border-color:rgba(122,156,114,.4);background:rgba(122,156,114,.08);}
 .final-slot-open .final-slot-name{color:var(--green);}
+.final-slot-sh .final-slot-num{color:var(--gold);}
+.final-slot-ft .final-slot-num{color:var(--steel);}
 .copy-btn{width:100%;padding:11px;border-radius:10px;border:1px solid var(--b2);background:var(--surface2);color:var(--ac);font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-top:10px;transition:all .2s;}
 .copy-btn:hover{background:rgba(201,151,75,.1);}
 .reward-inp{width:100%;background:var(--input);border:1px solid var(--b2);border-radius:8px;padding:7px 10px;color:var(--t);font-family:'Manrope',sans-serif;font-size:12px;outline:none;margin-top:4px;}
@@ -818,6 +824,11 @@ function renderHome(app){
   var cardTr    = 'border-color:rgba(125,90,140,.28);';
   var cardCj    = 'border-color:rgba(156,107,79,.28);background:rgba(156,107,79,.04);';
   var cardAdmin = 'border-color:rgba(201,151,75,.28);';
+  function iconBadgeStyle(rgb){
+    return 'background:radial-gradient(circle at 32% 28%,rgba('+rgb+',.28),rgba('+rgb+',.04) 72%);border-color:rgba('+rgb+',.4);';
+  }
+  var badgeRot='107,122,143', badgeTr='125,90,140', badgeCj='156,107,79',
+      badgeRules='92,138,122', badgeLib='160,133,86', badgeAdmin='227,188,106';
 
   app.innerHTML=
     '<div class="home-hdr">'+
@@ -867,13 +878,13 @@ function renderHome(app){
       '</div>'+
       '<div class="home-cards">'+
         '<div class="home-card brk" id="goRot" style="'+cardRot+'">'+
-          '<div class="home-card-icon-badge"><div class="home-card-icon">🏯</div></div>'+
+          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeRot)+'"><div class="home-card-icon">🏯</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#a3b3c2;">Stronghold Rotation</span>'+
           '<div class="home-card-sub">Weekly fort & stronghold selection</div></div>'+
           '<div class="home-card-chev">›</div>'+
         '</div>'+
         '<div class="home-card brk" id="goTransfer" style="'+cardTr+'">'+
-          '<div class="home-card-icon-badge"><div class="home-card-icon">✈️</div></div>'+
+          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeTr)+'"><div class="home-card-icon">✈️</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#b494c4;">Transfer Management</span>'+
           '<div class="home-card-sub">Invite tracking & player management</div></div>'+
           '<div class="home-card-chev">›</div>'+
@@ -883,27 +894,27 @@ function renderHome(app){
           var hasAlliance=isSuperAdmin(SESSION.name)||(myP&&myP.alliance);
           if(!hasAlliance) return '';
           return '<div class="home-card brk" id="goCj" style="'+cardCj+'">'+
-            '<div class="home-card-icon-badge"><div class="home-card-icon">🤪</div></div>'+
+            '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeCj)+'"><div class="home-card-icon">🤪</div></div>'+
             '<div class="home-card-text"><span class="home-card-title" style="color:#c48f6a;">Crazy Joe</span>'+
             '<div class="home-card-sub">Team assignments for the event</div></div>'+
             '<div class="home-card-chev">›</div>'+
           '</div>';
         })()+
         '<div class="home-card brk" id="goRules" style="border-color:rgba(92,138,122,.25);">'+
-          '<div class="home-card-icon-badge"><div class="home-card-icon">📜</div></div>'+
+          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeRules)+'"><div class="home-card-icon">📜</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#8fb8a8;">State Rules</span>'+
           '<div class="home-card-sub">State rules & regulations</div></div>'+
           '<div class="home-card-chev">›</div>'+
         '</div>'+
         '<div class="home-card brk" id="goLibrary" style="border-color:rgba(160,133,86,.25);">'+
-          '<div class="home-card-icon-badge"><div class="home-card-icon">📚</div></div>'+
+          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeLib)+'"><div class="home-card-icon">📚</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#c4a876;">Library</span>'+
           '<div class="home-card-sub">Announcements & knowledge archive</div></div>'+
           '<div class="home-card-chev">›</div>'+
         '</div>'+
         (isSuperAdmin(SESSION.name)||getRole(SESSION.name)?
         '<div class="home-card brk" id="goAdmin" style="'+cardAdmin+'">'+
-          '<div class="home-card-icon-badge"><div class="home-card-icon">🏛️</div></div>'+
+          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeAdmin)+'"><div class="home-card-icon">🏛️</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#e3bc6a;">Admin Panel</span>'+
           '<div class="home-card-sub">System management & settings</div></div>'+
           '<div class="home-card-chev">›</div>'+
@@ -1454,7 +1465,7 @@ function renderRotBoard(rc){
   for(var i=1;i<=4;i++){
     var ally=takenSH[i];
     var reward=getReward('stronghold',i);
-    var cls=ally?'rot-loc-taken':'rot-loc-free';
+    var cls=(ally?'rot-loc-taken':'rot-loc-free')+' rot-loc-sh';
     var color=ally?(ALLIANCE_COLORS[ally]||'var(--ac)'):'var(--t2)';
     var adminBtn=canAdminBoard&&ally?'<button class="del-sel-btn" data-alliance="'+ally+'" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;margin-top:4px;">✕ Remove</button>':'';
     shHtml+='<div class="rot-loc '+cls+'">'+
@@ -1470,7 +1481,7 @@ function renderRotBoard(rc){
   for(var j=1;j<=12;j++){
     var fally=takenFT[j];
     var freward=getReward('fort',j);
-    var fcls=fally?'rot-loc-taken':(done?'rot-loc-open':'rot-loc-free');
+    var fcls=(fally?'rot-loc-taken':(done?'rot-loc-open':'rot-loc-free'))+' rot-loc-ft';
     var fcolor=fally?(ALLIANCE_COLORS[fally]||'var(--ac)'):(done?'var(--green)':'var(--t2)');
     var fadminBtn=canAdminBoard&&fally?'<button class="del-sel-btn" data-alliance="'+fally+'" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;margin-top:4px;">✕ Remove</button>':'';
     ftHtml+='<div class="rot-loc '+fcls+'">'+
@@ -1502,7 +1513,7 @@ function renderRotBoard(rc){
     var shFinalSlots='';
     for(var fi=1;fi<=4;fi++){
       var fa=takenSH[fi]||'';
-      shFinalSlots+='<div class="final-slot">'+
+      shFinalSlots+='<div class="final-slot final-slot-sh">'+
         '<div class="final-slot-num">SH'+fi+'</div>'+
         '<div class="final-slot-name" style="color:'+(ALLIANCE_COLORS[fa]||'var(--ac)')+';">'+fa+'</div>'+
       '</div>';
@@ -1511,7 +1522,7 @@ function renderRotBoard(rc){
     for(var fj=1;fj<=12;fj++){
       var ffa=takenFT[fj]||'';
       var isOpen=!ffa;
-      ftFinalSlots+='<div class="final-slot '+(isOpen?'final-slot-open':'')+'">'+
+      ftFinalSlots+='<div class="final-slot final-slot-ft '+(isOpen?'final-slot-open':'')+'">'+
         '<div class="final-slot-num">F'+fj+'</div>'+
         '<div class="final-slot-name" style="color:'+(isOpen?'var(--green)':(ALLIANCE_COLORS[ffa]||'var(--ac)'))+';">'+(isOpen?'FREE':ffa)+'</div>'+
       '</div>';
@@ -1526,9 +1537,9 @@ function renderRotBoard(rc){
     }
 
     finalHtml='<div class="final-board">'+
-      '<div class="rot-section-title">🏰 Strongholds</div>'+
+      '<div class="rot-section-title" style="color:var(--gold);">🏰 Strongholds</div>'+
       '<div class="final-row">'+shFinalSlots+'</div>'+
-      '<div class="rot-section-title" style="margin-top:12px;">🏯 Forts</div>'+
+      '<div class="rot-section-title" style="margin-top:12px;color:var(--steel);">🏯 Forts</div>'+
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">'+ftFinalSlots+'</div>'+
       '<button class="copy-btn" id="copyResultBtn">📋 Copy Result for Announcement</button>'+
     '</div>';
@@ -1585,9 +1596,9 @@ function renderRotBoard(rc){
       '<button class="copy-btn" id="copyOrderBtn" style="width:auto;margin-top:0;padding:6px 12px;font-size:11px;">📋 Copy Order</button>'+
     '</div>'+
     '<div class="rot-order" style="margin-bottom:12px;">'+orderHtml+'</div>'+
-    '<div class="rot-section-title">🏰 Strongholds</div>'+
+    '<div class="rot-section-title" style="color:var(--gold);">🏰 Strongholds</div>'+
     '<div class="rot-grid-4" style="margin-bottom:12px;">'+shHtml+'</div>'+
-    '<div class="rot-section-title">🏯 Forts</div>'+
+    '<div class="rot-section-title" style="color:var(--steel);">🏯 Forts</div>'+
     '<div class="rot-grid-12">'+ftHtml+'</div>'+
     finalHtml+
     repsHtml;
@@ -1736,20 +1747,20 @@ function renderRotSelect(rc){
   // Stronghold picker (only for top4)
   var shPickerHtml='';
   if(isTop4){
-    shPickerHtml='<div class="rot-section-title">🏰 Choose Stronghold</div>'+
+    shPickerHtml='<div class="rot-section-title" style="color:var(--gold);">🏰 Choose Stronghold</div>'+
       '<div class="rot-grid-4" id="shPicker" style="margin-bottom:14px;">';
     for(var i=1;i<=4;i++){
       var taken=takenSH[i];
       var reward=getReward('stronghold',i);
       if(taken){
-        shPickerHtml+='<div class="rot-loc rot-loc-taken">'+
+        shPickerHtml+='<div class="rot-loc rot-loc-taken rot-loc-sh">'+
           '<div class="rot-loc-name">SH '+i+'</div>'+
           '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[taken]||'var(--t2)')+';">'+taken+'</div>'+
           (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
         '</div>';
       } else {
         var shIsSelected = mySelSH===i;
-        shPickerHtml+='<div class="rot-loc '+(shIsSelected?'rot-loc-mine':'rot-loc-free')+' pick-sh" data-sh="'+i+'">'+
+        shPickerHtml+='<div class="rot-loc rot-loc-sh '+(shIsSelected?'rot-loc-mine':'rot-loc-free')+' pick-sh" data-sh="'+i+'">'+
           '<div class="rot-loc-name">SH '+i+'</div>'+
           '<div class="rot-loc-alliance" style="color:'+(shIsSelected?'var(--gold)':'#6b5a42')+'">'+(shIsSelected?'Selected ✓':'Tap to select')+'</div>'+
           (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
@@ -1760,20 +1771,20 @@ function renderRotSelect(rc){
   }
 
   // Fort picker
-  var ftPickerHtml='<div class="rot-section-title">🏯 Choose Fort</div>'+
+  var ftPickerHtml='<div class="rot-section-title" style="color:var(--steel);">🏯 Choose Fort</div>'+
     '<div class="rot-grid-12" id="ftPicker" style="margin-bottom:14px;">';
   for(var j=1;j<=12;j++){
     var ftaken=takenFT[j];
     var freward=getReward('fort',j);
     if(ftaken){
-      ftPickerHtml+='<div class="rot-loc rot-loc-taken">'+
+      ftPickerHtml+='<div class="rot-loc rot-loc-taken rot-loc-ft">'+
         '<div class="rot-loc-name">F'+j+'</div>'+
         '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[ftaken]||'var(--t2)')+';">'+ftaken+'</div>'+
         (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
       '</div>';
     } else {
       var ftIsSelected = mySelFT===j;
-      ftPickerHtml+='<div class="rot-loc '+(ftIsSelected?'rot-loc-mine':'rot-loc-free')+' pick-ft" data-ft="'+j+'">'+
+      ftPickerHtml+='<div class="rot-loc rot-loc-ft '+(ftIsSelected?'rot-loc-mine':'rot-loc-free')+' pick-ft" data-ft="'+j+'">'+
         '<div class="rot-loc-name">F'+j+'</div>'+
         '<div class="rot-loc-alliance" style="color:'+(ftIsSelected?'var(--gold)':'#6b5a42')+'">'+(ftIsSelected?'Selected ✓':'Tap')+'</div>'+
         (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
@@ -2699,7 +2710,7 @@ function renderRotHistory(rc){
   for(var i=1;i<=4;i++){
     var al=takenSH[i];
     var color=al?(ALLIANCE_COLORS[al]||'var(--ac)'):'#6b5a42';
-    shHtml+='<div style="background:rgba(18,13,8,.52);border:1px solid rgba(196,155,92,.14);border-radius:10px;padding:10px;text-align:center;">'+
+    shHtml+='<div style="background:rgba(18,13,8,.52);border:1px solid rgba(196,155,92,.14);border-left:3px solid var(--gold);border-radius:10px;padding:10px;text-align:center;">'+
       '<div style="font-size:11px;color:var(--t2);margin-bottom:4px;">SH '+i+'</div>'+
       '<div style="font-size:14px;font-weight:800;color:'+color+';">'+(al||'—')+'</div>'+
     '</div>';
@@ -2708,14 +2719,14 @@ function renderRotHistory(rc){
 
   // Forts
   var ftHtml='<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:12px;padding:14px;margin-bottom:12px;">'+
-    '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🏯 Forts</div>'+
+    '<div style="font-size:12px;font-weight:800;color:var(--steel);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🏯 Forts</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
   for(var j=1;j<=12;j++){
     var fal=takenFT[j];
     var fcolor=fal?(ALLIANCE_COLORS[fal]||'var(--ac)'):'var(--green)';
     var fbg=fal?'rgba(18,13,8,.52)':'color-mix(in srgb,var(--green) 6%,transparent)';
     var fborder=fal?'rgba(196,155,92,.14)':'color-mix(in srgb,var(--green) 20%,transparent)';
-    ftHtml+='<div style="background:'+fbg+';border:1px solid '+fborder+';border-radius:8px;padding:8px;text-align:center;">'+
+    ftHtml+='<div style="background:'+fbg+';border:1px solid '+fborder+';border-left:3px solid var(--steel);border-radius:8px;padding:8px;text-align:center;">'+
       '<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">F'+j+'</div>'+
       '<div style="font-size:12px;font-weight:800;color:'+fcolor+'">'+(fal||'FREE')+'</div>'+
     '</div>';
