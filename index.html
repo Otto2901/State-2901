@@ -3246,7 +3246,8 @@ function renderAdminStats(ac){
 // ── "HOW TO USE" GUIDE MODAL (generic, reused per module) ────────────
 var GUIDE_CONTENT = {
   rotation: { title:'🏯 Stronghold Rotation — How to use', render: renderRotationGuideContent },
-  library:  { title:'📚 Library — How to use',            render: renderLibraryGuideContent }
+  library:  { title:'📚 Library — How to use',            render: renderLibraryGuideContent },
+  warteam:  { title:'⚔️ War Team Builder — How to use',   render: renderWarTeamGuideContent }
 };
 function openGuideModal(key){
   var g=GUIDE_CONTENT[key]; if(!g) return;
@@ -3297,6 +3298,22 @@ function renderLibraryGuideContent(rc){
     guideStep(2,'Use <strong>+ New Entry</strong> to add a page: pick an emoji icon, a title, an optional short description, and write the content in Markdown.')+
     guideStep(3,'Open any entry to <strong>Edit</strong>, <strong>Delete</strong>, or move it <strong>▲/▼</strong> to reorder the list.')+
     '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Entries are shown to everyone who can open the Library, in the order you set here.</div>';
+  rc.innerHTML=html;
+}
+function renderWarTeamGuideContent(rc){
+  var html=
+    guideSection('How it works')+
+    guideStep(1,'Each <strong>Team</strong> represents a rally: a leader, a single formation (either ⚔️ Attack <em>or</em> 🛡️ Defense, never both), and a squad of other members.')+
+    guideStep(2,'A formation is 3 hero slots locked one-per-troop-class — slot 1 is always an <strong>Infantry</strong> hero, slot 2 <strong>Lancer</strong>, slot 3 <strong>Marksman</strong> — plus the troop-type percentages that must add up to 100%.')+
+    guideStep(3,'Squad members each pick their own heroes but automatically follow the leader\'s troop-percentage ratio, so you only set it once per team.')+
+    guideStep(4,'The <strong>Teams</strong> tab is a read-only board everyone can view — use <strong>📋 Copy</strong> on any team to paste a short announcement into the game.')+
+    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 While typing percentages, the remaining fields auto-cap so the total can never exceed 100%.</div>';
+  if(isWarAdmin(SESSION.name)){
+    html+=guideSection('As a War Team Admin, you can:','var(--green)');
+    html+=guideStep('•','Create, edit, and delete teams in the <strong>Admin</strong> tab.');
+    html+=guideStep('•','Use <strong>⧉ Duplicate</strong> on any team to clone it into a new one — rename it and hit Save.');
+    html+=guideStep('•','Manage the hero roster in the <strong>Heroes</strong> tab (add, edit, or delete). A hero can\'t be deleted while it\'s still used in a team or squad member\'s formation.');
+  }
   rc.innerHTML=html;
 }
 
@@ -4322,12 +4339,13 @@ function renderWarTeamApp(app){
   }).join('');
 
   app.innerHTML=
-    buildModuleHeader('warteam','⚔️','War Team Builder','Rally Formations')+
+    buildModuleHeader('warteam','⚔️','War Team Builder','Rally Formations','warteam')+
     '<div class="content" id="warContent"></div>'+
     '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
     '<div class="nav">'+navHtml+'</div>';
 
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('warteam'); });
   app.querySelectorAll('.nav-btn').forEach(function(btn){
     btn.addEventListener('click',function(){ WAR_TAB=btn.dataset.tab; renderWarContent(); });
   });
