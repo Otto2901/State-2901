@@ -4346,6 +4346,43 @@ function warHeroName(id){
   return h?h.name:'—';
 }
 
+// Options for one class-locked hero slot (see renderFormationFields).
+function warHeroOptsForClass(cls, selId){
+  var inClass=WAR_HEROES.filter(function(h){ return h.class===cls; });
+  return '<option value="">— '+cls+' Hero —</option>'+inClass.map(function(h){
+    return '<option value="'+h.id+'"'+(h.id===selId?' selected':'')+'>'+escHtml(h.name)+'</option>';
+  }).join('');
+}
+
+function warTypeBadgeHtml(team){
+  var isAtk=team.formation_type==='Attack';
+  return '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0;background:'+
+    (isAtk?'rgba(181,85,74,.18)':'rgba(163,179,194,.18)')+';color:'+(isAtk?'var(--red)':'var(--steel)')+';">'+
+    (isAtk?'⚔️ ATTACK':'🛡️ DEFENSE')+'</span>';
+}
+
+// Concise in-game announcement text — team formation ratio is stated once
+// (squad members follow it, so no per-member percentages are repeated).
+function buildWarTeamCopyText(team, members){
+  var lines=[(team.formation_type==='Attack'?'⚔️':'🛡️')+' '+team.team_name+' ('+team.alliance+') — '+team.formation_type.toUpperCase()];
+  lines.push('Leader: '+team.leader_name+' — '+[team.hero1,team.hero2,team.hero3].map(warHeroName).join('/')+
+    ' (Inf '+team.infantry_pct+'% / Lan '+team.lancer_pct+'% / Mar '+team.marksman_pct+'%)');
+  if(members.length){
+    lines.push('Squad:');
+    members.forEach(function(m,i){
+      lines.push((i+1)+'. '+m.player_name+' — '+[m.hero1,m.hero2,m.hero3].map(warHeroName).join('/'));
+    });
+  }
+  return lines.join('\n');
+}
+
+function copyWarTeam(teamId){
+  var team=WAR_TEAMS.find(function(t){ return t.id===teamId; });
+  if(!team) return;
+  var members=WAR_MEMBERS.filter(function(m){ return m.team_id===teamId; }).sort(function(a,b){ return a.position-b.position; });
+  navigator.clipboard.writeText(buildWarTeamCopyText(team, members)).then(function(){ toast('✅ Team copied!'); });
+}
+
 function renderWarBoard(el, isAdm){
   if(!WAR_TEAMS.length){
     el.innerHTML='<div class="empty"><div class="empty-icon">⚔️</div><p>No war teams set up yet.</p></div>';
@@ -4367,7 +4404,9 @@ function renderWarBoard(el, isAdm){
         '<div class="card" style="margin-bottom:12px;">'+
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;">'+
             '<div style="min-width:0;">'+
-              '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(team.team_name)+'</div>'+
+              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">'+
+                '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(team.team_name)+'</div>'+warTypeBadgeHtml(team)+
+              '</div>'+
               '<div style="font-size:11px;color:var(--t3);">Leader: '+escHtml(team.leader_name)+'</div>'+
             '</div>'+
             '<div style="display:flex;gap:6px;flex-shrink:0;">'+
@@ -4375,14 +4414,9 @@ function renderWarBoard(el, isAdm){
               (isAdm?'<button class="btn btn-g btn-sm warDupBoard" data-id="'+team.id+'">⧉</button>':'')+
             '</div>'+
           '</div>'+
-          '<div style="font-size:11px;font-weight:800;color:var(--red);margin-bottom:4px;">⚔️ Attack</div>'+
-          '<div style="font-size:12px;margin-bottom:8px;color:var(--t2);">'+
-            [team.atk_hero1,team.atk_hero2,team.atk_hero3].map(warHeroName).map(escHtml).join(' / ')+
-            ' — Inf '+team.atk_infantry_pct+'% Lan '+team.atk_lancer_pct+'% Mar '+team.atk_marksman_pct+'%</div>'+
-          '<div style="font-size:11px;font-weight:800;color:var(--steel);margin-bottom:4px;">🛡️ Defense</div>'+
           '<div style="font-size:12px;margin-bottom:10px;color:var(--t2);">'+
-            [team.def_hero1,team.def_hero2,team.def_hero3].map(warHeroName).map(escHtml).join(' / ')+
-            ' — Inf '+team.def_infantry_pct+'% Lan '+team.def_lancer_pct+'% Mar '+team.def_marksman_pct+'%</div>'+
+            [team.hero1,team.hero2,team.hero3].map(warHeroName).map(escHtml).join(' / ')+
+            ' — Inf '+team.infantry_pct+'% Lan '+team.lancer_pct+'% Mar '+team.marksman_pct+'%</div>'+
           (members.length?
             '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:rgba(230,213,180,.45);margin-bottom:6px;">Squad ('+members.length+')</div>'+
             '<div style="display:flex;flex-direction:column;gap:4px;">'+
@@ -4390,8 +4424,7 @@ function renderWarBoard(el, isAdm){
                 return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06);font-size:12px;">'+
                   '<span style="font-weight:800;color:var(--t3);width:16px;text-align:right;flex-shrink:0;">'+(i+1)+'.</span>'+
                   '<span style="font-weight:600;flex-shrink:0;">'+escHtml(m.player_name)+'</span>'+
-                  '<span style="color:var(--t3);">'+[m.hero1,m.hero2,m.hero3].map(warHeroName).map(escHtml).join('/')+
-                    ' — Inf '+m.infantry_pct+'% Lan '+m.lancer_pct+'% Mar '+m.marksman_pct+'%</span>'+
+                  '<span style="color:var(--t3);">'+[m.hero1,m.hero2,m.hero3].map(warHeroName).map(escHtml).join('/')+'</span>'+
                 '</div>';
               }).join('')+
             '</div>'
@@ -4402,20 +4435,7 @@ function renderWarBoard(el, isAdm){
   el.innerHTML=html;
 
   el.querySelectorAll('.warCopyTeam').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var team=WAR_TEAMS.find(function(t){ return t.id===btn.dataset.id; });
-      if(!team) return;
-      var members=WAR_MEMBERS.filter(function(m){ return m.team_id===team.id; }).sort(function(a,b){ return a.position-b.position; });
-      var text='⚔️ '+team.team_name+' ('+team.alliance+') — Leader: '+team.leader_name+'\n'+
-        'Attack: '+[team.atk_hero1,team.atk_hero2,team.atk_hero3].map(warHeroName).join('/')+' — Inf '+team.atk_infantry_pct+'% Lan '+team.atk_lancer_pct+'% Mar '+team.atk_marksman_pct+'%\n'+
-        'Defense: '+[team.def_hero1,team.def_hero2,team.def_hero3].map(warHeroName).join('/')+' — Inf '+team.def_infantry_pct+'% Lan '+team.def_lancer_pct+'% Mar '+team.def_marksman_pct+'%\n'+
-        'Squad ('+members.length+'):\n'+
-        members.map(function(m,i){
-          return (i+1)+'. '+m.player_name+' — '+[m.hero1,m.hero2,m.hero3].map(warHeroName).join('/')+
-            ' — Inf '+m.infantry_pct+'% Lan '+m.lancer_pct+'% Mar '+m.marksman_pct+'%';
-        }).join('\n');
-      navigator.clipboard.writeText(text).then(function(){ toast('✅ Team copied!'); });
-    });
+    btn.addEventListener('click',function(){ copyWarTeam(btn.dataset.id); });
   });
 
   if(isAdm){
@@ -4425,23 +4445,16 @@ function renderWarBoard(el, isAdm){
   }
 }
 
-// Shared "3 hero selects (grouped by class) + 3 troop-type percent inputs +
-// live sum readout" block, reused for the leader's attack formation, the
-// leader's defense formation, and every squad member's single formation.
+// The team's single formation: 3 hero slots locked one-per-troop-class
+// (matches the game's one-hero-per-troop-type rally mechanic — slot 1 is
+// always an Infantry hero, slot 2 Lancer, slot 3 Marksman) + the 3
+// troop-type percent inputs + a live sum readout.
 function renderFormationFields(prefix, values){
-  var classes=['Infantry','Lancer','Marksman','Support'];
-  function heroOptsHtml(selId){
-    return '<option value="">— Hero —</option>'+classes.map(function(cls){
-      var inClass=WAR_HEROES.filter(function(h){ return h.class===cls; });
-      if(!inClass.length) return '';
-      return '<optgroup label="'+cls+'">'+inClass.map(function(h){
-        return '<option value="'+h.id+'"'+(h.id===selId?' selected':'')+'>'+escHtml(h.name)+'</option>';
-      }).join('')+'</optgroup>';
-    }).join('');
-  }
+  var slotClasses=['Infantry','Lancer','Marksman'];
   return '<div style="display:flex;gap:6px;margin-bottom:6px;">'+
-      [1,2,3].map(function(n){
-        return '<select class="sel" id="'+prefix+'Hero'+n+'" style="flex:1;font-size:12px;">'+heroOptsHtml(values['hero'+n]||'')+'</select>';
+      slotClasses.map(function(cls,i){
+        var n=i+1;
+        return '<select class="sel" id="'+prefix+'Hero'+n+'" style="flex:1;font-size:12px;">'+warHeroOptsForClass(cls, values['hero'+n]||'')+'</select>';
       }).join('')+
     '</div>'+
     '<div style="display:flex;gap:6px;align-items:center;">'+
@@ -4452,17 +4465,42 @@ function renderFormationFields(prefix, values){
     '</div>';
 }
 
+// Same class-locked 3 hero slots, no percent block — used for squad
+// members, who each pick their own heroes but follow the team's ratio.
+function renderMemberHeroFields(prefix, values){
+  var slotClasses=['Infantry','Lancer','Marksman'];
+  return '<div style="display:flex;gap:6px;">'+
+      slotClasses.map(function(cls,i){
+        var n=i+1;
+        return '<select class="sel" id="'+prefix+'Hero'+n+'" style="flex:1;font-size:12px;">'+warHeroOptsForClass(cls, values['hero'+n]||'')+'</select>';
+      }).join('')+
+    '</div>';
+}
+
+// Live-caps each percent field against the other two so their sum can
+// never exceed 100 while typing (Save-time validation stays as a
+// backstop, matching the DB CHECK constraint).
 function bindFormationFields(prefix){
   var infEl=document.getElementById(prefix+'Inf'), lanEl=document.getElementById(prefix+'Lan'), marEl=document.getElementById(prefix+'Mar');
   var lbl=document.getElementById(prefix+'SumLbl');
   if(!infEl||!lanEl||!marEl||!lbl) return;
-  function update(){
-    var sum=(parseInt(infEl.value)||0)+(parseInt(lanEl.value)||0)+(parseInt(marEl.value)||0);
+  var fields=[infEl,lanEl,marEl];
+  function refresh(changed){
+    if(changed){
+      var others=fields.filter(function(f){ return f!==changed; }).reduce(function(s,f){ return s+(parseInt(f.value)||0); },0);
+      var maxAllowed=Math.max(0,100-others);
+      if((parseInt(changed.value)||0)>maxAllowed) changed.value=maxAllowed;
+    }
+    fields.forEach(function(f){
+      var others=fields.filter(function(x){ return x!==f; }).reduce(function(s,x){ return s+(parseInt(x.value)||0); },0);
+      f.max=Math.max(0,100-others);
+    });
+    var sum=fields.reduce(function(s,f){ return s+(parseInt(f.value)||0); },0);
     lbl.textContent=sum+'%';
     lbl.style.color=sum===100?'var(--green)':'var(--red)';
   }
-  [infEl,lanEl,marEl].forEach(function(inp){ inp.addEventListener('input',update); });
-  update();
+  fields.forEach(function(f){ f.addEventListener('input',function(){ refresh(f); }); });
+  refresh(null);
 }
 
 function formationSum(prefix){
@@ -4483,6 +4521,14 @@ function readFormation(prefix){
   };
 }
 
+function readMemberHeroes(prefix){
+  return {
+    hero1: document.getElementById(prefix+'Hero1').value||null,
+    hero2: document.getElementById(prefix+'Hero2').value||null,
+    hero3: document.getElementById(prefix+'Hero3').value||null
+  };
+}
+
 function setFormationFields(prefix, values){
   document.getElementById(prefix+'Hero1').value=values.hero1||'';
   document.getElementById(prefix+'Hero2').value=values.hero2||'';
@@ -4493,9 +4539,21 @@ function setFormationFields(prefix, values){
   bindFormationFields(prefix);
 }
 
+// Recolors/relabels the formation section header to match the selected
+// Attack/Defense type.
+function updateFormationTypeStyle(){
+  var sel=document.getElementById('warTypeSel');
+  var lbl=document.getElementById('warFormationLabel');
+  if(!sel||!lbl) return;
+  var isAtk=sel.value==='Attack';
+  lbl.style.color=isAtk?'var(--red)':'var(--steel)';
+  lbl.textContent=(isAtk?'⚔️ Attack':'🛡️ Defense')+' Formation';
+}
+
 // Renders the dynamic (add/remove) squad-member rows from WAR_EDIT_MEMBERS
-// into #warMemberRows, and (re)binds each row's formation-sum validation +
-// roster-select/manual-entry mutual exclusion.
+// into #warMemberRows, and (re)binds roster-select/manual-entry mutual
+// exclusion. Members only pick heroes (no percent — they follow the
+// team's single ratio), so there's no per-row validation to bind here.
 function renderWarMemberRows(){
   var wrap=document.getElementById('warMemberRows');
   if(!wrap) return;
@@ -4513,13 +4571,12 @@ function renderWarMemberRows(){
         '<input class="inp" id="'+prefix+'Man" placeholder="or type name" value="'+(isManual?escHtml(m.player_name):'')+'" style="flex:1;font-size:12px;" autocomplete="off">'+
         '<button class="btn btn-d btn-sm warRemoveMember" data-idx="'+idx+'" style="flex-shrink:0;">✕</button>'+
       '</div>'+
-      renderFormationFields(prefix, m)+
+      renderMemberHeroFields(prefix, m)+
     '</div>';
   }).join('');
 
   WAR_EDIT_MEMBERS.forEach(function(m,idx){
     var prefix='warMem_'+idx;
-    bindFormationFields(prefix);
     var selEl=document.getElementById(prefix+'Sel');
     var manEl=document.getElementById(prefix+'Man');
     if(selEl) selEl.addEventListener('change',function(){ if(this.value&&manEl) manEl.value=''; });
@@ -4540,11 +4597,12 @@ function loadWarTeamIntoForm(team){
   document.getElementById('warTeamName').value=team.team_name;
   document.getElementById('warFormAlliance').value=team.alliance||'';
   document.getElementById('warLeaderSel').value=team.leader_name||'';
-  setFormationFields('warAtk', {hero1:team.atk_hero1,hero2:team.atk_hero2,hero3:team.atk_hero3,infantry_pct:team.atk_infantry_pct,lancer_pct:team.atk_lancer_pct,marksman_pct:team.atk_marksman_pct});
-  setFormationFields('warDef', {hero1:team.def_hero1,hero2:team.def_hero2,hero3:team.def_hero3,infantry_pct:team.def_infantry_pct,lancer_pct:team.def_lancer_pct,marksman_pct:team.def_marksman_pct});
+  document.getElementById('warTypeSel').value=team.formation_type||'Attack';
+  updateFormationTypeStyle();
+  setFormationFields('warTeam', {hero1:team.hero1,hero2:team.hero2,hero3:team.hero3,infantry_pct:team.infantry_pct,lancer_pct:team.lancer_pct,marksman_pct:team.marksman_pct});
   var members=WAR_MEMBERS.filter(function(m){ return m.team_id===team.id; }).sort(function(a,b){ return a.position-b.position; });
   WAR_EDIT_MEMBERS=members.map(function(m){
-    return {player_name:m.player_name,hero1:m.hero1,hero2:m.hero2,hero3:m.hero3,infantry_pct:m.infantry_pct,lancer_pct:m.lancer_pct,marksman_pct:m.marksman_pct};
+    return {player_name:m.player_name,hero1:m.hero1,hero2:m.hero2,hero3:m.hero3};
   });
   renderWarMemberRows();
   document.getElementById('warCancelEdit').style.display='';
@@ -4564,7 +4622,7 @@ function duplicateWarTeam(teamId){
   WAR_TAB='admin';
   WAR_EDIT_TEAM=null; // null => Save will INSERT a new row, not UPDATE
   WAR_EDIT_MEMBERS=members.map(function(m){
-    return {player_name:m.player_name,hero1:m.hero1,hero2:m.hero2,hero3:m.hero3,infantry_pct:m.infantry_pct,lancer_pct:m.lancer_pct,marksman_pct:m.marksman_pct};
+    return {player_name:m.player_name,hero1:m.hero1,hero2:m.hero2,hero3:m.hero3};
   });
   render(); // rebuild the module DOM with a fresh (empty) admin form
 
@@ -4572,8 +4630,9 @@ function duplicateWarTeam(teamId){
   document.getElementById('warTeamName').value=team.team_name+' (Copy)';
   document.getElementById('warFormAlliance').value=team.alliance||'';
   document.getElementById('warLeaderSel').value=team.leader_name||'';
-  setFormationFields('warAtk', {hero1:team.atk_hero1,hero2:team.atk_hero2,hero3:team.atk_hero3,infantry_pct:team.atk_infantry_pct,lancer_pct:team.atk_lancer_pct,marksman_pct:team.atk_marksman_pct});
-  setFormationFields('warDef', {hero1:team.def_hero1,hero2:team.def_hero2,hero3:team.def_hero3,infantry_pct:team.def_infantry_pct,lancer_pct:team.def_lancer_pct,marksman_pct:team.def_marksman_pct});
+  document.getElementById('warTypeSel').value=team.formation_type||'Attack';
+  updateFormationTypeStyle();
+  setFormationFields('warTeam', {hero1:team.hero1,hero2:team.hero2,hero3:team.hero3,infantry_pct:team.infantry_pct,lancer_pct:team.lancer_pct,marksman_pct:team.marksman_pct});
   renderWarMemberRows();
   document.getElementById('warFormCard').scrollIntoView({behavior:'smooth',block:'start'});
   toast('Duplicated — rename and Save to create the new team.');
@@ -4583,20 +4642,25 @@ function renderWarAdmin(el, isAdm){
   var teamListHtml = WAR_TEAMS.length===0
     ? '<div class="empty" style="padding:20px 0;"><div class="empty-icon">⚔️</div><p>No teams yet. Create your first team below.</p></div>'
     : WAR_TEAMS.map(function(team){
-        var members=WAR_MEMBERS.filter(function(m){ return m.team_id===team.id; });
+        var members=WAR_MEMBERS.filter(function(m){ return m.team_id===team.id; }).sort(function(a,b){ return a.position-b.position; });
         return '<div class="card" style="margin-bottom:10px;">'+
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">'+
             '<div style="min-width:0;">'+
-              '<div style="font-size:13px;font-weight:800;">'+escHtml(team.team_name)+'</div>'+
+              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">'+
+                '<div style="font-size:13px;font-weight:800;">'+escHtml(team.team_name)+'</div>'+warTypeBadgeHtml(team)+
+              '</div>'+
               '<div style="font-size:10px;color:var(--t3);">'+escHtml(team.alliance)+' · Leader: '+escHtml(team.leader_name)+'</div>'+
             '</div>'+
             '<div style="display:flex;gap:6px;flex-shrink:0;">'+
+              '<button class="btn btn-g btn-sm warCopyTeam" data-id="'+team.id+'" style="font-size:11px;">📋</button>'+
               '<button class="btn btn-g btn-sm warEditTeamBtn" data-id="'+team.id+'" style="font-size:11px;">✏️</button>'+
               '<button class="btn btn-g btn-sm warDupTeamBtn" data-id="'+team.id+'" style="font-size:11px;">⧉</button>'+
               '<button class="btn btn-d btn-sm warDelTeamBtn" data-id="'+team.id+'" style="font-size:11px;">🗑</button>'+
             '</div>'+
           '</div>'+
-          '<div style="font-size:11px;color:var(--t3);">'+members.length+' squad member'+(members.length===1?'':'s')+'</div>'+
+          (members.length?
+            '<div style="font-size:11px;color:var(--t3);">'+members.map(function(m){ return escHtml(m.player_name); }).join(', ')+'</div>'
+            :'<div style="font-size:11px;color:var(--t3);">No squad members yet</div>')+
         '</div>';
       }).join('');
 
@@ -4618,10 +4682,15 @@ function renderWarAdmin(el, isAdm){
           ALL_PLAYERS.map(function(p){ return '<option value="'+escHtml(p.name)+'">'+escHtml(p.name)+(p.alliance?' ['+p.alliance+']':'')+'</option>'; }).join('')+
         '</select>'+
       '</div>'+
-      '<div class="field"><label class="lbl" style="color:var(--red);">⚔️ Attack Formation</label>'+renderFormationFields('warAtk',{})+'</div>'+
-      '<div class="field"><label class="lbl" style="color:var(--steel);">🛡️ Defense Formation</label>'+renderFormationFields('warDef',{})+'</div>'+
+      '<div class="field"><label class="lbl">Team Type</label>'+
+        '<select class="sel" id="warTypeSel">'+
+          '<option value="Attack">⚔️ Attack</option>'+
+          '<option value="Defense">🛡️ Defense</option>'+
+        '</select>'+
+      '</div>'+
+      '<div class="field"><label class="lbl" id="warFormationLabel" style="color:var(--red);">⚔️ Attack Formation</label>'+renderFormationFields('warTeam',{})+'</div>'+
       '<div class="field">'+
-        '<label class="lbl">Squad <span style="font-size:10px;color:var(--t3);font-weight:500;">(each member brings their own formation)</span></label>'+
+        '<label class="lbl">Squad <span style="font-size:10px;color:var(--t3);font-weight:500;">(each member picks their own heroes and follows the team\'s ratio above)</span></label>'+
         '<div id="warMemberRows"></div>'+
         '<button class="btn btn-g btn-sm" id="warAddMemberBtn" style="margin-top:6px;">➕ Add Squad Member</button>'+
       '</div>'+
@@ -4632,9 +4701,13 @@ function renderWarAdmin(el, isAdm){
       '<div class="err" id="warFormErr"></div>'+
     '</div>';
 
-  bindFormationFields('warAtk');
-  bindFormationFields('warDef');
+  bindFormationFields('warTeam');
+  document.getElementById('warTypeSel').addEventListener('change', updateFormationTypeStyle);
   renderWarMemberRows();
+
+  el.querySelectorAll('.warCopyTeam').forEach(function(btn){
+    btn.addEventListener('click',function(){ copyWarTeam(btn.dataset.id); });
+  });
 
   el.querySelectorAll('.warEditTeamBtn').forEach(function(btn){
     btn.addEventListener('click',function(){
@@ -4669,7 +4742,7 @@ function renderWarAdmin(el, isAdm){
   });
 
   document.getElementById('warAddMemberBtn').addEventListener('click',function(){
-    WAR_EDIT_MEMBERS.push({player_name:'',hero1:null,hero2:null,hero3:null,infantry_pct:0,lancer_pct:0,marksman_pct:0});
+    WAR_EDIT_MEMBERS.push({player_name:'',hero1:null,hero2:null,hero3:null});
     renderWarMemberRows();
   });
 
@@ -4678,14 +4751,14 @@ function renderWarAdmin(el, isAdm){
     var teamName=document.getElementById('warTeamName').value.trim();
     var alliance=document.getElementById('warFormAlliance').value.trim().toUpperCase();
     var leaderName=document.getElementById('warLeaderSel').value;
+    var formationType=document.getElementById('warTypeSel').value;
     var errEl=document.getElementById('warFormErr');
     errEl.textContent='';
 
     if(!teamName){ errEl.textContent='Team name is required.'; return; }
     if(!alliance){ errEl.textContent='Alliance is required.'; return; }
     if(!leaderName){ errEl.textContent='Rally leader is required.'; return; }
-    if(formationSum('warAtk')!==100){ errEl.textContent='Attack formation percentages must sum to 100%.'; return; }
-    if(formationSum('warDef')!==100){ errEl.textContent='Defense formation percentages must sum to 100%.'; return; }
+    if(formationSum('warTeam')!==100){ errEl.textContent='Formation percentages must sum to 100%.'; return; }
 
     var members=[];
     var memberRowEls=el.querySelectorAll('#warMemberRows [data-mem-idx]');
@@ -4696,21 +4769,18 @@ function renderWarAdmin(el, isAdm){
       var nameMan=document.getElementById(prefix+'Man');
       var name=(nameMan&&nameMan.value.trim())||(nameSel&&nameSel.value)||'';
       if(!name){ errEl.textContent='Squad member #'+(i+1)+' needs a player.'; return; }
-      if(formationSum(prefix)!==100){ errEl.textContent='Squad member '+name+"'s formation must sum to 100%."; return; }
-      var f=readFormation(prefix);
-      f.player_name=name; f.position=i+1;
-      members.push(f);
+      var h=readMemberHeroes(prefix);
+      h.player_name=name; h.position=i+1;
+      members.push(h);
     }
 
     saveBtn.disabled=true; saveBtn.textContent='Saving...';
     try{
-      var atk=readFormation('warAtk'), def=readFormation('warDef');
+      var f=readFormation('warTeam');
       var teamRow={
-        team_name:teamName, alliance:alliance, leader_name:leaderName,
-        atk_hero1:atk.hero1, atk_hero2:atk.hero2, atk_hero3:atk.hero3,
-        atk_infantry_pct:atk.infantry_pct, atk_lancer_pct:atk.lancer_pct, atk_marksman_pct:atk.marksman_pct,
-        def_hero1:def.hero1, def_hero2:def.hero2, def_hero3:def.hero3,
-        def_infantry_pct:def.infantry_pct, def_lancer_pct:def.lancer_pct, def_marksman_pct:def.marksman_pct
+        team_name:teamName, alliance:alliance, leader_name:leaderName, formation_type:formationType,
+        hero1:f.hero1, hero2:f.hero2, hero3:f.hero3,
+        infantry_pct:f.infantry_pct, lancer_pct:f.lancer_pct, marksman_pct:f.marksman_pct
       };
       var teamId;
       if(WAR_EDIT_TEAM){
@@ -4731,8 +4801,7 @@ function renderWarAdmin(el, isAdm){
       if(members.length){
         var mRows=members.map(function(m){
           return {team_id:teamId, player_name:m.player_name, position:m.position,
-            hero1:m.hero1, hero2:m.hero2, hero3:m.hero3,
-            infantry_pct:m.infantry_pct, lancer_pct:m.lancer_pct, marksman_pct:m.marksman_pct};
+            hero1:m.hero1, hero2:m.hero2, hero3:m.hero3};
         });
         var mIns=await sb.from('war_team_members').insert(mRows).select();
         if(mIns.error) throw mIns.error;
@@ -4751,12 +4820,12 @@ function renderWarAdmin(el, isAdm){
 }
 
 function heroInUse(heroId){
-  return WAR_TEAMS.some(function(t){ return [t.atk_hero1,t.atk_hero2,t.atk_hero3,t.def_hero1,t.def_hero2,t.def_hero3].indexOf(heroId)>=0; })
+  return WAR_TEAMS.some(function(t){ return [t.hero1,t.hero2,t.hero3].indexOf(heroId)>=0; })
     || WAR_MEMBERS.some(function(m){ return [m.hero1,m.hero2,m.hero3].indexOf(heroId)>=0; });
 }
 function countHeroUsage(heroId){
   var count=0;
-  WAR_TEAMS.forEach(function(t){ if([t.atk_hero1,t.atk_hero2,t.atk_hero3,t.def_hero1,t.def_hero2,t.def_hero3].indexOf(heroId)>=0) count++; });
+  WAR_TEAMS.forEach(function(t){ if([t.hero1,t.hero2,t.hero3].indexOf(heroId)>=0) count++; });
   WAR_MEMBERS.forEach(function(m){ if([m.hero1,m.hero2,m.hero3].indexOf(heroId)>=0) count++; });
   return count;
 }
