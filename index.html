@@ -3305,7 +3305,7 @@ function renderWarTeamGuideContent(rc){
     guideSection('How it works')+
     guideStep(1,'Each <strong>Team</strong> represents a rally: a leader, a single formation (either ⚔️ Attack <em>or</em> 🛡️ Defense, never both), and a squad of other members.')+
     guideStep(2,'A formation is 3 hero slots locked one-per-troop-class — slot 1 is always an <strong>Infantry</strong> hero, slot 2 <strong>Lancer</strong>, slot 3 <strong>Marksman</strong> — plus the troop-type percentages that must add up to 100%.')+
-    guideStep(3,'Squad members each pick their own heroes but automatically follow the leader\'s troop-percentage ratio, so you only set it once per team.')+
+    guideStep(3,'Squad members each pick a single hero (any class — only this one slot matters for a squad member) and automatically follow the leader\'s troop-percentage ratio, so you only set it once per team.')+
     guideStep(4,'The <strong>Teams</strong> tab is a read-only board everyone can view — use <strong>📋 Copy</strong> on any team to paste a short announcement into the game.')+
     '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 While typing percentages, the remaining fields auto-cap so the total can never exceed 100%.</div>';
   if(isWarAdmin(SESSION.name)){
@@ -4372,6 +4372,15 @@ function warHeroOptsForClass(cls, selId){
   }).join('');
 }
 
+// Options spanning every hero regardless of class — used for a squad
+// member's single hero slot (see renderMemberHeroFields), which isn't
+// class-locked the way the leader's formation slots are.
+function warHeroOptsAll(selId){
+  return '<option value="">— Hero —</option>'+WAR_HEROES.map(function(h){
+    return '<option value="'+h.id+'"'+(h.id===selId?' selected':'')+'>'+escHtml(h.name)+'</option>';
+  }).join('');
+}
+
 function warTypeBadgeHtml(team){
   var isAtk=team.formation_type==='Attack';
   return '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;flex-shrink:0;background:'+
@@ -4384,11 +4393,11 @@ function warTypeBadgeHtml(team){
 function buildWarTeamCopyText(team, members){
   var lines=[(team.formation_type==='Attack'?'⚔️':'🛡️')+' '+team.team_name+' ('+team.alliance+') — '+team.formation_type.toUpperCase()];
   lines.push('Leader: '+team.leader_name+' — '+[team.hero1,team.hero2,team.hero3].map(warHeroName).join('/')+
-    ' (Inf '+team.infantry_pct+'% / Lan '+team.lancer_pct+'% / Mar '+team.marksman_pct+'%)');
+    ' ('+team.infantry_pct+'/'+team.lancer_pct+'/'+team.marksman_pct+')');
   if(members.length){
     lines.push('Squad:');
     members.forEach(function(m,i){
-      lines.push((i+1)+'. '+m.player_name+' — '+[m.hero1,m.hero2,m.hero3].map(warHeroName).join('/'));
+      lines.push((i+1)+'. '+m.player_name+' — '+warHeroName(m.hero1));
     });
   }
   return lines.join('\n');
@@ -4442,7 +4451,7 @@ function renderWarBoard(el, isAdm){
                 return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06);font-size:12px;">'+
                   '<span style="font-weight:800;color:var(--t3);width:16px;text-align:right;flex-shrink:0;">'+(i+1)+'.</span>'+
                   '<span style="font-weight:600;flex-shrink:0;">'+escHtml(m.player_name)+'</span>'+
-                  '<span style="color:var(--t3);">'+[m.hero1,m.hero2,m.hero3].map(warHeroName).map(escHtml).join('/')+'</span>'+
+                  '<span style="color:var(--t3);">'+escHtml(warHeroName(m.hero1))+'</span>'+
                 '</div>';
               }).join('')+
             '</div>'
@@ -4483,15 +4492,14 @@ function renderFormationFields(prefix, values){
     '</div>';
 }
 
-// Same class-locked 3 hero slots, no percent block — used for squad
-// members, who each pick their own heroes but follow the team's ratio.
+// Only the Infantry (1st) slot matters for squad members in practice, so
+// slots 2/3 are locked out entirely — shown as a static, non-interactive
+// "Other" label instead of a functional select.
 function renderMemberHeroFields(prefix, values){
-  var slotClasses=['Infantry','Lancer','Marksman'];
   return '<div style="display:flex;gap:6px;">'+
-      slotClasses.map(function(cls,i){
-        var n=i+1;
-        return '<select class="sel" id="'+prefix+'Hero'+n+'" style="flex:1;font-size:12px;">'+warHeroOptsForClass(cls, values['hero'+n]||'')+'</select>';
-      }).join('')+
+      '<select class="sel" id="'+prefix+'Hero1" style="flex:1;font-size:12px;">'+warHeroOptsAll(values.hero1||'')+'</select>'+
+      '<div class="sel" style="flex:1;font-size:12px;opacity:.5;">Other</div>'+
+      '<div class="sel" style="flex:1;font-size:12px;opacity:.5;">Other</div>'+
     '</div>';
 }
 
@@ -4542,8 +4550,8 @@ function readFormation(prefix){
 function readMemberHeroes(prefix){
   return {
     hero1: document.getElementById(prefix+'Hero1').value||null,
-    hero2: document.getElementById(prefix+'Hero2').value||null,
-    hero3: document.getElementById(prefix+'Hero3').value||null
+    hero2: null,
+    hero3: null
   };
 }
 
