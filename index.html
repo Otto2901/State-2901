@@ -474,6 +474,7 @@ var ROLE_INFO = {
   library_admin:    { label:'Library Admin',   guideKey:'library',  desc:'You can view the Library and add, edit, reorder, or delete entries.' },
   cj_admin:         { label:'Crazy Joe Admin', guideKey:null,       desc:'You can manage Crazy Joe team assignments.' },
   war_admin:        { label:'War Team Admin',  guideKey:null,       desc:'You can manage War Team Builder rally teams, formations, and the hero list.' },
+  rally_admin:      { label:'Rally Timer Admin',guideKey:'rallytimer', desc:'You can open the Rally Timer march-sync calculator.' },
   moderator:        { label:'Moderator',       guideKey:null,       desc:'You have moderator status.' }
 };
 function createSb(token){
@@ -499,6 +500,7 @@ function isCjAdmin(name){ return isSuperAdmin(name)||hasRole(name,'cj_admin'); }
 function isLibraryAdmin(name){ return isSuperAdmin(name)||hasRole(name,'library_admin'); }
 function isStrongholdAdmin(name){ return isSuperAdmin(name)||hasRole(name,'stronghold_admin'); }
 function isWarAdmin(name){ return isSuperAdmin(name)||hasRole(name,'war_admin'); }
+function isRallyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'rally_admin'); }
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
@@ -837,7 +839,7 @@ function renderHome(app){
   }
   var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super">Super Admin</span>':
     getRoles(SESSION.name).map(function(r){
-      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'||r==='war_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
+      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'||r==='war_admin'||r==='rally_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
       return '<span class="role-badge '+cls+'">'+r.replace(/_/g,' ')+'</span>';
     }).join(' ');
 
@@ -935,7 +937,7 @@ function renderHome(app){
           '<div class="home-card-sub">Rally leader & squad formations</div></div>'+
           '<div class="home-card-chev">›</div>'+
         '</div>'+
-        (isSuperAdmin(SESSION.name)?
+        (isRallyAdmin(SESSION.name)?
         '<div class="home-card brk" id="goRally" style="border-color:rgba(216,196,138,.25);">'+
           '<div class="home-card-icon-badge" style="'+iconBadgeStyle('216,196,138')+'"><div class="home-card-icon">⏱️</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#d8c48a;">Rally Timer</span>'+
@@ -2924,7 +2926,7 @@ function renderAdminPlayers(ac){
 
   function playerRowHtml(p){
     var role=getRole(p.name);
-    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
+    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin"||role==="rally_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
     var playerReps=ALLIANCE_REPS.filter(function(r){ return r.player_name===p.name; });
     var repTags=playerReps.map(function(r){
       if(r.alliance==='TRANSFER') return '<span style="font-size:9px;background:rgba(143,122,168,.12);color:#b494c4;border:1px solid rgba(143,122,168,.35);border-radius:5px;padding:1px 5px;">✈️ Transfer Rep</span>';
@@ -3172,7 +3174,7 @@ function renderAdminRoles(ac){
   var rolesHtml=Object.keys(byPlayer).sort().map(function(pname){
     var roles=byPlayer[pname];
     var badgesHtml=roles.map(function(r){
-      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
+      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'||r.role==='rally_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
       return '<span class="role-badge '+badgeCls+'" style="margin-right:4px;">'+r.role.replace(/_/g," ")+'</span>'+
         '<button class="btn btn-d btn-sm revoke-role" data-player="'+pname+'" data-role="'+r.role+'" style="padding:3px 8px;font-size:10px;margin-right:4px;">✕</button>';
     }).join('');
@@ -3200,6 +3202,7 @@ function renderAdminRoles(ac){
           '<option value="library_admin">📚 Library Admin</option>'+
           '<option value="stronghold_admin">🏯 Stronghold Admin</option>'+
           '<option value="war_admin">⚔️ War Team Admin</option>'+
+          '<option value="rally_admin">⏱️ Rally Timer Admin</option>'+
         '</select>'+
         '<button class="btn btn-g btn-sm" id="grantRoleBtn">Grant</button>'+
       '</div>'+
@@ -3343,7 +3346,7 @@ function renderRallyTimerGuideContent(rc){
     guideStep(3,'Pick the rally duration: <strong>1:00</strong>, <strong>3:00</strong>, or <strong>5:00</strong>. This is the countdown the game shows after a rally is launched.')+
     guideStep(4,'The result panel updates instantly, sorted longest-march-first. Each line shows the <strong>remaining time</strong> the first opener should see on their rally when that leader launches, and how many seconds <strong>after</strong> the first opener they go.')+
     guideStep(5,'Hit <strong>Copy</strong> to paste the full order into alliance chat. <strong>Save preset</strong> stores the current roster + duration for next time.')+
-    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 This module is Super Admin only. Everything is stored on this device — nothing is shared or synced.</div>';
+    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Access to this module is granted by a Super Admin. Everything is stored on this device — nothing is shared or synced.</div>';
 }
 
 function openNotifModal(){
@@ -4458,7 +4461,7 @@ function rtUpdateResult(){
 }
 
 function renderRallyTimerApp(app){
-  if(!isSuperAdmin(SESSION.name)){ MODULE=null; render(); return; }
+  if(!isRallyAdmin(SESSION.name)){ MODULE=null; render(); return; }
   rtLoad();
   app.innerHTML=
     buildModuleHeader('rallytimer','⏱️','Rally Timer','March Sync','rallytimer')+
