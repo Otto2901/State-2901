@@ -550,6 +550,12 @@ var WAR_EDIT_TEAM    = null; // null=new, obj=editing (war_teams row)
 var WAR_EDIT_MEMBERS = []; // in-memory squad rows while editing/creating a team
 var WAR_EDIT_HERO    = undefined; // undefined=hidden, {}=new, obj=editing
 
+// RALLY TIMER STATE (pure client-side calculator, localStorage only)
+var RT_LEADERS = []; // [{name, march}] in entry order — march kept as raw string
+var RT_DUR     = 180; // rally duration in seconds: 180 (3:00) or 300 (5:00)
+var RT_PRESETS = []; // [{name, dur, leaders:[{name, march}]}]
+var RT_LOADED  = false; // guard: localStorage read once on first module open
+
 // STATE RULES
 var RULES_TOPICS   = []; // rules_topics
 var RULES_TAB      = 'board'; // board | admin
@@ -567,7 +573,8 @@ var MOD_COLORS = {
   rules:     {grad:'linear-gradient(90deg,#5c8a7a,#8fb8a8)', icon:'linear-gradient(135deg,rgba(92,138,122,.3),rgba(143,184,168,.2))', text:'#8fb8a8'},
   library:   {grad:'linear-gradient(90deg,#a08556,#c4a876)', icon:'linear-gradient(135deg,rgba(160,133,86,.3),rgba(196,168,118,.2))', text:'#c4a876'},
   crazyjoe:  {grad:'linear-gradient(90deg,#9c6b4f,#c48f6a)', icon:'linear-gradient(135deg,rgba(156,107,79,.3),rgba(196,143,106,.2))', text:'#c48f6a'},
-  warteam:   {grad:'linear-gradient(90deg,#8c4b4b,#c4756a)', icon:'linear-gradient(135deg,rgba(140,75,75,.3),rgba(196,117,106,.2))', text:'#c4756a'}
+  warteam:   {grad:'linear-gradient(90deg,#8c4b4b,#c4756a)', icon:'linear-gradient(135deg,rgba(140,75,75,.3),rgba(196,117,106,.2))', text:'#c4756a'},
+  rallytimer:{grad:'linear-gradient(90deg,#6b7a8f,#e3bc6a)', icon:'linear-gradient(135deg,rgba(107,122,143,.3),rgba(227,188,106,.2))', text:'#d8c48a'}
 };
 
 function buildModuleHeader(moduleKey, icon, title, sub, guideKey){
@@ -773,6 +780,7 @@ function render(){
   if(MODULE==='transfer') renderTransferApp(app);
   if(MODULE==='crazyjoe')  renderCrazyJoeApp(app);
   if(MODULE==='warteam')   renderWarTeamApp(app);
+  if(MODULE==='rallytimer') renderRallyTimerApp(app);
   if(MODULE==='rules')     renderRulesApp(app);
   if(MODULE==='library')   renderLibraryApp(app);
   if(MODULE==='adminpanel') renderAdminPanel(app);
@@ -927,6 +935,12 @@ function renderHome(app){
           '<div class="home-card-sub">Rally leader & squad formations</div></div>'+
           '<div class="home-card-chev">›</div>'+
         '</div>'+
+        '<div class="home-card brk" id="goRally" style="border-color:rgba(216,196,138,.25);">'+
+          '<div class="home-card-icon-badge" style="'+iconBadgeStyle('216,196,138')+'"><div class="home-card-icon">⏱️</div></div>'+
+          '<div class="home-card-text"><span class="home-card-title" style="color:#d8c48a;">Rally Timer</span>'+
+          '<div class="home-card-sub">March sync calculator</div></div>'+
+          '<div class="home-card-chev">›</div>'+
+        '</div>'+
         '<div class="home-card brk" id="goRules" style="border-color:rgba(92,138,122,.25);">'+
           '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeRules)+'"><div class="home-card-icon">📜</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#8fb8a8;">State Rules</span>'+
@@ -973,6 +987,7 @@ function renderHome(app){
   var goCjBtn=document.getElementById('goCj');
   if(goCjBtn) goCjBtn.addEventListener('click',function(){ MODULE='crazyjoe'; CJ_TAB='board'; CJ_VIEW_ALLIANCE=null; render(); });
   document.getElementById('goWar').addEventListener('click',function(){ MODULE='warteam'; WAR_TAB='board'; WAR_EDIT_TEAM=null; WAR_EDIT_MEMBERS=[]; WAR_EDIT_HERO=undefined; render(); });
+  document.getElementById('goRally').addEventListener('click', function(){ MODULE='rallytimer'; render(); });
   document.getElementById('goRules').addEventListener('click', function(){ MODULE='rules'; RULES_TAB='board'; RULES_SELECTED=null; render(); });
   document.getElementById('goLibrary').addEventListener('click', function(){ MODULE='library'; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
   var goAdminBtn=document.getElementById('goAdmin');
@@ -3248,7 +3263,8 @@ function renderAdminStats(ac){
 var GUIDE_CONTENT = {
   rotation: { title:'🏯 Stronghold Rotation — How to use', render: renderRotationGuideContent },
   library:  { title:'📚 Library — How to use',            render: renderLibraryGuideContent },
-  warteam:  { title:'⚔️ War Team Builder — How to use',   render: renderWarTeamGuideContent }
+  warteam:  { title:'⚔️ War Team Builder — How to use',   render: renderWarTeamGuideContent },
+  rallytimer:{ title:'⏱️ Rally Timer — How to use',       render: renderRallyTimerGuideContent }
 };
 function openGuideModal(key){
   var g=GUIDE_CONTENT[key]; if(!g) return;
@@ -3316,6 +3332,16 @@ function renderWarTeamGuideContent(rc){
     html+=guideStep('•','Manage the hero roster in the <strong>Heroes</strong> tab (add, edit, or delete). A hero can\'t be deleted while it\'s still used in a team or squad member\'s formation.');
   }
   rc.innerHTML=html;
+}
+function renderRallyTimerGuideContent(rc){
+  rc.innerHTML=
+    guideSection('How it works')+
+    guideStep(1,'For a synced rally, every army must <strong>land on the target at the same time</strong>. The leader with the <strong>longest march</strong> opens first; everyone else waits by the difference in march time.')+
+    guideStep(2,'Add each rally leader with their <strong>march time</strong> to the target. Type plain seconds (<strong>72</strong>) or <strong>m:ss</strong> (<strong>1:12</strong>).')+
+    guideStep(3,'Pick the rally duration: <strong>3:00</strong> or <strong>5:00</strong>. This is the countdown the game shows after a rally is launched.')+
+    guideStep(4,'The result panel updates instantly, sorted longest-march-first. Each line shows the <strong>remaining time</strong> the first opener should see on their rally when that leader launches, and how many seconds <strong>after</strong> the first opener they go.')+
+    guideStep(5,'Hit <strong>Copy</strong> to paste the full order into alliance chat. <strong>Save preset</strong> stores the current roster + duration for next time.')+
+    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Everything is stored only on this device. Nothing is shared or synced.</div>';
 }
 
 function openNotifModal(){
@@ -4358,6 +4384,208 @@ function renderWarTeamApp(app){
     if(WAR_TAB==='heroes' && isAdm) renderWarHeroesAdmin(warEl);
   }
   renderWarContent();
+}
+
+// ── RALLY TIMER ──────────────────────────────────────────────
+// Pure client-side rally-sync calculator. No Supabase, no roles.
+// delay = maxMarch - playerMarch ; remaining = duration - delay
+
+function rtLoad(){
+  if(RT_LOADED) return;
+  RT_LOADED=true;
+  try{
+    var s=JSON.parse(localStorage.getItem('rally-timer-v1')||'null');
+    if(s&&typeof s==='object'){
+      if(Array.isArray(s.leaders)) RT_LEADERS=s.leaders.map(function(l){ return {name:String(l&&l.name||''),march:String(l&&l.march||'')}; });
+      if(s.dur===180||s.dur===300) RT_DUR=s.dur;
+      if(Array.isArray(s.presets)) RT_PRESETS=s.presets;
+    }
+  }catch(e){}
+  if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:''},{name:'',march:''}];
+}
+function rtSave(){
+  try{ localStorage.setItem('rally-timer-v1',JSON.stringify({leaders:RT_LEADERS,dur:RT_DUR,presets:RT_PRESETS})); }catch(e){}
+}
+// "72" or "1:12" -> seconds ; null if invalid
+function rtParseMarch(str){
+  var v=String(str==null?'':str).trim();
+  if(!v) return null;
+  if(/^\d+$/.test(v)) return parseInt(v,10);
+  var m=v.match(/^(\d+):([0-5]?\d)$/);
+  if(m) return parseInt(m[1],10)*60+parseInt(m[2],10);
+  return null;
+}
+// seconds -> "M:SS"
+function rtMmss(sec){
+  sec=Math.max(0,Math.round(sec));
+  var m=Math.floor(sec/60), s=sec%60;
+  return m+':'+String(s).padStart(2,'0');
+}
+// valid leaders sorted by march desc (stable on entry order)
+function rtCompute(){
+  var rows=[];
+  RT_LEADERS.forEach(function(l,i){
+    var march=rtParseMarch(l.march);
+    if(march==null) return;
+    rows.push({name:(l.name||'').trim()||'Leader '+(i+1),march:march,idx:i});
+  });
+  if(!rows.length) return [];
+  rows.sort(function(a,b){ return (b.march-a.march)||(a.idx-b.idx); });
+  var maxMarch=rows[0].march;
+  return rows.map(function(r,rank){
+    var delay=maxMarch-r.march;
+    return {name:r.name,rank:rank,delay:delay,remaining:Math.max(0,RT_DUR-delay),tooSlow:delay>RT_DUR};
+  });
+}
+function rtBuildText(){
+  var rows=rtCompute();
+  if(!rows.length) return 'Add rally leaders and their march times to see the opening order.';
+  var out=rows[0].name+"'s rally remaining time ("+rtMmss(RT_DUR)+"):\n";
+  out+=rows.map(function(r){
+    var line=(r.rank+1)+'. '+r.name+' - '+rtMmss(r.remaining);
+    if(r.rank===0) line+=' GO';
+    else line+=' ('+r.delay+'s after)';
+    if(r.tooSlow) line+=' ⚠ too slow';
+    return line;
+  }).join('\n');
+  return out;
+}
+function rtUpdateResult(){
+  var el=document.getElementById('rtResult');
+  if(el) el.textContent=rtBuildText();
+}
+
+function renderRallyTimerApp(app){
+  rtLoad();
+  app.innerHTML=
+    buildModuleHeader('rallytimer','⏱️','Rally Timer','March Sync','rallytimer')+
+    '<div class="content" id="rtContent"></div>'+
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
+  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('rallytimer'); });
+  renderRallyTimerContent();
+}
+
+function renderRallyTimerContent(){
+  var el=document.getElementById('rtContent');
+  var presetOpts='<option value="">Load preset…</option>'+RT_PRESETS.map(function(p,i){
+    return '<option value="'+i+'">'+escHtml(p.name)+'</option>';
+  }).join('');
+  el.innerHTML=
+    '<div class="field">'+
+      '<label class="lbl">Rally duration</label>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button class="tog rt-dur'+(RT_DUR===180?' on':'')+'" data-dur="180" style="flex:1;border-color:'+(RT_DUR===180?'rgba(216,196,138,.6)':'var(--b2)')+';background:'+(RT_DUR===180?'rgba(216,196,138,.12)':'transparent')+';color:var(--t);">3:00</button>'+
+        '<button class="tog rt-dur'+(RT_DUR===300?' on':'')+'" data-dur="300" style="flex:1;border-color:'+(RT_DUR===300?'rgba(216,196,138,.6)':'var(--b2)')+';background:'+(RT_DUR===300?'rgba(216,196,138,.12)':'transparent')+';color:var(--t);">5:00</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="field">'+
+      '<label class="lbl">Rally leaders · march time</label>'+
+      '<div id="rtRows"></div>'+
+      '<button class="btn btn-g" id="rtAdd" style="margin-top:4px;">+ Add leader</button>'+
+    '</div>'+
+    '<div class="field">'+
+      '<label class="lbl">Opening order</label>'+
+      '<pre id="rtResult" class="card" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.7;color:var(--t);white-space:pre-wrap;word-break:break-word;margin:0;"></pre>'+
+      '<button class="btn btn-p" id="rtCopy" style="margin-top:8px;">📋 Copy</button>'+
+    '</div>'+
+    '<div class="field" style="margin-bottom:0;">'+
+      '<label class="lbl">Presets</label>'+
+      '<div style="display:flex;gap:8px;align-items:center;">'+
+        '<select class="sel" id="rtPresetSel" style="flex:1;">'+presetOpts+'</select>'+
+        '<button class="btn btn-g btn-sm" id="rtPresetSave">Save</button>'+
+        '<button class="btn btn-d btn-sm" id="rtPresetDel">🗑</button>'+
+      '</div>'+
+    '</div>';
+
+  el.querySelectorAll('.rt-dur').forEach(function(b){
+    b.addEventListener('click',function(){
+      RT_DUR=parseInt(b.dataset.dur,10); rtSave(); renderRallyTimerContent();
+    });
+  });
+  document.getElementById('rtAdd').addEventListener('click',function(){
+    RT_LEADERS.push({name:'',march:''}); rtSave(); renderRtRows(true);
+  });
+  document.getElementById('rtCopy').addEventListener('click',function(){
+    var txt=rtBuildText();
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ toast('✅ Copied!'); },function(){ toast('Copy failed'); });
+    } else { toast('Copy not supported'); }
+  });
+  document.getElementById('rtPresetSel').addEventListener('change',function(){
+    var i=this.value; if(i==='') return;
+    var p=RT_PRESETS[parseInt(i,10)]; if(!p) return;
+    RT_LEADERS=(p.leaders||[]).map(function(l){ return {name:String(l.name||''),march:String(l.march||'')}; });
+    if(p.dur===180||p.dur===300) RT_DUR=p.dur;
+    rtSave(); renderRallyTimerContent();
+  });
+  document.getElementById('rtPresetSave').addEventListener('click',function(){
+    rtPromptName(function(name){
+      if(!name) return;
+      RT_PRESETS.push({name:name,dur:RT_DUR,leaders:RT_LEADERS.map(function(l){ return {name:l.name,march:l.march}; })});
+      rtSave(); renderRallyTimerContent(); toast('✅ Preset saved');
+    });
+  });
+  document.getElementById('rtPresetDel').addEventListener('click',function(){
+    var sel=document.getElementById('rtPresetSel'); var i=sel.value;
+    if(i===''){ toast('Pick a preset to delete'); return; }
+    RT_PRESETS.splice(parseInt(i,10),1); rtSave(); renderRallyTimerContent(); toast('Preset deleted');
+  });
+
+  renderRtRows(false);
+}
+
+function renderRtRows(focusLast){
+  var wrap=document.getElementById('rtRows');
+  if(!wrap) return;
+  wrap.innerHTML=RT_LEADERS.map(function(l,i){
+    return '<div style="display:flex;gap:8px;margin-bottom:8px;">'+
+      '<input class="inp rt-name" data-i="'+i+'" placeholder="Name" value="'+escHtml(l.name)+'" style="flex:1;">'+
+      '<input class="inp rt-march" data-i="'+i+'" placeholder="72 or 1:12" value="'+escHtml(l.march)+'" inputmode="numeric" style="width:96px;">'+
+      '<button class="btn btn-d rt-del" data-i="'+i+'" style="width:44px;padding:0;flex-shrink:0;">×</button>'+
+    '</div>';
+  }).join('');
+  wrap.querySelectorAll('.rt-name').forEach(function(inp){
+    inp.addEventListener('input',function(){ RT_LEADERS[parseInt(inp.dataset.i,10)].name=inp.value; rtSave(); rtUpdateResult(); });
+  });
+  wrap.querySelectorAll('.rt-march').forEach(function(inp){
+    inp.addEventListener('input',function(){ RT_LEADERS[parseInt(inp.dataset.i,10)].march=inp.value; rtSave(); rtUpdateResult(); });
+  });
+  wrap.querySelectorAll('.rt-del').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      RT_LEADERS.splice(parseInt(btn.dataset.i,10),1);
+      if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:''}];
+      rtSave(); renderRtRows(false);
+    });
+  });
+  rtUpdateResult();
+  if(focusLast){
+    var names=wrap.querySelectorAll('.rt-name');
+    if(names.length) names[names.length-1].focus();
+  }
+}
+
+function rtPromptName(cb){
+  var overlay=document.createElement('div');
+  overlay.id='rtPromptOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML=
+    '<div style="background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:340px;width:100%;padding:18px;">'+
+      '<div style="font-family:Cinzel,serif;font-size:14px;color:#c9974b;margin-bottom:12px;">Save preset</div>'+
+      '<input class="inp" id="rtPromptInp" placeholder="Preset name" maxlength="40" style="margin-bottom:12px;">'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button class="btn btn-g" id="rtPromptCancel">Cancel</button>'+
+        '<button class="btn btn-p" id="rtPromptOk">Save</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  var inp=document.getElementById('rtPromptInp');
+  inp.focus();
+  function close(){ overlay.remove(); }
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) close(); });
+  document.getElementById('rtPromptCancel').addEventListener('click',close);
+  document.getElementById('rtPromptOk').addEventListener('click',function(){ var v=inp.value.trim(); close(); cb(v); });
+  inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var v=inp.value.trim(); close(); cb(v); } });
 }
 
 function warHeroName(id){
