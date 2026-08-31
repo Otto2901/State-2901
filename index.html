@@ -552,11 +552,13 @@ var WAR_EDIT_TEAM    = null; // null=new, obj=editing (war_teams row)
 var WAR_EDIT_MEMBERS = []; // in-memory squad rows while editing/creating a team
 var WAR_EDIT_HERO    = undefined; // undefined=hidden, {}=new, obj=editing
 
-// RALLY TIMER STATE (pure client-side calculator, localStorage only)
-var RT_LEADERS = []; // [{name, march}] in entry order — march kept as raw string
+// RALLY TIMER STATE — working roster is device-local (localStorage), presets are
+// shared across all rally admins via the rally_timer_presets Supabase table.
+var RT_LEADERS = []; // [{name, march, active}] in entry order — march kept as raw string
 var RT_DUR     = 180; // rally duration in seconds: 60 (1:00), 180 (3:00) or 300 (5:00)
-var RT_PRESETS = []; // [{name, dur, leaders:[{name, march}]}]
+var RT_PRESETS = []; // server rows: [{id, name, dur, leaders:[{name, march, active}], created_by}]
 var RT_LOADED  = false; // guard: localStorage read once on first module open
+var RT_PRESETS_LOADED = false; // guard: presets fetched once per session
 
 // STATE RULES
 var RULES_TOPICS   = []; // rules_topics
@@ -2581,8 +2583,7 @@ function renderTransferAdmin(tc){
       name:document.getElementById('trPName').value.trim(),
       normal_limit:parseInt(document.getElementById('trNLimit').value)||35,
       special_limit:parseInt(document.getElementById('trSLimit').value)||1,
-      power_cap:parsePower(document.getElementById('trPCap').value),
-      updated_at:new Date().toISOString()
+      power_cap:parsePower(document.getElementById('trPCap').value)
     }).eq('id',p.id).select().single();
     if(r.error){ toast('Error: '+r.error.message); return; }
     TRANSFER_PERIOD=r.data;
@@ -3342,11 +3343,11 @@ function renderRallyTimerGuideContent(rc){
   rc.innerHTML=
     guideSection('How it works')+
     guideStep(1,'For a synced rally, every army must <strong>land on the target at the same time</strong>. The leader with the <strong>longest march</strong> opens first; everyone else waits by the difference in march time.')+
-    guideStep(2,'Add each rally leader with their <strong>march time</strong> to the target. Type plain seconds (<strong>72</strong>) or <strong>m:ss</strong> (<strong>1:12</strong>).')+
+    guideStep(2,'Add each rally leader with their <strong>march time</strong> to the target. Type plain seconds (<strong>72</strong>) or <strong>m:ss</strong> (<strong>1:12</strong>). Untick the checkbox next to a leader to <strong>bench them for this rally</strong> without deleting their march time.')+
     guideStep(3,'Pick the rally duration: <strong>1:00</strong>, <strong>3:00</strong>, or <strong>5:00</strong>. This is the countdown the game shows after a rally is launched.')+
     guideStep(4,'The result panel updates instantly, sorted longest-march-first. Each line shows the <strong>remaining time</strong> the first opener should see on their rally when that leader launches, and how many seconds <strong>after</strong> the first opener they go.')+
-    guideStep(5,'Hit <strong>Copy</strong> to paste the full order into alliance chat. <strong>Save preset</strong> stores the current roster + duration for next time.')+
-    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Access to this module is granted by a Super Admin. Everything is stored on this device — nothing is shared or synced.</div>';
+    guideStep(5,'Hit <strong>Copy</strong> to paste the full order into alliance chat. <strong>Save preset</strong> stores the current roster + duration as a shared preset that every rally admin can load — on any device.')+
+    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Access to this module is granted by a Super Admin. Saved presets are shared across all rally admins; the roster you are currently editing stays on this device until you save it.</div>';
 }
 
 function openNotifModal(){
@@ -4401,15 +4402,29 @@ function rtLoad(){
   try{
     var s=JSON.parse(localStorage.getItem('rally-timer-v1')||'null');
     if(s&&typeof s==='object'){
-      if(Array.isArray(s.leaders)) RT_LEADERS=s.leaders.map(function(l){ return {name:String(l&&l.name||''),march:String(l&&l.march||'')}; });
+      if(Array.isArray(s.leaders)) RT_LEADERS=s.leaders.map(function(l){ return {name:String(l&&l.name||''),march:String(l&&l.march||''),active:!(l&&l.active===false)}; });
       if([60,180,300].indexOf(s.dur)>=0) RT_DUR=s.dur;
-      if(Array.isArray(s.presets)) RT_PRESETS=s.presets;
     }
   }catch(e){}
-  if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:''},{name:'',march:''}];
+  if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:'',active:true},{name:'',march:'',active:true}];
 }
 function rtSave(){
-  try{ localStorage.setItem('rally-timer-v1',JSON.stringify({leaders:RT_LEADERS,dur:RT_DUR,presets:RT_PRESETS})); }catch(e){}
+  try{ localStorage.setItem('rally-timer-v1',JSON.stringify({leaders:RT_LEADERS,dur:RT_DUR})); }catch(e){}
+}
+// Presets live in Supabase (rally_timer_presets), shared by every rally admin.
+async function rtLoadPresets(){
+  if(RT_PRESETS_LOADED) return;
+  RT_PRESETS_LOADED=true;
+  try{
+    var r=await sb.from('rally_timer_presets').select('*').order('created_at');
+    if(!r.error&&Array.isArray(r.data)){
+      RT_PRESETS=r.data;
+      if(document.getElementById('rtContent')) renderRallyTimerContent();
+    }
+  }catch(e){}
+}
+function rtLeadersForPreset(){
+  return RT_LEADERS.map(function(l){ return {name:l.name,march:l.march,active:l.active!==false}; });
 }
 // "72" or "1:12" -> seconds ; null if invalid
 function rtParseMarch(str){
@@ -4430,6 +4445,7 @@ function rtMmss(sec){
 function rtCompute(){
   var rows=[];
   RT_LEADERS.forEach(function(l,i){
+    if(l.active===false) return; // benched — kept in the roster, excluded from the order
     var march=rtParseMarch(l.march);
     if(march==null) return;
     rows.push({name:(l.name||'').trim()||'Leader '+(i+1),march:march,idx:i});
@@ -4470,12 +4486,13 @@ function renderRallyTimerApp(app){
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
   document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('rallytimer'); });
   renderRallyTimerContent();
+  rtLoadPresets(); // shared presets — re-renders the content when they arrive
 }
 
 function renderRallyTimerContent(){
   var el=document.getElementById('rtContent');
-  var presetOpts='<option value="">Load preset…</option>'+RT_PRESETS.map(function(p,i){
-    return '<option value="'+i+'">'+escHtml(p.name)+'</option>';
+  var presetOpts='<option value="">Load preset…</option>'+RT_PRESETS.map(function(p){
+    return '<option value="'+p.id+'">'+escHtml(p.name)+'</option>';
   }).join('');
   el.innerHTML=
     '<div class="field">'+
@@ -4512,7 +4529,7 @@ function renderRallyTimerContent(){
     });
   });
   document.getElementById('rtAdd').addEventListener('click',function(){
-    RT_LEADERS.push({name:'',march:''}); rtSave(); renderRtRows(true);
+    RT_LEADERS.push({name:'',march:'',active:true}); rtSave(); renderRtRows(true);
   });
   document.getElementById('rtCopy').addEventListener('click',function(){
     var txt=rtBuildText();
@@ -4521,23 +4538,29 @@ function renderRallyTimerContent(){
     } else { toast('Copy not supported'); }
   });
   document.getElementById('rtPresetSel').addEventListener('change',function(){
-    var i=this.value; if(i==='') return;
-    var p=RT_PRESETS[parseInt(i,10)]; if(!p) return;
-    RT_LEADERS=(p.leaders||[]).map(function(l){ return {name:String(l.name||''),march:String(l.march||'')}; });
+    var id=this.value; if(id==='') return;
+    var p=RT_PRESETS.find(function(x){ return String(x.id)===id; }); if(!p) return;
+    RT_LEADERS=(p.leaders||[]).map(function(l){ return {name:String(l.name||''),march:String(l.march||''),active:!(l&&l.active===false)}; });
+    if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:'',active:true}];
     if([60,180,300].indexOf(p.dur)>=0) RT_DUR=p.dur;
     rtSave(); renderRallyTimerContent();
   });
   document.getElementById('rtPresetSave').addEventListener('click',function(){
-    rtPromptName(function(name){
+    rtPromptName(async function(name){
       if(!name) return;
-      RT_PRESETS.push({name:name,dur:RT_DUR,leaders:RT_LEADERS.map(function(l){ return {name:l.name,march:l.march}; })});
-      rtSave(); renderRallyTimerContent(); toast('✅ Preset saved');
+      var r=await sb.from('rally_timer_presets').insert([{name:name,dur:RT_DUR,leaders:rtLeadersForPreset(),created_by:SESSION.name}]).select().single();
+      if(r.error){ toast('Error: '+r.error.message); return; }
+      RT_PRESETS.push(r.data); renderRallyTimerContent(); toast('✅ Preset saved');
     });
   });
-  document.getElementById('rtPresetDel').addEventListener('click',function(){
-    var sel=document.getElementById('rtPresetSel'); var i=sel.value;
-    if(i===''){ toast('Pick a preset to delete'); return; }
-    RT_PRESETS.splice(parseInt(i,10),1); rtSave(); renderRallyTimerContent(); toast('Preset deleted');
+  document.getElementById('rtPresetDel').addEventListener('click',async function(){
+    var id=document.getElementById('rtPresetSel').value;
+    if(id===''){ toast('Pick a preset to delete'); return; }
+    if(!confirm('Delete this shared preset? Every rally admin will lose it.')) return;
+    var r=await sb.from('rally_timer_presets').delete().eq('id',id);
+    if(r.error){ toast('Error: '+r.error.message); return; }
+    RT_PRESETS=RT_PRESETS.filter(function(x){ return String(x.id)!==id; });
+    renderRallyTimerContent(); toast('Preset deleted');
   });
 
   renderRtRows(false);
@@ -4547,12 +4570,23 @@ function renderRtRows(focusLast){
   var wrap=document.getElementById('rtRows');
   if(!wrap) return;
   wrap.innerHTML=RT_LEADERS.map(function(l,i){
-    return '<div style="display:flex;gap:8px;margin-bottom:8px;">'+
+    var off=l.active===false;
+    return '<div class="rt-row" data-i="'+i+'" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;'+(off?'opacity:.45;':'')+'">'+
+      '<input type="checkbox" class="rt-active" data-i="'+i+'"'+(off?'':' checked')+' title="Include in the opening order" style="width:18px;height:18px;flex-shrink:0;accent-color:var(--ac);cursor:pointer;">'+
       '<input class="inp rt-name" data-i="'+i+'" placeholder="Name" value="'+escHtml(l.name)+'" style="flex:1;">'+
       '<input class="inp rt-march" data-i="'+i+'" placeholder="72 or 1:12" value="'+escHtml(l.march)+'" inputmode="numeric" style="width:96px;">'+
       '<button class="btn btn-d rt-del" data-i="'+i+'" style="width:44px;padding:0;flex-shrink:0;">×</button>'+
     '</div>';
   }).join('');
+  wrap.querySelectorAll('.rt-active').forEach(function(cb){
+    cb.addEventListener('change',function(){
+      var i=parseInt(cb.dataset.i,10);
+      RT_LEADERS[i].active=cb.checked;
+      var row=wrap.querySelector('.rt-row[data-i="'+i+'"]');
+      if(row) row.style.opacity=cb.checked?'':'0.45';
+      rtSave(); rtUpdateResult();
+    });
+  });
   wrap.querySelectorAll('.rt-name').forEach(function(inp){
     inp.addEventListener('input',function(){ RT_LEADERS[parseInt(inp.dataset.i,10)].name=inp.value; rtSave(); rtUpdateResult(); });
   });
@@ -4562,7 +4596,7 @@ function renderRtRows(focusLast){
   wrap.querySelectorAll('.rt-del').forEach(function(btn){
     btn.addEventListener('click',function(){
       RT_LEADERS.splice(parseInt(btn.dataset.i,10),1);
-      if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:''}];
+      if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:'',active:true}];
       rtSave(); renderRtRows(false);
     });
   });
