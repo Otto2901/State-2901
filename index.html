@@ -658,7 +658,8 @@ async function loadAll(){
     sb.from('notifications').select('*').is('read_at',null).order('created_at'),
     sb.from('war_heroes').select('*').order('class').order('name'),
     sb.from('war_teams').select('*').order('created_at'),
-    sb.from('war_team_members').select('*').order('position')
+    sb.from('war_team_members').select('*').order('position'),
+    sb.from('alliance_colors').select('*')
   ]);
   var r3=results[0],r5=results[2],r6=results[3];
   var r7=results[4],r8=results[5],r9=results[6],r10=results[7];
@@ -684,10 +685,12 @@ async function loadAll(){
   if(!rRUL.error&&rRUL.data) RULES_TOPICS=rRUL.data;
   if(!rLIB.error&&rLIB.data) LIBRARY_ENTRIES=rLIB.data;
   if(!rNOT.error&&rNOT.data) PENDING_NOTIFS=rNOT.data;
-  var rWH=results[16], rWT=results[17], rWM=results[18];
+  var rWH=results[16], rWT=results[17], rWM=results[18], rAC=results[19];
   if(!rWH.error&&rWH.data) WAR_HEROES=rWH.data;
   if(!rWT.error&&rWT.data) WAR_TEAMS=rWT.data;
   if(!rWM.error&&rWM.data) WAR_MEMBERS=rWM.data;
+  // DB alliance colours override / extend the hard-coded ALLIANCE_COLORS defaults
+  if(!rAC.error&&Array.isArray(rAC.data)) rAC.data.forEach(function(c){ if(c&&c.alliance) ALLIANCE_COLORS[c.alliance]=c.color; });
   maybeAutoResetRotation();
 }
 
@@ -1373,10 +1376,20 @@ function getAllAlliances(){
   if(!ROT_STATE) return ALL_ALLIANCES;
   return (ROT_STATE.top4_order||TOP4).concat(ROT_STATE.bot5_order||BOT5); 
 }
+// Hard-coded fallback only — rows from the alliance_colors table (loaded in
+// loadAll) override and extend this at runtime. Editable per-alliance in
+// Rotation Admin; rename / add / delete keep the DB row in sync.
 var ALLIANCE_COLORS = {
   HUM:'#2a9fd6',SEA:'#52c759',FAL:'#ff9500',BST:'#ff453a',
   WLF:'#bf5af2',LHC:'#ffd60a',DND:'#30d158',FAM:'#ff6b6b',CHB:'#64d2ff'
 };
+// Palette for auto-assigning a colour when a new alliance is added
+var ALLIANCE_PALETTE = ['#2a9fd6','#52c759','#ff9500','#ff453a','#bf5af2','#ffd60a','#30d158','#ff6b6b','#64d2ff','#c9974b','#e3bc6a','#a3b3c2'];
+function pickAllianceColor(){
+  var used={}; Object.keys(ALLIANCE_COLORS).forEach(function(k){ used[(ALLIANCE_COLORS[k]||'').toLowerCase()]=1; });
+  for(var i=0;i<ALLIANCE_PALETTE.length;i++){ if(!used[ALLIANCE_PALETTE[i].toLowerCase()]) return ALLIANCE_PALETTE[i]; }
+  return ALLIANCE_PALETTE[Math.floor(Math.random()*ALLIANCE_PALETTE.length)];
+}
 
 function hexToRgb(hex){
   hex=(hex||'').replace('#','');
@@ -1955,13 +1968,15 @@ function renderRotAdmin(rc){
   // Build alliance management UI
   function allianceRow(al, idx, group){
     var color=ALLIANCE_COLORS[al]||'var(--ac)';
+    var hex=/^#[0-9a-fA-F]{6}$/.test(ALLIANCE_COLORS[al]||'')?ALLIANCE_COLORS[al]:'#c9974b';
     var isTop=group==='top4';
     var arr=isTop?ro.top4:ro.bot5;
     var canUp=idx>0;
     var canDown=idx<arr.length-1;
     return '<div class="rot-alliance-row" data-al="'+al+'" data-group="'+group+'" data-idx="'+idx+'">'+
       '<div style="width:16px;text-align:center;font-size:10px;color:#6b5a42;flex-shrink:0;">'+(idx+1)+'</div>'+
-      '<div style="flex:1;font-size:12px;font-weight:800;color:'+color+';min-width:0;">'+al+'</div>'+
+      '<input type="color" class="al-color" data-al="'+al+'" value="'+hex+'" title="Alliance colour" style="width:24px;height:22px;padding:0;border:1px solid rgba(196,155,92,.25);border-radius:4px;background:none;cursor:pointer;flex-shrink:0;">'+
+      '<div class="al-name" style="flex:1;font-size:12px;font-weight:800;color:'+color+';min-width:0;">'+al+'</div>'+
       '<div style="display:flex;gap:2px;flex-shrink:0;">'+
         '<button class="rot-act-btn rename-al" data-al="'+al+'" data-group="'+group+'" title="Rename" style="padding:2px 5px;font-size:11px;">✏️</button>'+
         '<button class="rot-act-btn move-up-al" data-al="'+al+'" data-group="'+group+'" data-idx="'+idx+'" '+(canUp?'':'disabled')+' title="Move up" style="padding:2px 5px;font-size:11px;">▲</button>'+
@@ -2136,13 +2151,13 @@ function renderRotAdmin(rc){
       }
       // Propagate the rename to every table that stores the alliance string.
       // Sequential with error checks, not atomic — matches the other multi-table
-      // flows in this app. ALLIANCE_COLORS has no backing table, so its rename
-      // (above) only applies on this client.
+      // flows in this app.
       var cascade=[
         ['players','alliance'],
         ['cj_teams','alliance'],
         ['war_teams','alliance'],
-        ['transfer_invites','alliance']
+        ['transfer_invites','alliance'],
+        ['alliance_colors','alliance']
       ];
       for(var ci=0;ci<cascade.length;ci++){
         var cr=await sb.from(cascade[ci][0]).update({alliance:newName}).eq('alliance',al);
@@ -2155,7 +2170,7 @@ function renderRotAdmin(rc){
 
       // Update rotation_state orders
       var ok=await saveAllianceOrder(newTop4,newBot5);
-      if(ok){ toast('✅ Renamed: '+al+' → '+newName+'. Alliance color updates for other users on their next visit.'); render(); }
+      if(ok){ toast('✅ Renamed: '+al+' → '+newName); render(); }
     });
   });
 
@@ -2210,8 +2225,24 @@ function renderRotAdmin(rc){
       // Remove their reps
       await sb.from('alliance_reps').delete().eq('alliance',al);
       ALLIANCE_REPS=ALLIANCE_REPS.filter(function(r){ return r.alliance!==al; });
+      // Remove their colour row
+      await sb.from('alliance_colors').delete().eq('alliance',al);
+      delete ALLIANCE_COLORS[al];
       var ok=await saveAllianceOrder(newTop4,newBot5);
       if(ok){ toast('🗑 '+al+' removed'); render(); }
+    });
+  });
+
+  // Alliance colour picker — persists to alliance_colors, no full re-render
+  rc.querySelectorAll('.al-color').forEach(function(inp){
+    inp.addEventListener('change',async function(){
+      var al=inp.dataset.al; var col=inp.value;
+      ALLIANCE_COLORS[al]=col;
+      var nameEl=inp.parentNode.querySelector('.al-name');
+      if(nameEl) nameEl.style.color=col;
+      var r=await sb.from('alliance_colors').upsert({alliance:al,color:col,updated_by:SESSION.name,updated_at:new Date().toISOString()}).select();
+      if(r.error){ toast('Error: '+r.error.message); return; }
+      toast('✅ Colour saved: '+al);
     });
   });
 
@@ -2227,7 +2258,14 @@ function renderRotAdmin(rc){
       if(group==='top4') newTop4.push(name);
       else newBot5.push(name);
       var ok=await saveAllianceOrder(newTop4,newBot5);
-      if(ok){ toast('✅ '+name+' added to '+(group==='top4'?'Top 4':'Bot 5')); render(); }
+      if(ok){
+        var col=pickAllianceColor();
+        ALLIANCE_COLORS[name]=col;
+        var acr=await sb.from('alliance_colors').upsert({alliance:name,color:col,updated_by:SESSION.name}).select();
+        if(acr.error) console.warn('alliance_colors upsert failed:',acr.error.message);
+        toast('✅ '+name+' added to '+(group==='top4'?'Top 4':'Bot 5'));
+        render();
+      }
     });
   }
   } // end isFullAdmin-only handlers
