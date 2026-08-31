@@ -1,14 +1,23 @@
-const CACHE = 'state2901-v10';
+const CACHE = 'state2901-v11';
 
-// Install — cache core files
+const CORE = [
+  '/State-2901/',
+  '/State-2901/index.html',
+  '/State-2901/manifest.json',
+  '/State-2901/icons/icon-192.png',
+  '/State-2901/icons/icon-512.png',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cinzel:wght@600;700;900&display=swap'
+];
+
+// Install — precache the shell + the third-party assets the app needs to boot
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll([
-      '/State-2901/',
-      '/State-2901/index.html',
-      '/State-2901/manifest.json'
-    ]))
+    caches.open(CACHE).then(c =>
+      // don't let one flaky CDN request fail the whole install
+      Promise.allSettled(CORE.map(u => c.add(u)))
+    )
   );
 });
 
@@ -21,11 +30,20 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch — network first, cache fallback
+// Fetch — network first, fall back to cache; keep the cache fresh on every hit.
+// Supabase REST/Realtime calls are skipped so stale API data never gets served.
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (url.hostname.endsWith('supabase.co')) return;
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request).then(res => {
+      if (res && res.ok && (url.origin === location.origin || url.hostname.includes('jsdelivr') || url.hostname.includes('gstatic') || url.hostname.includes('googleapis'))) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });
 
