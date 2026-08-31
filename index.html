@@ -887,7 +887,7 @@ function renderHome(app){
         var stored=localStorage.getItem('push-dismissed');
         if(stored) return '';
         if(Notification.permission==='granted') return '';
-        if(isIOS()&&!isStandalone()) return
+        if(isIOS()&&!isStandalone()) return '' +
           '<div style="background:rgba(201,151,75,.09);border:1px solid rgba(201,151,75,.25);border-radius:14px;padding:11px 14px;margin-bottom:14px;width:100%;max-width:400px;display:flex;align-items:flex-start;gap:10px;">'+
             '<span style="font-size:18px;flex-shrink:0;">📲</span>'+
             '<div style="flex:1;">'+
@@ -1084,7 +1084,7 @@ function renderProfileSetup(app){
       // Update existing player
       var upd=await sb.from('players').update({player_id:pid,alliance:pal}).eq('name',name2);
       if(upd.error){ PROF_ERR='Error: '+upd.error.message; render(); return; }
-      SESSION={name:name2,isAdmin:name2===ADMIN_NAME,needsProfile:false};
+      SESSION=Object.assign({},SESSION,{name:name2,isAdmin:name2===ADMIN_NAME,needsProfile:false});
       localStorage.setItem('wos-session',JSON.stringify(SESSION));
       PROF_ID=''; PROF_ALLIANCE=''; PROF_ERR='';
       await loadAll(); render();
@@ -2134,9 +2134,28 @@ function renderRotAdmin(rc){
         if(sr.error){ toast('Error: '+sr.error.message); return; }
         selUpdates[si].alliance=newName;
       }
+      // Propagate the rename to every table that stores the alliance string.
+      // Sequential with error checks, not atomic — matches the other multi-table
+      // flows in this app. ALLIANCE_COLORS has no backing table, so its rename
+      // (above) only applies on this client.
+      var cascade=[
+        ['players','alliance'],
+        ['cj_teams','alliance'],
+        ['war_teams','alliance'],
+        ['transfer_invites','alliance']
+      ];
+      for(var ci=0;ci<cascade.length;ci++){
+        var cr=await sb.from(cascade[ci][0]).update({alliance:newName}).eq('alliance',al);
+        if(cr.error){ toast('Error ('+cascade[ci][0]+'): '+cr.error.message); return; }
+      }
+      ALL_PLAYERS.forEach(function(p){ if(p.alliance===al) p.alliance=newName; });
+      CJ_TEAMS.forEach(function(t){ if(t.alliance===al) t.alliance=newName; });
+      WAR_TEAMS.forEach(function(t){ if(t.alliance===al) t.alliance=newName; });
+      TRANSFER_INVITES.forEach(function(i){ if(i.alliance===al) i.alliance=newName; });
+
       // Update rotation_state orders
       var ok=await saveAllianceOrder(newTop4,newBot5);
-      if(ok){ toast('✅ Renamed: '+al+' → '+newName); render(); }
+      if(ok){ toast('✅ Renamed: '+al+' → '+newName+'. Alliance color updates for other users on their next visit.'); render(); }
     });
   });
 
@@ -2895,14 +2914,16 @@ function renderAdminPlayers(ac){
     '<div style="background:color-mix(in srgb,var(--orange) 6%,transparent);border:2px solid color-mix(in srgb,var(--orange) 30%,transparent);border-radius:12px;padding:14px;margin-bottom:12px;">'+
       '<div style="font-size:12px;font-weight:800;color:var(--orange);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🔄 ID Change Requests ('+ID_REQUESTS.filter(function(r){ return r.status==='pending'; }).length+')</div>'+
       ID_REQUESTS.filter(function(r){ return r.status==='pending'; }).map(function(req){
+        var isName=req.request_type==='name';
         return '<div style="background:rgba(26,18,10,.6);border-radius:10px;padding:10px;margin-bottom:8px;">'+
           '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
             '<div>'+
               '<div style="font-size:13px;font-weight:800;color:#f2e6d0;">'+req.player_name+'</div>'+
+              '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:'+(isName?'var(--purple)':'var(--steel)')+';margin:2px 0;">'+(isName?'Name change':'ID change')+'</div>'+
               '<div style="font-size:11px;color:var(--t2);">'+req.old_id+' → <strong style="color:var(--gold);">'+req.new_id+'</strong></div>'+
             '</div>'+
             '<div style="display:flex;gap:6px;">'+
-              '<button class="btn btn-g btn-sm approve-id-req" data-id="'+req.id+'" data-player="'+req.player_name+'" data-newid="'+req.new_id+'" style="padding:5px 12px;font-size:11px;">✅ Approve</button>'+
+              '<button class="btn btn-g btn-sm approve-id-req" data-id="'+req.id+'" data-player="'+req.player_name+'" data-newid="'+req.new_id+'" data-type="'+(isName?'name':'id')+'" style="padding:5px 12px;font-size:11px;">✅ Approve</button>'+
               '<button class="btn btn-d btn-sm reject-id-req" data-id="'+req.id+'" style="padding:5px 12px;font-size:11px;background:color-mix(in srgb,var(--red) 15%,transparent);border-color:color-mix(in srgb,var(--red) 30%,transparent);color:var(--red);">❌ Reject</button>'+
             '</div>'+
           '</div>'+
@@ -3021,6 +3042,9 @@ function renderAdminPlayers(ac){
       var r7=await sb.from('war_team_members').delete().eq('player_name',pl);
       if(r7.error){ failCount++; continue; }
       WAR_MEMBERS=WAR_MEMBERS.filter(function(x){ return x.player_name!==pl; });
+      var r8=await sb.from('cj_team_members').delete().eq('player_name',pl);
+      if(r8.error){ failCount++; continue; }
+      CJ_MEMBERS=CJ_MEMBERS.filter(function(x){ return x.player_name!==pl; });
       var r3=await sb.from('players').delete().eq('name',pl);
       if(r3.error){ failCount++; continue; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
@@ -3070,9 +3094,16 @@ function renderAdminPlayers(ac){
         if(r3.error){ toast('Error: '+r3.error.message); return; }
         var r7=await sb.from('push_subscriptions').update({player_name:newId}).eq('player_name',player);
         if(r7.error){ toast('Error: '+r7.error.message); return; }
+        var r8=await sb.from('war_team_members').update({player_name:newId}).eq('player_name',player);
+        if(r8.error){ toast('Error: '+r8.error.message); return; }
+        var r9=await sb.from('cj_team_members').update({player_name:newId}).eq('player_name',player);
+        if(r9.error){ toast('Error: '+r9.error.message); return; }
         var p=ALL_PLAYERS.find(function(x){ return x.name===player; });
         if(p) p.name=newId;
         ALLIANCE_REPS.forEach(function(r){ if(r.player_name===player) r.player_name=newId; });
+        ADMIN_ROLES.forEach(function(r){ if(r.player_name===player) r.player_name=newId; });
+        WAR_MEMBERS.forEach(function(m){ if(m.player_name===player) m.player_name=newId; });
+        CJ_MEMBERS.forEach(function(m){ if(m.player_name===player) m.player_name=newId; });
         if(SESSION.name===player){ SESSION.name=newId; localStorage.setItem('wos-session',JSON.stringify(SESSION)); }
         toast('✅ Name changed: '+player+' → '+newId);
       } else {
@@ -3152,6 +3183,9 @@ function renderAdminPlayers(ac){
       var r7=await sb.from('war_team_members').delete().eq('player_name',pl);
       if(r7.error){ toast('Error: '+r7.error.message); return; }
       WAR_MEMBERS=WAR_MEMBERS.filter(function(x){ return x.player_name!==pl; });
+      var r8=await sb.from('cj_team_members').delete().eq('player_name',pl);
+      if(r8.error){ toast('Error: '+r8.error.message); return; }
+      CJ_MEMBERS=CJ_MEMBERS.filter(function(x){ return x.player_name!==pl; });
       var r3=await sb.from('players').delete().eq('name',pl);
       if(r3.error){ toast('Error: '+r3.error.message); return; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
