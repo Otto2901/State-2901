@@ -166,7 +166,17 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 
 /* UNDO BAR */
 
-/* MODAL */
+/* MODAL — shared by openModal()/confirmDanger() */
+.modal-overlay{position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b));animation:modalIn .16s var(--ease);}
+@keyframes modalIn{from{opacity:0}to{opacity:1}}
+.modal-panel{background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;padding:18px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.modal-panel.sm{max-width:340px;}
+.modal-panel.lg{max-width:480px;}
+.modal-close{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--t2);font-size:20px;cursor:pointer;line-height:1;padding:4px;}
+.modal-title{font-family:var(--serif);font-size:15px;color:var(--ac);margin-bottom:14px;padding-right:24px;line-height:1.2;text-wrap:balance;}
+.modal-body{font-size:13px;color:#e6d5b4;line-height:1.65;}
+.modal-actions{display:flex;gap:8px;margin-top:16px;}
+.modal-actions .btn{flex:1;}
 
 /* EMPTY/LOADING */
 .empty{text-align:center;padding:52px 20px;color:var(--t3);}
@@ -647,6 +657,114 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 
 // HELPERS
 function toast(msg){ var o=document.querySelector('.toast'); if(o) o.remove(); var t=document.createElement('div'); t.className='toast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite'); t.textContent=msg; document.body.appendChild(t); setTimeout(function(){ t.remove(); },3300); }
+
+// ── MODAL ────────────────────────────────────────────────────────────────
+// Unified dialog. opts: { title, bodyHtml | bodyRender(el), actions:[{label,kind,onClick(close)}],
+//   onClose, size:'sm'|'md'|'lg', dismissible (default true) }. Returns { close, panel, body }.
+function openModal(opts){
+  opts=opts||{};
+  var prevFocus=document.activeElement;
+  var ov=document.createElement('div');
+  ov.className='modal-overlay';
+  var sizeCls=opts.size==='lg'?' lg':opts.size==='sm'?' sm':'';
+  ov.innerHTML=
+    '<div class="modal-panel'+sizeCls+'" role="dialog" aria-modal="true" aria-label="'+escHtml(opts.title||'Dialog')+'">'+
+      (opts.dismissible!==false?'<button class="modal-close" type="button" aria-label="Close">✕</button>':'')+
+      (opts.title?'<div class="modal-title">'+opts.title+'</div>':'')+
+      '<div class="modal-body"></div>'+
+      (opts.actions&&opts.actions.length?'<div class="modal-actions"></div>':'')+
+    '</div>';
+  document.body.appendChild(ov);
+  var prevOverflow=document.body.style.overflow;
+  document.body.style.overflow='hidden';
+  var panel=ov.querySelector('.modal-panel');
+  var bodyEl=ov.querySelector('.modal-body');
+  if(opts.bodyHtml!=null) bodyEl.innerHTML=opts.bodyHtml;
+  if(opts.bodyRender) opts.bodyRender(bodyEl);
+  var closed=false;
+  function close(){
+    if(closed) return; closed=true;
+    document.removeEventListener('keydown',onKey);
+    ov.remove();
+    document.body.style.overflow=prevOverflow;
+    if(prevFocus&&prevFocus.focus){ try{ prevFocus.focus(); }catch(e){} }
+    if(opts.onClose) opts.onClose();
+  }
+  function onKey(e){
+    if(e.key==='Escape'&&opts.dismissible!==false){ e.preventDefault(); close(); return; }
+    if(e.key==='Tab'){
+      var f=panel.querySelectorAll('button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+      if(!f.length) return;
+      var first=f[0], last=f[f.length-1];
+      if(e.shiftKey&&document.activeElement===first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey&&document.activeElement===last){ e.preventDefault(); first.focus(); }
+    }
+  }
+  document.addEventListener('keydown',onKey);
+  if(opts.dismissible!==false) ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+  var cb=ov.querySelector('.modal-close'); if(cb) cb.addEventListener('click',close);
+  if(opts.actions){
+    var ae=ov.querySelector('.modal-actions');
+    opts.actions.forEach(function(a){
+      var b=document.createElement('button');
+      b.type='button';
+      b.className='btn '+(a.kind==='danger'?'btn-d':a.kind==='ghost'?'btn-g':'btn-p');
+      b.textContent=a.label;
+      b.addEventListener('click',function(){ if(a.onClick) a.onClick(close); else close(); });
+      ae.appendChild(b);
+    });
+  }
+  setTimeout(function(){ var f=panel.querySelector('input:not([type=hidden]),textarea,button.btn,.modal-close'); if(f) f.focus(); },0);
+  return {close:close,panel:panel,body:bodyEl};
+}
+
+// Styled replacement for window.confirm(). Resolves true only on the confirm button.
+// opts: { title, confirmLabel, cancelLabel, requireTyped:'WORD', danger (default true) }
+function confirmDanger(message,opts){
+  opts=opts||{};
+  return new Promise(function(resolve){
+    var body='<div style="white-space:pre-wrap;">'+escHtml(message)+'</div>';
+    if(opts.requireTyped) body+='<input class="inp" id="cdTypedInp" autocomplete="off" placeholder="Type '+escHtml(opts.requireTyped)+' to confirm" style="margin-top:12px;">';
+    openModal({
+      title:opts.title||'Please confirm',
+      bodyHtml:body,
+      size:'sm',
+      onClose:function(){ resolve(false); },
+      actions:[
+        {label:opts.cancelLabel||'Cancel',kind:'ghost',onClick:function(close){ close(); }},
+        {label:opts.confirmLabel||'Confirm',kind:opts.danger===false?'primary':'danger',onClick:function(close){
+          if(opts.requireTyped){
+            var v=((document.getElementById('cdTypedInp')||{}).value||'').trim();
+            if(v!==opts.requireTyped){ toast('Type '+opts.requireTyped+' to confirm'); return; }
+          }
+          resolve(true); close();
+        }}
+      ]
+    });
+  });
+}
+
+// Styled replacement for window.prompt() text input. Resolves the trimmed string, or null on cancel.
+// opts: { title, initial, placeholder, confirmLabel }
+function promptText(message,opts){
+  opts=opts||{};
+  return new Promise(function(resolve){
+    openModal({
+      title:opts.title||message,
+      size:'sm',
+      bodyHtml:(opts.title?'<div style="margin-bottom:10px;">'+escHtml(message)+'</div>':'')+
+        '<input class="inp" id="ptInp" autocomplete="off" placeholder="'+escHtml(opts.placeholder||'')+'" value="'+escHtml(opts.initial||'')+'">',
+      onClose:function(){ resolve(null); },
+      actions:[
+        {label:'Cancel',kind:'ghost',onClick:function(close){ close(); }},
+        {label:opts.confirmLabel||'OK',kind:'primary',onClick:function(close){
+          var v=((document.getElementById('ptInp')||{}).value||'').trim();
+          resolve(v||null); close();
+        }}
+      ]
+    });
+  });
+}
 function fmt(d){ return d?d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):''; }
 function sameName(a,b){ return a&&b&&a.trim().toLowerCase()===b.trim().toLowerCase(); }
 async function loadAll(){
@@ -985,7 +1103,7 @@ function renderHome(app){
     '</div>';
 
   document.getElementById('logoutBtn').addEventListener('click', function(){ PROFILE_OPEN=true; render(); });
-  document.getElementById('logoutIconBtn').addEventListener('click', function(){ if(confirm('Sign out?')) logout(); });
+  document.getElementById('logoutIconBtn').addEventListener('click', function(){ confirmDanger('Sign out? You can sign back in with your PIN.',{title:'Sign out',confirmLabel:'Sign out',danger:false}).then(function(ok){ if(ok) logout(); }); });
   var nbb=document.getElementById('notifBellBtn');
   if(nbb) nbb.addEventListener('click', openNotifModal);
   var mbb=document.getElementById('missingBannerBtn');
@@ -1690,7 +1808,7 @@ function renderRotBoard(rc){
   rc.querySelectorAll('.del-sel-btn').forEach(function(btn){
     btn.addEventListener('click',async function(){
       var al=btn.dataset.alliance;
-      if(!confirm('Remove selection for '+al+'?')) return;
+      if(!await confirmDanger('Remove '+al+'’s selection for this week?',{title:'Remove selection',confirmLabel:'Remove'})) return;
       var ws=ROT_STATE.week_start;
       var r=await sb.from('rotation_selections').delete().eq('week_start',ws).eq('alliance',al);
       if(r.error){ toast('Error: '+r.error.message); return; }
@@ -1795,7 +1913,7 @@ function renderRotSelect(rc){
     '</div>';
     var undoBtn=document.getElementById('undoSelBtn');
     if(undoBtn) undoBtn.addEventListener('click',async function(){
-      if(!confirm('Undo '+myAlliance+'\'s selection?')) return;
+      if(!await confirmDanger('Undo '+myAlliance+'’s selection? You can pick again while the window is open.',{title:'Undo selection',confirmLabel:'Undo'})) return;
       var r=await sb.from('rotation_selections').delete().eq('week_start',ROT_STATE.week_start).eq('alliance',myAlliance);
       if(r.error){ toast('Error: '+r.error.message); return; }
       ROT_SELS=ROT_SELS.filter(function(s){ return !(s.week_start===ROT_STATE.week_start&&s.alliance===myAlliance); });
@@ -1925,8 +2043,8 @@ function renderRotSelect(rc){
 
   document.getElementById('confirmSelBtn').addEventListener('click',async function(){
     if((!isTop4||mySelSH)&&mySelFT){
-      var confirmMsg='Confirm selection for '+myAlliance+'?\n'+(isTop4?'Stronghold '+mySelSH+'\n':'')+'Fort '+mySelFT+'\n\nThis cannot be undone!';
-      if(!confirm(confirmMsg)) return;
+      var confirmMsg='Lock in '+myAlliance+'’s selection:\n'+(isTop4?'Stronghold '+mySelSH+'\n':'')+'Fort '+mySelFT+'\n\nThis can only be undone while the window is open.';
+      if(!await confirmDanger(confirmMsg,{title:'Confirm selection',confirmLabel:'Lock it in',danger:false})) return;
       var newSel={week_start:ROT_STATE.week_start,alliance:myAlliance,fort:mySelFT,confirmed:true,selected_by:SESSION.name};
       if(isTop4) newSel.stronghold=mySelSH;
       var r=await sb.from('rotation_selections').upsert(newSel,{onConflict:'week_start,alliance'}).select().single();
@@ -2077,14 +2195,14 @@ function renderRotAdmin(rc){
   if(isFullAdmin){
   // Reset week
   document.getElementById('forceOpenBtn').addEventListener('click',async function(){
-    if(!confirm('Force open selections? Players can select outside normal Wed-Fri window.')) return;
+    if(!await confirmDanger('Force the selection window open? Players will be able to pick outside the normal Wed–Fri window.',{title:'Force open',confirmLabel:'Force open',danger:false})) return;
     var r=await sb.from('rotation_state').update({force_open:true,force_closed:false}).eq('id',1);
     if(r.error){ toast('Error: '+r.error.message); return; }
     if(ROT_STATE){ ROT_STATE.force_open=true; ROT_STATE.force_closed=false; }
     toast('🔓 Selections forced open!'); render();
   });
   document.getElementById('forceCloseBtn').addEventListener('click',async function(){
-    if(!confirm('Force close selections?')) return;
+    if(!await confirmDanger('Force the selection window closed now?',{title:'Force close',confirmLabel:'Force close'})) return;
     var r=await sb.from('rotation_state').update({force_open:false,force_closed:true}).eq('id',1);
     if(r.error){ toast('Error: '+r.error.message); return; }
     if(ROT_STATE){ ROT_STATE.force_open=false; ROT_STATE.force_closed=true; }
@@ -2098,9 +2216,7 @@ function renderRotAdmin(rc){
   });
 
   document.getElementById('resetWeekBtn').addEventListener('click',async function(){
-    if(!confirm('Reset week? This will rotate the alliance order and clear all selections for the new week.')) return;
-    var typed=prompt('Type RESET to confirm:');
-    if(typed!=='RESET'){ toast('Cancelled'); return; }
+    if(!await confirmDanger('Reset the week? This rotates the alliance order and clears every selection for the new week.',{title:'Reset week',confirmLabel:'Reset week',requireTyped:'RESET'})) return;
     // Rotate top4 and bot5
     // Rotate dynamically - first goes to last
     var newTop4=ro.top4.length>1?ro.top4.slice(1).concat(ro.top4[0]):ro.top4.slice();
@@ -2118,9 +2234,7 @@ function renderRotAdmin(rc){
 
   // Clear selections only
   document.getElementById('clearSelsOnlyBtn').addEventListener('click',async function(){
-    if(!confirm('Clear all selections for this week? The rotation order will NOT change.')) return;
-    var typed=prompt('Type CLEAR to confirm:');
-    if(typed!=='CLEAR'){ toast('Cancelled'); return; }
+    if(!await confirmDanger('Clear every selection for this week? The rotation order stays the same.',{title:'Clear selections',confirmLabel:'Clear selections',requireTyped:'CLEAR'})) return;
     var ws=ROT_STATE.week_start;
     var r=await sb.from('rotation_selections').delete().eq('week_start',ws);
     if(r.error){ toast('Error: '+r.error.message); return; }
@@ -2141,9 +2255,8 @@ function renderRotAdmin(rc){
   rc.querySelectorAll('.rename-al').forEach(function(btn){
     btn.addEventListener('click',async function(){
       var al=btn.dataset.al; var grp=btn.dataset.group;
-      var newName=prompt('Rename "'+al+'" to:', al);
-      if(!newName||!newName.trim()||newName.trim()===al) return;
-      newName=newName.trim();
+      var newName=await promptText('New name for the "'+al+'" alliance',{title:'Rename alliance',initial:al,confirmLabel:'Rename'});
+      if(!newName||newName===al) return;
       if(getAllAlliances().some(function(a){ return a.toLowerCase()===newName.toLowerCase(); })){ toast('Alliance already exists'); return; }
       var newTop4=ro.top4.map(function(x){ return x===al?newName:x; });
       var newBot5=ro.bot5.map(function(x){ return x===al?newName:x; });
@@ -2233,7 +2346,7 @@ function renderRotAdmin(rc){
   rc.querySelectorAll('.del-al').forEach(function(btn){
     btn.addEventListener('click',async function(){
       var al=btn.dataset.al; var grp=btn.dataset.group;
-      if(!confirm('Remove "'+al+'" from the rotation? Their selections will also be removed.')) return;
+      if(!await confirmDanger('Remove "'+al+'" from the rotation? Their selections and reps are removed too.',{title:'Remove alliance',confirmLabel:'Remove alliance'})) return;
       var newTop4=ro.top4.filter(function(x){ return x!==al; });
       var newBot5=ro.bot5.filter(function(x){ return x!==al; });
       // Remove their selections
@@ -2307,7 +2420,7 @@ function renderRotAdmin(rc){
     btn.addEventListener('click',async function(){
       var pl=btn.dataset.player;
       var al=btn.dataset.alliance;
-      if(!confirm('Remove rep: '+pl+' ('+al+')?')) return;
+      if(!await confirmDanger('Remove '+pl+' as a rep for '+al+'?',{title:'Remove rep',confirmLabel:'Remove'})) return;
       var r=await sb.from('alliance_reps').delete().eq('player_name',pl).eq('alliance',al);
       if(r.error){ toast('Error: '+r.error.message); return; }
       ALLIANCE_REPS=ALLIANCE_REPS.filter(function(x){ return !(x.player_name===pl&&x.alliance===al); });
@@ -2607,7 +2720,7 @@ function renderTransferList(tc){
   // Reject
   tc.querySelectorAll('.tr-reject').forEach(function(btn){
     btn.addEventListener('click',async function(){
-      if(!confirm('Mark as rejected?')) return;
+      if(!await confirmDanger('Mark this invite as rejected?',{title:'Reject invite',confirmLabel:'Reject'})) return;
       var r=await sb.from('transfer_invites').update({status:'rejected',updated_by:SESSION.name,updated_at:new Date().toISOString()}).eq('id',btn.dataset.id).select().single();
       if(r.error){ toast('Error: '+r.error.message); return; }
       var idx=TRANSFER_INVITES.findIndex(function(i){ return i.id===btn.dataset.id; });
@@ -2665,9 +2778,7 @@ function renderTransferAdmin(tc){
   });
 
   document.getElementById('trNewPeriod').addEventListener('click',async function(){
-    if(!confirm('End current period and start a new one? Old invites will be archived.')) return;
-    var typed=prompt('Type NEW to confirm:');
-    if(typed!=='NEW'){ toast('Cancelled'); return; }
+    if(!await confirmDanger('End the current transfer period and start a new one? The existing invites are archived.',{title:'New transfer period',confirmLabel:'End & start new',requireTyped:'NEW'})) return;
     // End current
     await sb.from('transfer_periods').update({is_active:false,ended_at:new Date().toISOString()}).eq('id',p.id);
     // Create new
@@ -2696,7 +2807,7 @@ function renderTransferAdmin(tc){
 
   tc.querySelectorAll('.tr-rmv-mgr').forEach(function(btn){
     btn.addEventListener('click',async function(){
-      if(!confirm('Remove manager: '+btn.dataset.player+'?')) return;
+      if(!await confirmDanger('Remove '+btn.dataset.player+' as a transfer manager?',{title:'Remove manager',confirmLabel:'Remove'})) return;
       await sb.from('alliance_reps').delete().eq('player_name',btn.dataset.player).eq('alliance','TRANSFER');
       ALLIANCE_REPS=ALLIANCE_REPS.filter(function(r){ return !(r.player_name===btn.dataset.player&&r.alliance==='TRANSFER'); });
       toast('Removed'); render();
@@ -2774,7 +2885,7 @@ function renderTransferEdit(tc){
   });
 
   document.getElementById('edDelete').addEventListener('click',async function(){
-    if(!confirm('Delete invite for '+inv.player_name+'? This cannot be undone.')) return;
+    if(!await confirmDanger('Delete the invite for '+inv.player_name+'? This cannot be undone.',{title:'Delete invite',confirmLabel:'Delete'})) return;
     var r=await sb.from('transfer_invites').delete().eq('id',inv.id);
     if(r.error){ toast('Error: '+r.error.message); return; }
     TRANSFER_INVITES=TRANSFER_INVITES.filter(function(i){ return i.id!==inv.id; });
@@ -3076,9 +3187,7 @@ function renderAdminPlayers(ac){
   if(bulkDeleteBtn) bulkDeleteBtn.addEventListener('click',async function(){
     var names=Array.from(SEL);
     if(!names.length) return;
-    if(!confirm(names.join(', ')+' ('+names.length+' players) will be deleted. Continue?')) return;
-    var typed=prompt('Type DELETE to confirm:');
-    if(typed!=='DELETE'){ toast('Cancelled'); return; }
+    if(!await confirmDanger(names.length+' player account(s) will be permanently deleted:\n\n'+names.join(', '),{title:'Delete '+names.length+' players',confirmLabel:'Delete players',requireTyped:'DELETE'})) return;
     bulkDeleteBtn.disabled=true;
     var okCount=0, failCount=0;
     for(var i=0;i<names.length;i++){
@@ -3176,7 +3285,7 @@ function renderAdminPlayers(ac){
   });
   ac.querySelectorAll('.reject-id-req').forEach(function(btn){
     btn.addEventListener('click',async function(){
-      if(!confirm('Reject this ID change request?')) return;
+      if(!await confirmDanger('Reject this ID change request?',{title:'Reject request',confirmLabel:'Reject'})) return;
       var r=await sb.from('id_change_requests').update({status:'rejected',reviewed_by:SESSION.name,reviewed_at:new Date().toISOString()}).eq('id',btn.dataset.id);
       if(r.error){ toast('Error: '+r.error.message); return; }
       ID_REQUESTS=ID_REQUESTS.filter(function(r){ return r.id!==btn.dataset.id; });
@@ -3198,7 +3307,7 @@ function renderAdminPlayers(ac){
   ac.querySelectorAll('.reject-player').forEach(function(btn){
     btn.addEventListener('click',async function(){
       var name=btn.dataset.name;
-      if(!confirm('Reject and delete: '+name+'?')) return;
+      if(!await confirmDanger('Reject and delete the pending account for '+name+'?',{title:'Reject account',confirmLabel:'Reject & delete'})) return;
       var r=await sb.from('players').delete().eq('name',name);
       if(r.error){ toast('Error: '+r.error.message); return; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==name; });
@@ -3209,8 +3318,9 @@ function renderAdminPlayers(ac){
   ac.querySelectorAll('.reset-pin').forEach(function(btn){
     btn.addEventListener('click',async function(){
       var pl=btn.dataset.player;
-      var newPin=prompt('Set new 6-digit PIN for '+pl+':');
-      if(!newPin||newPin.length!==6||!/^\d{6}$/.test(newPin)){ toast('PIN must be exactly 6 digits'); return; }
+      var newPin=await promptText('Set a new PIN for '+pl,{title:'Reset PIN',placeholder:'6 digits',confirmLabel:'Set PIN'});
+      if(newPin===null) return;
+      if(!/^\d{6}$/.test(newPin)){ toast('PIN must be exactly 6 digits'); return; }
       var r=await sb.from('players').update({pin:newPin}).eq('name',pl);
       if(r.error){ toast('Error: '+r.error.message); return; }
       toast('🔑 PIN reset for '+pl);
@@ -3221,9 +3331,7 @@ function renderAdminPlayers(ac){
   ac.querySelectorAll('.del-account').forEach(function(btn){
     btn.addEventListener('click',async function(){
       var pl=btn.dataset.player;
-      if(!confirm('Delete account for '+pl+'?')) return;
-      var typed=prompt('Type DELETE to confirm:');
-      if(typed!=='DELETE'){ toast('Cancelled'); return; }
+      if(!await confirmDanger('Permanently delete the account for '+pl+' and remove them from every team, role and rep list?',{title:'Delete account',confirmLabel:'Delete account',requireTyped:'DELETE'})) return;
       var r1=await sb.from('admin_roles').delete().eq('player_name',pl);
       if(r1.error){ toast('Error: '+r1.error.message); return; }
       ADMIN_ROLES=ADMIN_ROLES.filter(function(x){ return x.player_name!==pl; });
@@ -3319,7 +3427,7 @@ function renderAdminRoles(ac){
   ac.querySelectorAll('.revoke-role').forEach(function(btn){
     btn.addEventListener('click',function(){
       var p=btn.dataset.player, r=btn.dataset.role;
-      if(confirm('Revoke '+r.replace(/_/g,' ')+' from '+p+'?')) revokeRole(p,r);
+      confirmDanger('Revoke the "'+r.replace(/_/g,' ')+'" role from '+p+'?',{title:'Revoke role',confirmLabel:'Revoke'}).then(function(ok){ if(ok) revokeRole(p,r); });
     });
   });
 }
@@ -3849,7 +3957,7 @@ function renderRulesAdmin(el){
   // Delete buttons
   el.querySelectorAll('[data-del]').forEach(function(btn){
     btn.addEventListener('click',async function(){
-      if(!confirm('Delete this topic?')) return;
+      if(!await confirmDanger('Delete this rules topic? It disappears for everyone.',{title:'Delete topic',confirmLabel:'Delete'})) return;
       var tid=btn.dataset.del;
       var r=await sb.from('rules_topics').delete().eq('id',tid);
       if(r.error){ toast('Error: '+r.error.message); return; }
@@ -3937,7 +4045,7 @@ function renderLibraryDetail(el){
   document.getElementById('libraryBack').addEventListener('click',function(){ LIBRARY_SELECTED=null; renderLibraryContent(); });
   document.getElementById('libraryEditBtn').addEventListener('click',function(){ LIBRARY_EDIT=LIBRARY_SELECTED; renderLibraryContent(); });
   document.getElementById('libraryDelBtn').addEventListener('click',async function(){
-    if(!confirm('Delete this entry?')) return;
+    if(!await confirmDanger('Delete this library entry? It disappears for everyone.',{title:'Delete entry',confirmLabel:'Delete'})) return;
     var tid=t.id;
     var r=await sb.from('library_entries').delete().eq('id',tid);
     if(r.error){ toast('Error: '+r.error.message); return; }
@@ -4353,7 +4461,7 @@ function renderCjAdmin(el, isSuper, myAlliance){
       var tid=btn.dataset.id;
       var team=CJ_TEAMS.find(function(t){ return t.id===tid; });
       if(!team) return;
-      if(!confirm('Delete team "'+team.team_name+'"? This cannot be undone.')) return;
+      if(!await confirmDanger('Delete team "'+team.team_name+'"? This cannot be undone.',{title:'Delete team',confirmLabel:'Delete team'})) return;
       btn.disabled=true;
       await sb.from('cj_team_members').delete().eq('team_id',tid);
       await sb.from('cj_teams').delete().eq('id',tid);
@@ -4653,7 +4761,7 @@ function renderRallyTimerContent(){
   document.getElementById('rtPresetDel').addEventListener('click',async function(){
     var id=document.getElementById('rtPresetSel').value;
     if(id===''){ toast('Pick a preset to delete'); return; }
-    if(!confirm('Delete this shared preset? Every rally admin will lose it.')) return;
+    if(!await confirmDanger('Delete this shared preset? Every rally admin loses it.',{title:'Delete preset',confirmLabel:'Delete'})) return;
     var r=await sb.from('rally_timer_presets').delete().eq('id',id);
     if(r.error){ toast('Error: '+r.error.message); return; }
     RT_PRESETS=RT_PRESETS.filter(function(x){ return String(x.id)!==id; });
@@ -5131,7 +5239,7 @@ function renderWarAdmin(el, isAdm){
     btn.addEventListener('click',async function(){
       var team=WAR_TEAMS.find(function(t){ return t.id===btn.dataset.id; });
       if(!team) return;
-      if(!confirm('Delete team "'+team.team_name+'"? This cannot be undone.')) return;
+      if(!await confirmDanger('Delete team "'+team.team_name+'"? This cannot be undone.',{title:'Delete team',confirmLabel:'Delete team'})) return;
       btn.disabled=true;
       var tid=team.id;
       await sb.from('war_team_members').delete().eq('team_id',tid);
@@ -5320,7 +5428,7 @@ function renderWarHeroesAdmin(el){
         toast('⚠️ '+h.name+' is used in '+countHeroUsage(hid)+' formation(s) — remove them first.');
         return;
       }
-      if(!confirm('Delete hero "'+h.name+'"?')) return;
+      if(!await confirmDanger('Delete hero "'+h.name+'" from the roster?',{title:'Delete hero',confirmLabel:'Delete'})) return;
       var r=await sb.from('war_heroes').delete().eq('id',hid);
       if(r.error){ toast('Error: '+r.error.message); return; }
       WAR_HEROES=WAR_HEROES.filter(function(x){ return x.id!==hid; });
