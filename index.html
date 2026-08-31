@@ -4445,7 +4445,7 @@ function rtCompute(){
 function rtBuildText(){
   var rows=rtCompute();
   if(!rows.length) return 'Add rally leaders and their march times to see the opening order.';
-  var out=rows[0].name+"'s rally remaining time ("+rtMmss(RT_DUR)+"):\n";
+  var out="Rally pick order ("+rtMmss(RT_DUR)+"):\n";
   out+=rows.map(function(r){
     var line=(r.rank+1)+'. '+r.name+' - '+rtMmss(r.remaining);
     if(r.rank===0) line+=' GO';
