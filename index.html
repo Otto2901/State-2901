@@ -4098,7 +4098,11 @@ function renderCrazyJoeApp(app){
 
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
   app.querySelectorAll('.nav-btn').forEach(function(btn){
-    btn.addEventListener('click',function(){ CJ_TAB=btn.dataset.tab; renderCjContent(); });
+    btn.addEventListener('click',function(){
+      CJ_TAB=btn.dataset.tab;
+      app.querySelectorAll('.nav .nav-btn').forEach(function(b){ b.classList.toggle('on',b.dataset.tab===CJ_TAB); });
+      renderCjContent();
+    });
   });
 
   var cjEl = document.getElementById('cjContent');
@@ -4469,7 +4473,11 @@ function renderWarTeamApp(app){
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
   document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('warteam'); });
   app.querySelectorAll('.nav-btn').forEach(function(btn){
-    btn.addEventListener('click',function(){ WAR_TAB=btn.dataset.tab; renderWarContent(); });
+    btn.addEventListener('click',function(){
+      WAR_TAB=btn.dataset.tab;
+      app.querySelectorAll('.nav .nav-btn').forEach(function(b){ b.classList.toggle('on',b.dataset.tab===WAR_TAB); });
+      renderWarContent();
+    });
   });
 
   var warEl = document.getElementById('warContent');
