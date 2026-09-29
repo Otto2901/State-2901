@@ -499,6 +499,7 @@ var ROLE_INFO = {
   cj_admin:         { label:'Crazy Joe Admin', guideKey:null,       desc:'You can manage Crazy Joe team assignments.' },
   war_admin:        { label:'War Team Admin',  guideKey:null,       desc:'You can manage War Team Builder rally teams, formations, and the hero list.' },
   rally_admin:      { label:'Rally Timer Admin',guideKey:'rallytimer', desc:'You can open the Rally Timer march-sync calculator.' },
+  presidency_admin: { label:'Presidency Admin', guideKey:'presidency', desc:'You can record SFC and SvS Supreme results, add past records, edit records, and reorder the presidency queues in the Presidency Ledger.' },
   moderator:        { label:'Moderator',       guideKey:null,       desc:'You have moderator status.' }
 };
 function createSb(token){
@@ -525,6 +526,7 @@ function isLibraryAdmin(name){ return isSuperAdmin(name)||hasRole(name,'library_
 function isStrongholdAdmin(name){ return isSuperAdmin(name)||hasRole(name,'stronghold_admin'); }
 function isWarAdmin(name){ return isSuperAdmin(name)||hasRole(name,'war_admin'); }
 function isRallyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'rally_admin'); }
+function isPresidencyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'presidency_admin'); }
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
@@ -584,6 +586,14 @@ var RT_PRESETS = []; // server rows: [{id, name, dur, leaders:[{name, march, act
 var RT_LOADED  = false; // guard: localStorage read once on first module open
 var RT_PRESETS_LOADED = false; // guard: presets fetched once per session
 
+// PRESIDENCY LEDGER STATE
+var PRES_QUEUES = {sfc:[], supreme:[]}; // presidency_queues: alliances in order, [0] = next up
+var PRES_RECORDS = []; // presidency_records
+var PRES_LOG = []; // presidency_audit_log, super admin only, fetched lazily
+var PRES_LOG_LOADED = false;
+var PRES_TAB = 'board'; // board | history | manage | log
+var PRES_FILTER = 'all'; // all | sfc | supreme
+
 // STATE RULES
 var RULES_TOPICS   = []; // rules_topics
 var RULES_TAB      = 'board'; // board | admin
@@ -602,7 +612,8 @@ var MOD_COLORS = {
   library:   {grad:'linear-gradient(90deg,#a08556,#c4a876)', icon:'linear-gradient(135deg,rgba(160,133,86,.3),rgba(196,168,118,.2))', text:'#c4a876'},
   crazyjoe:  {grad:'linear-gradient(90deg,#9c6b4f,#c48f6a)', icon:'linear-gradient(135deg,rgba(156,107,79,.3),rgba(196,143,106,.2))', text:'#c48f6a'},
   warteam:   {grad:'linear-gradient(90deg,#8c4b4b,#c4756a)', icon:'linear-gradient(135deg,rgba(140,75,75,.3),rgba(196,117,106,.2))', text:'#c4756a'},
-  rallytimer:{grad:'linear-gradient(90deg,#6b7a8f,#e3bc6a)', icon:'linear-gradient(135deg,rgba(107,122,143,.3),rgba(227,188,106,.2))', text:'#d8c48a'}
+  rallytimer:{grad:'linear-gradient(90deg,#6b7a8f,#e3bc6a)', icon:'linear-gradient(135deg,rgba(107,122,143,.3),rgba(227,188,106,.2))', text:'#d8c48a'},
+  presidency:{grad:'linear-gradient(90deg,#8a6d3b,#d9c27a)', icon:'linear-gradient(135deg,rgba(138,109,59,.3),rgba(217,194,122,.2))', text:'#d9c27a'}
 };
 
 function buildModuleHeader(moduleKey, icon, title, sub, guideKey){
@@ -791,7 +802,9 @@ async function loadAll(){
     sb.from('war_heroes').select('*').order('class').order('name'),
     sb.from('war_teams').select('*').order('created_at'),
     sb.from('war_team_members').select('*').order('position'),
-    sb.from('alliance_colors').select('*')
+    sb.from('alliance_colors').select('*'),
+    sb.from('presidency_queues').select('*'),
+    sb.from('presidency_records').select('*')
   ]);
   var r3=results[0],r5=results[2],r6=results[3];
   var r7=results[4],r8=results[5],r9=results[6],r10=results[7];
@@ -823,6 +836,10 @@ async function loadAll(){
   if(!rWM.error&&rWM.data) WAR_MEMBERS=rWM.data;
   // DB alliance colours override / extend the hard-coded ALLIANCE_COLORS defaults
   if(!rAC.error&&Array.isArray(rAC.data)) rAC.data.forEach(function(c){ if(c&&c.alliance) ALLIANCE_COLORS[c.alliance]=c.color; });
+  var rPQ=results[20], rPR=results[21];
+  if(!rPQ.error&&Array.isArray(rPQ.data)) rPQ.data.forEach(function(q){ if(q&&PRES_QUEUES[q.type]) PRES_QUEUES[q.type]=Array.isArray(q.alliances)?q.alliances:[]; });
+  if(!rPR.error&&Array.isArray(rPR.data)) PRES_RECORDS=rPR.data;
+  PRES_LOG_LOADED=false;
   maybeAutoResetRotation();
 }
 
@@ -920,6 +937,7 @@ function render(){
   if(MODULE==='crazyjoe')  renderCrazyJoeApp(app);
   if(MODULE==='warteam')   renderWarTeamApp(app);
   if(MODULE==='rallytimer') renderRallyTimerApp(app);
+  if(MODULE==='presidency') renderPresidencyApp(app);
   if(MODULE==='rules')     renderRulesApp(app);
   if(MODULE==='library')   renderLibraryApp(app);
   if(MODULE==='adminpanel') renderAdminPanel(app);
@@ -976,7 +994,7 @@ function renderHome(app){
   }
   var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super">Super Admin</span>':
     getRoles(SESSION.name).map(function(r){
-      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'||r==='war_admin'||r==='rally_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
+      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'||r==='war_admin'||r==='rally_admin'||r==='presidency_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
       return '<span class="role-badge '+cls+'">'+r.replace(/_/g,' ')+'</span>';
     }).join(' ');
 
@@ -1074,6 +1092,12 @@ function renderHome(app){
           '<div class="home-card-sub">Rally leader & squad formations</div></div>'+
           '<div class="home-card-chev">›</div>'+
         '</div>'+
+        '<div class="home-card brk" id="goPresidency" style="border-color:rgba(217,194,122,.25);">'+
+          '<div class="home-card-icon-badge" style="'+iconBadgeStyle('217,194,122')+'"><div class="home-card-icon">👑</div></div>'+
+          '<div class="home-card-text"><span class="home-card-title" style="color:#d9c27a;">Presidency Ledger</span>'+
+          '<div class="home-card-sub">SFC & SvS Supreme rotation</div></div>'+
+          '<div class="home-card-chev">›</div>'+
+        '</div>'+
         (isRallyAdmin(SESSION.name)?
         '<div class="home-card brk" id="goRally" style="border-color:rgba(216,196,138,.25);">'+
           '<div class="home-card-icon-badge" style="'+iconBadgeStyle('216,196,138')+'"><div class="home-card-icon">⏱️</div></div>'+
@@ -1129,6 +1153,8 @@ function renderHome(app){
   document.getElementById('goWar').addEventListener('click',function(){ MODULE='warteam'; WAR_TAB='board'; WAR_EDIT_TEAM=null; WAR_EDIT_MEMBERS=[]; WAR_EDIT_HERO=undefined; render(); });
   var goRallyBtn=document.getElementById('goRally');
   if(goRallyBtn) goRallyBtn.addEventListener('click', function(){ MODULE='rallytimer'; render(); });
+  var goPresBtn=document.getElementById('goPresidency');
+  if(goPresBtn) goPresBtn.addEventListener('click', function(){ MODULE='presidency'; PRES_TAB='board'; render(); });
   document.getElementById('goRules').addEventListener('click', function(){ MODULE='rules'; RULES_TAB='board'; RULES_SELECTED=null; render(); });
   document.getElementById('goLibrary').addEventListener('click', function(){ MODULE='library'; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
   var goAdminBtn=document.getElementById('goAdmin');
@@ -2290,7 +2316,8 @@ function renderRotAdmin(rc){
         ['cj_teams','alliance'],
         ['war_teams','alliance'],
         ['transfer_invites','alliance'],
-        ['alliance_colors','alliance']
+        ['alliance_colors','alliance'],
+        ['presidency_records','alliance']
       ];
       for(var ci=0;ci<cascade.length;ci++){
         var cr=await sb.from(cascade[ci][0]).update({alliance:newName}).eq('alliance',al);
@@ -2300,6 +2327,12 @@ function renderRotAdmin(rc){
       CJ_TEAMS.forEach(function(t){ if(t.alliance===al) t.alliance=newName; });
       WAR_TEAMS.forEach(function(t){ if(t.alliance===al) t.alliance=newName; });
       TRANSFER_INVITES.forEach(function(i){ if(i.alliance===al) i.alliance=newName; });
+      PRES_RECORDS.forEach(function(r){ if(r.alliance===al) r.alliance=newName; });
+      var presTypes=['sfc','supreme'];
+      for(var pti=0;pti<presTypes.length;pti++){
+        var pq=PRES_QUEUES[presTypes[pti]];
+        if(pq.indexOf(al)>=0&&!await presSaveQueue(presTypes[pti],pq.map(function(x){ return x===al?newName:x; }))) return;
+      }
 
       // Update rotation_state orders
       var ok=await saveAllianceOrder(newTop4,newBot5);
@@ -2361,6 +2394,12 @@ function renderRotAdmin(rc){
       // Remove their colour row
       await sb.from('alliance_colors').delete().eq('alliance',al);
       delete ALLIANCE_COLORS[al];
+      // Drop them from the presidency queues; their presidency records stay as history
+      var presDelTypes=['sfc','supreme'];
+      for(var pdi=0;pdi<presDelTypes.length;pdi++){
+        var pdq=PRES_QUEUES[presDelTypes[pdi]];
+        if(pdq.indexOf(al)>=0) await presSaveQueue(presDelTypes[pdi],pdq.filter(function(x){ return x!==al; }));
+      }
       var ok=await saveAllianceOrder(newTop4,newBot5);
       if(ok){ toast('🗑 '+al+' removed'); render(); }
     });
@@ -3117,7 +3156,7 @@ function renderAdminPlayers(ac){
 
   function playerRowHtml(p){
     var role=getRole(p.name);
-    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin"||role==="rally_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
+    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin"||role==="rally_admin"||role==="presidency_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
     var playerReps=ALLIANCE_REPS.filter(function(r){ return r.player_name===p.name; });
     var repTags=playerReps.map(function(r){
       if(r.alliance==='TRANSFER') return '<span style="font-size:9px;background:rgba(143,122,168,.12);color:#b494c4;border:1px solid rgba(143,122,168,.35);border-radius:5px;padding:1px 5px;">✈️ Transfer Rep</span>';
@@ -3375,7 +3414,7 @@ function renderAdminRoles(ac){
   var rolesHtml=Object.keys(byPlayer).sort().map(function(pname){
     var roles=byPlayer[pname];
     var badgesHtml=roles.map(function(r){
-      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'||r.role==='rally_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
+      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'||r.role==='rally_admin'||r.role==='presidency_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
       return '<span class="role-badge '+badgeCls+'" style="margin-right:4px;">'+r.role.replace(/_/g," ")+'</span>'+
         '<button class="btn btn-d btn-sm revoke-role" data-player="'+pname+'" data-role="'+r.role+'" style="padding:3px 8px;font-size:10px;margin-right:4px;">✕</button>';
     }).join('');
@@ -3404,6 +3443,7 @@ function renderAdminRoles(ac){
           '<option value="stronghold_admin">🏯 Stronghold Admin</option>'+
           '<option value="war_admin">⚔️ War Team Admin</option>'+
           '<option value="rally_admin">⏱️ Rally Timer Admin</option>'+
+          '<option value="presidency_admin">👑 Presidency Admin</option>'+
         '</select>'+
         '<button class="btn btn-g btn-sm" id="grantRoleBtn">Grant</button>'+
       '</div>'+
@@ -3470,7 +3510,8 @@ var GUIDE_CONTENT = {
   rotation: { title:'🏯 Stronghold Rotation — How to use', render: renderRotationGuideContent },
   library:  { title:'📚 Library — How to use',            render: renderLibraryGuideContent },
   warteam:  { title:'⚔️ War Team Builder — How to use',   render: renderWarTeamGuideContent },
-  rallytimer:{ title:'⏱️ Rally Timer — How to use',       render: renderRallyTimerGuideContent }
+  rallytimer:{ title:'⏱️ Rally Timer — How to use',       render: renderRallyTimerGuideContent },
+  presidency:{ title:'👑 Presidency Ledger — How to use', render: renderPresidencyGuideContent }
 };
 function openGuideModal(key){
   var g=GUIDE_CONTENT[key]; if(!g) return;
@@ -3548,6 +3589,28 @@ function renderRallyTimerGuideContent(rc){
     guideStep(4,'The result panel updates instantly, sorted longest-march-first. Each line shows the <strong>remaining time</strong> the first opener should see on their rally when that leader launches, and how many seconds <strong>after</strong> the first opener they go.')+
     guideStep(5,'Hit <strong>Copy</strong> to paste the full order into alliance chat. <strong>Save preset</strong> stores the current roster + duration as a shared preset that every rally admin can load — on any device.')+
     '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Access to this module is granted by a Super Admin. Saved presets are shared across all rally admins; the roster you are currently editing stays on this device until you save it.</div>';
+}
+
+function renderPresidencyGuideContent(rc){
+  var html=
+    guideSection('How it works')+
+    guideStep(1,'<strong>SFC</strong> and <strong>SvS Supreme</strong> presidencies rotate between our alliances in <strong>two separate queues</strong>. The <strong>Board</strong> shows who is next up in each.')+
+    guideStep(2,'When we <strong>win</strong>, the next alliance holds the presidency and moves to the back of that queue.')+
+    guideStep(3,'When we <strong>lose</strong>, the winning state takes the presidency, so nobody\'s turn is used. The same alliance stays next up for the next won event.')+
+    guideStep(4,'A <strong>TM</strong> badge means that term also carried Transfer Manager authority. TM terms are counted separately in the <strong>Fairness</strong> table and do not affect the order.')+
+    guideStep(5,'<strong>History</strong> keeps every event, won or lost. Entries marked <strong>PAST ENTRY</strong> were added afterwards for the record.');
+  if(isPresidencyAdmin(SESSION.name)){
+    html+=guideSection('As a Presidency Admin, in the Manage tab you can:','var(--green)');
+    html+=guideStep('•','<strong>Record result</strong> after each event. A win rotates the queue automatically, a loss leaves it as is.');
+    html+=guideStep('•','<strong>Add past record</strong> to enter history. Past records never change the queue.');
+    html+=guideStep('•','Reorder, add or remove alliances in each queue, and edit records from History.');
+  }
+  if(isSuperAdmin(SESSION.name)){
+    html+=guideSection('Super Admin only','var(--gold)');
+    html+=guideStep('•','Delete records.');
+    html+=guideStep('•','The <strong>Log</strong> tab shows every change: who made it, when, and the before and after values. It is written by the database, so it cannot be skipped or edited from the app.');
+  }
+  rc.innerHTML=html;
 }
 
 function openNotifModal(){
@@ -5441,6 +5504,420 @@ function renderWarHeroesAdmin(el){
 }
 
 // ── WAR TEAM BUILDER END ──────────────────────────────────────
+
+// ── PRESIDENCY LEDGER ────────────────────────────────────────
+// SFC and SvS Supreme presidency rotation between alliances. Two independent
+// queues (presidency_queues, index 0 = next up) plus a permanent record book
+// (presidency_records). A lost event produces no presidency, so it never
+// consumes a turn: the next alliance keeps waiting for the next won event.
+// Every write is captured server-side by a DB trigger into
+// presidency_audit_log, readable by super admins only.
+
+var PRES_TYPE_LABEL = { sfc:'SFC', supreme:'SvS Supreme' };
+
+function presAlColor(al){ return ALLIANCE_COLORS[al]||'#a3927a'; }
+function presChip(al,big){
+  var c=presAlColor(al);
+  return '<span style="display:inline-block;padding:'+(big?'6px 14px':'2px 8px')+';border-radius:8px;font-weight:800;font-size:'+(big?'18px':'11px')+';letter-spacing:.5px;color:'+c+';background:rgba('+hexToRgb(c)+',.12);border:1px solid rgba('+hexToRgb(c)+',.35);">'+escHtml(al)+'</span>';
+}
+function presFmtDate(d){
+  if(!d) return '';
+  var dt=new Date(String(d).length<=10?d+'T00:00:00':d);
+  if(isNaN(dt)) return escHtml(d);
+  return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+function presFmtTime(ts){
+  var dt=new Date(ts); if(isNaN(dt)) return escHtml(ts||'');
+  return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+// Newest first: event date, then creation time as tie-breaker.
+function presSortedRecords(){
+  return PRES_RECORDS.slice().sort(function(a,b){
+    if(a.event_date!==b.event_date) return a.event_date<b.event_date?1:-1;
+    return String(a.created_at||'')<String(b.created_at||'')?1:-1;
+  });
+}
+// The winner moves to the end of the queue. When the winner is next up this is
+// a plain rotation; an out-of-turn winner also goes to the back. A winner that
+// is not in the queue leaves it unchanged.
+function presRotateQueue(queue,winner){
+  if(queue.indexOf(winner)<0) return queue.slice();
+  return queue.filter(function(a){ return a!==winner; }).concat([winner]);
+}
+// Alliances that can appear in the ledger: queue members, anyone with a record,
+// and the full alliance roster for adding new members.
+function presKnownAlliances(){
+  var set=[];
+  function add(a){ if(a&&set.indexOf(a)<0) set.push(a); }
+  PRES_QUEUES.sfc.forEach(add); PRES_QUEUES.supreme.forEach(add);
+  PRES_RECORDS.forEach(function(r){ add(r.alliance); });
+  return set;
+}
+function presStats(){
+  var stats={}, lost={sfc:0,supreme:0};
+  presKnownAlliances().forEach(function(a){ stats[a]={sfc:0,supreme:0,tm:0,last:null}; });
+  PRES_RECORDS.forEach(function(r){
+    if(r.outcome!=='won'){ if(lost[r.type]!=null) lost[r.type]++; return; }
+    var s=stats[r.alliance]; if(!s) return;
+    if(r.type==='sfc') s.sfc++; else if(r.type==='supreme') s.supreme++;
+    if(r.has_tm) s.tm++;
+    if(!s.last||r.event_date>s.last) s.last=r.event_date;
+  });
+  return {byAlliance:stats,lost:lost};
+}
+
+async function presSaveQueue(type,arr){
+  var r=await sb.from('presidency_queues').update({alliances:arr,updated_by:SESSION.name,updated_at:new Date().toISOString()}).eq('type',type).select().single();
+  if(r.error){ toast('Error: '+r.error.message); return false; }
+  PRES_QUEUES[type]=Array.isArray(r.data.alliances)?r.data.alliances:[];
+  PRES_LOG_LOADED=false;
+  return true;
+}
+
+function renderPresidencyApp(app){
+  var isAdm=isPresidencyAdmin(SESSION.name), isSup=isSuperAdmin(SESSION.name);
+  if(PRES_TAB==='manage'&&!isAdm) PRES_TAB='board';
+  if(PRES_TAB==='log'&&!isSup) PRES_TAB='board';
+
+  var tabs=[{id:'board',icon:'👑',label:'Board'},{id:'history',icon:'📖',label:'History'}];
+  if(isAdm) tabs.push({id:'manage',icon:'⚙️',label:'Manage'});
+  if(isSup) tabs.push({id:'log',icon:'🔍',label:'Log'});
+
+  app.innerHTML=
+    buildModuleHeader('presidency','👑','Presidency Ledger','SFC & SvS Supreme rotation','presidency')+
+    '<div class="content" id="presContent"></div>'+
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
+    '<div class="nav">'+tabs.map(function(t){
+      return '<button class="nav-btn '+(PRES_TAB===t.id?'on':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>';
+    }).join('')+'</div>';
+
+  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('presidency'); });
+  app.querySelectorAll('.nav .nav-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      PRES_TAB=btn.dataset.tab;
+      app.querySelectorAll('.nav .nav-btn').forEach(function(b){ b.classList.toggle('on',b.dataset.tab===PRES_TAB); });
+      renderPresContent();
+    });
+  });
+  renderPresContent();
+}
+function renderPresContent(){
+  var el=document.getElementById('presContent'); if(!el) return;
+  if(PRES_TAB==='board') renderPresBoard(el);
+  else if(PRES_TAB==='history') renderPresHistory(el);
+  else if(PRES_TAB==='manage'&&isPresidencyAdmin(SESSION.name)) renderPresManage(el);
+  else if(PRES_TAB==='log'&&isSuperAdmin(SESSION.name)) renderPresLog(el);
+  else el.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
+}
+
+function renderPresBoard(el){
+  var st=presStats();
+  var recs=presSortedRecords();
+  function queueCard(type){
+    var q=PRES_QUEUES[type]||[];
+    var last=recs.find(function(r){ return r.type===type; });
+    var lastHtml=last?
+      '<div style="font-size:11px;color:var(--t3);margin-top:10px;">Last: '+presFmtDate(last.event_date)+' · '+
+        (last.outcome==='won'?presChip(last.alliance)+(last.president_name?' '+escHtml(last.president_name):''):'<span style="color:var(--red);">Lost, no presidency</span>')+
+      '</div>':'';
+    var body=q.length?
+      '<div style="font-size:10px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Next up</div>'+
+      '<div>'+presChip(q[0],true)+'</div>'+
+      (q.length>1?'<div style="font-size:12px;color:var(--t2);margin-top:10px;">Then: '+q.slice(1).map(function(a,i){ return '<span style="margin-right:6px;">'+(i+2)+'. '+presChip(a)+'</span>'; }).join('')+'</div>':''):
+      '<div style="font-size:12px;color:var(--t3);">No rotation order set yet.</div>';
+    return '<div class="card brk" style="margin-bottom:12px;">'+
+      '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:12px;">'+PRES_TYPE_LABEL[type]+'</div>'+
+      body+lastHtml+
+    '</div>';
+  }
+  var names=Object.keys(st.byAlliance);
+  var th='style="text-align:center;padding:6px 4px;font-size:10px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;"';
+  var td='style="text-align:center;padding:8px 4px;font-size:13px;font-weight:700;color:var(--t);border-top:1px solid var(--b);"';
+  var table=names.length?
+    '<table style="width:100%;border-collapse:collapse;">'+
+      '<tr><th '+th.replace('center','left')+'>Alliance</th><th '+th+'>SFC</th><th '+th+'>Supreme</th><th '+th+'>TM</th><th '+th+'>Last</th></tr>'+
+      names.map(function(a){
+        var s=st.byAlliance[a];
+        return '<tr><td '+td.replace('center','left')+'>'+presChip(a)+'</td><td '+td+'>'+s.sfc+'</td><td '+td+'>'+s.supreme+'</td><td '+td+'>'+s.tm+'</td>'+
+          '<td '+td.replace('13px','11px')+'>'+(s.last?presFmtDate(s.last):'–')+'</td></tr>';
+      }).join('')+
+    '</table>'+
+    '<div style="font-size:11px;color:var(--t3);margin-top:10px;">Lost events: SFC '+st.lost.sfc+' · Supreme '+st.lost.supreme+'</div>':
+    '<div style="font-size:12px;color:var(--t3);">No records yet.</div>';
+  el.innerHTML=queueCard('sfc')+queueCard('supreme')+
+    '<div class="card brk">'+
+      '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:12px;">Fairness</div>'+
+      table+
+    '</div>';
+}
+
+function renderPresHistory(el){
+  var isAdm=isPresidencyAdmin(SESSION.name), isSup=isSuperAdmin(SESSION.name);
+  var recs=presSortedRecords().filter(function(r){ return PRES_FILTER==='all'||r.type===PRES_FILTER; });
+  var filters=[['all','All'],['sfc','SFC'],['supreme','Supreme']];
+  var badge=function(txt,col){ return '<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:4px;color:'+col+';border:1px solid '+col+';opacity:.85;">'+txt+'</span>'; };
+  el.innerHTML=
+    '<div style="display:flex;gap:8px;margin-bottom:14px;">'+filters.map(function(f){
+      var on=PRES_FILTER===f[0];
+      return '<button class="tog pres-filter'+(on?' on':'')+'" data-f="'+f[0]+'" style="flex:1;padding:9px;border-color:'+(on?'rgba(217,194,122,.6)':'var(--b2)')+';background:'+(on?'rgba(217,194,122,.12)':'transparent')+';color:var(--t);">'+f[1]+'</button>';
+    }).join('')+'</div>'+
+    (recs.length?recs.map(function(r){
+      var lost=r.outcome!=='won';
+      return '<div class="card" style="padding:12px 14px;margin-bottom:8px;'+(lost?'opacity:.6;':'')+'">'+
+        '<div style="display:flex;align-items:center;gap:8px;">'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-size:11px;color:var(--t2);font-weight:700;">'+presFmtDate(r.event_date)+' · '+PRES_TYPE_LABEL[r.type]+
+              (r.has_tm?badge('TM','#d9c27a'):'')+(r.is_backfill?badge('PAST ENTRY','#a3b3c2'):'')+'</div>'+
+            '<div style="margin-top:6px;font-size:13px;color:var(--t);">'+
+              (lost?'<span style="color:var(--red);font-weight:700;">Lost, no presidency</span>':presChip(r.alliance)+(r.president_name?' <span style="font-weight:600;">'+escHtml(r.president_name)+'</span>':''))+
+            '</div>'+
+            (r.notes?'<div style="font-size:11px;color:var(--t3);margin-top:6px;white-space:pre-wrap;">'+escHtml(r.notes)+'</div>':'')+
+          '</div>'+
+          (isAdm?'<button class="btn btn-g btn-sm pres-edit" data-id="'+r.id+'" title="Edit">✏️</button>':'')+
+          (isSup?'<button class="btn btn-d btn-sm pres-del" data-id="'+r.id+'" title="Delete">🗑</button>':'')+
+        '</div>'+
+      '</div>';
+    }).join(''):'<div class="empty"><div class="empty-icon">📖</div><p>No records yet.</p></div>');
+
+  el.querySelectorAll('.pres-filter').forEach(function(b){
+    b.addEventListener('click',function(){ PRES_FILTER=b.dataset.f; renderPresHistory(el); });
+  });
+  el.querySelectorAll('.pres-edit').forEach(function(b){
+    b.addEventListener('click',function(){
+      var rec=PRES_RECORDS.find(function(x){ return String(x.id)===b.dataset.id; });
+      if(rec) openPresRecordForm('edit',rec);
+    });
+  });
+  el.querySelectorAll('.pres-del').forEach(function(b){
+    b.addEventListener('click',async function(){
+      if(!isSuperAdmin(SESSION.name)) return;
+      var rec=PRES_RECORDS.find(function(x){ return String(x.id)===b.dataset.id; }); if(!rec) return;
+      var ok=await confirmDanger('Delete the '+PRES_TYPE_LABEL[rec.type]+' record of '+presFmtDate(rec.event_date)+'? The rotation order is not changed. The deletion is kept in the audit log.',{title:'Delete record',confirmLabel:'Delete',requireTyped:'DELETE'});
+      if(!ok) return;
+      var r=await sb.from('presidency_records').delete().eq('id',rec.id).select();
+      if(r.error){ toast('Error: '+r.error.message); return; }
+      if(!r.data||!r.data.length){ toast('Not deleted: permission denied'); return; }
+      PRES_RECORDS=PRES_RECORDS.filter(function(x){ return x.id!==rec.id; });
+      PRES_LOG_LOADED=false;
+      toast('🗑 Record deleted');
+      renderPresContent();
+    });
+  });
+}
+
+// mode: 'live' (current event, rotates the queue on a win), 'past' (backfill,
+// never touches the queue) or 'edit' (existing record, never touches the queue).
+function openPresRecordForm(mode,rec){
+  if(!isPresidencyAdmin(SESSION.name)) return;
+  rec=rec||{};
+  var type=rec.type||'sfc';
+  var titles={live:'Record result',past:'Add past record',edit:'Edit record'};
+  var notes={
+    live:'A win rotates the queue: the winning alliance moves to the back. A loss leaves the queue unchanged.',
+    past:'Past entries are for history and fairness counts only. They do not change the rotation queue.',
+    edit:'Editing a record does not change the rotation queue. Adjust the order in Manage if needed.'
+  };
+  var alls=presKnownAlliances();
+  getAllAlliances().forEach(function(a){ if(alls.indexOf(a)<0) alls.push(a); });
+  function allianceOpts(t,sel){
+    var q=PRES_QUEUES[t]||[];
+    var def=sel||(mode==='live'?q[0]:'')||'';
+    return '<option value="">Select alliance…</option>'+alls.map(function(a){
+      return '<option value="'+escHtml(a)+'"'+(a===def?' selected':'')+'>'+escHtml(a)+(mode==='live'&&a===q[0]?' (next up)':'')+'</option>';
+    }).join('');
+  }
+  var today=new Date().toISOString().slice(0,10);
+  openModal({
+    title:titles[mode],
+    bodyRender:function(b){
+      b.innerHTML=
+        '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">'+notes[mode]+'</div>'+
+        '<div class="field"><label class="lbl">Type</label><select class="sel" id="prType">'+
+          '<option value="sfc"'+(type==='sfc'?' selected':'')+'>SFC</option>'+
+          '<option value="supreme"'+(type==='supreme'?' selected':'')+'>SvS Supreme</option>'+
+        '</select></div>'+
+        '<div class="field"><label class="lbl">Event date</label><input class="inp" type="date" id="prDate" value="'+escHtml(rec.event_date||(mode==='live'?today:''))+'"></div>'+
+        '<div class="field"><label class="lbl">Outcome</label><select class="sel" id="prOutcome">'+
+          '<option value="won"'+(rec.outcome!=='lost'?' selected':'')+'>Won, we hold the presidency</option>'+
+          '<option value="lost"'+(rec.outcome==='lost'?' selected':'')+'>Lost, no presidency</option>'+
+        '</select></div>'+
+        '<div id="prWonFields">'+
+          '<div class="field"><label class="lbl">Alliance</label><select class="sel" id="prAlliance">'+allianceOpts(type,rec.alliance)+'</select></div>'+
+          '<div class="field"><label class="lbl">President name (optional)</label><input class="inp" id="prPres" autocomplete="off" value="'+escHtml(rec.president_name||'')+'"></div>'+
+          '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t);margin-bottom:14px;cursor:pointer;"><input type="checkbox" id="prTm"'+(rec.has_tm?' checked':'')+'> Transfer Manager authority this term</label>'+
+        '</div>'+
+        '<div class="field" style="margin-bottom:0;"><label class="lbl">Notes (optional)</label><textarea class="inp" id="prNotes" rows="2" style="resize:vertical;">'+escHtml(rec.notes||'')+'</textarea></div>';
+      var outSel=b.querySelector('#prOutcome'), wonBox=b.querySelector('#prWonFields');
+      function syncOutcome(){ wonBox.style.display=outSel.value==='won'?'':'none'; }
+      outSel.addEventListener('change',syncOutcome); syncOutcome();
+      if(mode==='live') b.querySelector('#prType').addEventListener('change',function(){
+        b.querySelector('#prAlliance').innerHTML=allianceOpts(this.value,'');
+      });
+    },
+    actions:[
+      {label:'Cancel',kind:'ghost'},
+      {label:mode==='edit'?'Save':'Record',kind:'primary',onClick:async function(close){
+        var t=document.getElementById('prType').value;
+        var date=document.getElementById('prDate').value;
+        var outcome=document.getElementById('prOutcome').value;
+        var won=outcome==='won';
+        var al=won?document.getElementById('prAlliance').value:'';
+        if(!date){ toast('Pick the event date'); return; }
+        if(won&&!al){ toast('Pick the alliance'); return; }
+        var row={
+          type:t, event_date:date, outcome:outcome,
+          alliance:won?al:null,
+          president_name:won?(document.getElementById('prPres').value.trim()||null):null,
+          has_tm:won?document.getElementById('prTm').checked:false,
+          notes:document.getElementById('prNotes').value.trim()||null
+        };
+        var q=PRES_QUEUES[t]||[];
+        if(mode==='live'&&won&&q.length&&al!==q[0]){
+          var msg=q.indexOf(al)>=0?
+            al+' is not next up, '+q[0]+' is. If you continue, '+al+' moves to the back of the '+PRES_TYPE_LABEL[t]+' queue and '+q[0]+' stays next.':
+            al+' is not in the '+PRES_TYPE_LABEL[t]+' queue. The record is saved but the queue does not change.';
+          if(!await confirmDanger(msg,{title:'Out of turn',confirmLabel:'Record anyway'})) return;
+        }
+        var r;
+        if(mode==='edit'){
+          row.updated_by=SESSION.name; row.updated_at=new Date().toISOString();
+          r=await sb.from('presidency_records').update(row).eq('id',rec.id).select().single();
+          if(r.error){ toast('Error: '+r.error.message); return; }
+          PRES_RECORDS=PRES_RECORDS.map(function(x){ return x.id===rec.id?r.data:x; });
+        } else {
+          row.is_backfill=mode==='past'; row.created_by=SESSION.name;
+          r=await sb.from('presidency_records').insert([row]).select().single();
+          if(r.error){ toast('Error: '+r.error.message); return; }
+          PRES_RECORDS.push(r.data);
+          if(mode==='live'&&won){
+            var nq=presRotateQueue(q,al);
+            if(nq.join('|')!==q.join('|')&&!await presSaveQueue(t,nq)){ close(); renderPresContent(); return; }
+          }
+        }
+        PRES_LOG_LOADED=false;
+        close();
+        toast(mode==='edit'?'✅ Record updated':'✅ Recorded');
+        renderPresContent();
+      }}
+    ]
+  });
+}
+
+function renderPresManage(el){
+  if(!isPresidencyAdmin(SESSION.name)){ PRES_TAB='board'; renderPresContent(); return; }
+  function queueEditor(type){
+    var q=PRES_QUEUES[type]||[];
+    var addable=getAllAlliances().concat(presKnownAlliances()).filter(function(a,i,arr){ return arr.indexOf(a)===i&&q.indexOf(a)<0; });
+    return '<div class="card" style="margin-bottom:12px;">'+
+      '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:10px;">'+PRES_TYPE_LABEL[type]+' queue</div>'+
+      (q.length?q.map(function(a,i){
+        return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-top:'+(i?'1px solid var(--b)':'none')+';">'+
+          '<span style="width:18px;font-size:12px;color:var(--t3);font-weight:700;">'+(i+1)+'</span>'+
+          '<span style="flex:1;">'+presChip(a)+(i===0?' <span style="font-size:10px;color:var(--t3);">next up</span>':'')+'</span>'+
+          '<button class="btn btn-g btn-sm pq-mv" data-t="'+type+'" data-i="'+i+'" data-d="-1"'+(i===0?' disabled':'')+' style="padding:4px 9px;">▲</button>'+
+          '<button class="btn btn-g btn-sm pq-mv" data-t="'+type+'" data-i="'+i+'" data-d="1"'+(i===q.length-1?' disabled':'')+' style="padding:4px 9px;">▼</button>'+
+          '<button class="btn btn-d btn-sm pq-rm" data-t="'+type+'" data-i="'+i+'" style="padding:4px 9px;">✕</button>'+
+        '</div>';
+      }).join(''):'<div style="font-size:12px;color:var(--t3);margin-bottom:6px;">Empty. Add the alliances in rotation order.</div>')+
+      (addable.length?'<div style="display:flex;gap:8px;margin-top:10px;">'+
+        '<select class="sel" id="pqAdd_'+type+'" style="flex:1;padding:9px 12px;">'+addable.map(function(a){ return '<option value="'+escHtml(a)+'">'+escHtml(a)+'</option>'; }).join('')+'</select>'+
+        '<button class="btn btn-g btn-sm pq-add" data-t="'+type+'">+ Add</button>'+
+      '</div>':'')+
+    '</div>';
+  }
+  el.innerHTML=
+    '<div style="display:flex;gap:8px;margin-bottom:14px;">'+
+      '<button class="btn btn-p" id="presLive" style="flex:1;">👑 Record result</button>'+
+      '<button class="btn btn-g" id="presPast" style="flex:1;">📜 Add past record</button>'+
+    '</div>'+
+    queueEditor('sfc')+queueEditor('supreme')+
+    '<div style="font-size:11px;color:var(--t3);line-height:1.6;">Manual order changes are saved immediately and recorded in the audit log.</div>';
+
+  document.getElementById('presLive').addEventListener('click',function(){ openPresRecordForm('live'); });
+  document.getElementById('presPast').addEventListener('click',function(){ openPresRecordForm('past'); });
+  el.querySelectorAll('.pq-mv').forEach(function(b){
+    b.addEventListener('click',async function(){
+      var t=b.dataset.t, i=+b.dataset.i, j=i+(+b.dataset.d);
+      var q=PRES_QUEUES[t].slice(); if(j<0||j>=q.length) return;
+      var tmp=q[i]; q[i]=q[j]; q[j]=tmp;
+      if(await presSaveQueue(t,q)) renderPresManage(el);
+    });
+  });
+  el.querySelectorAll('.pq-rm').forEach(function(b){
+    b.addEventListener('click',async function(){
+      var t=b.dataset.t, al=PRES_QUEUES[t][+b.dataset.i];
+      if(!await confirmDanger('Remove '+al+' from the '+PRES_TYPE_LABEL[t]+' queue? Their past records stay.',{title:'Remove from queue',confirmLabel:'Remove'})) return;
+      if(await presSaveQueue(t,PRES_QUEUES[t].filter(function(a){ return a!==al; }))) renderPresManage(el);
+    });
+  });
+  el.querySelectorAll('.pq-add').forEach(function(b){
+    b.addEventListener('click',async function(){
+      var t=b.dataset.t, al=document.getElementById('pqAdd_'+t).value;
+      if(!al||PRES_QUEUES[t].indexOf(al)>=0) return;
+      if(await presSaveQueue(t,PRES_QUEUES[t].concat([al]))) renderPresManage(el);
+    });
+  });
+}
+
+// Audit log: fetched lazily when the tab opens, re-fetched after any write.
+async function presLoadLog(){
+  var r=await sb.from('presidency_audit_log').select('*').order('id',{ascending:false}).limit(200);
+  if(r.error){ toast('Error: '+r.error.message); PRES_LOG=[]; }
+  else PRES_LOG=r.data||[];
+  PRES_LOG_LOADED=true;
+}
+function presDescribeRecord(o){
+  if(!o) return '';
+  return presFmtDate(o.event_date)+' '+(PRES_TYPE_LABEL[o.type]||o.type)+': '+
+    (o.outcome==='won'?escHtml(o.alliance||'')+(o.president_name?' ('+escHtml(o.president_name)+')':'')+(o.has_tm?' +TM':''):'lost');
+}
+function presLogFieldVal(k,v){
+  if(v==null||v==='') return '<em>empty</em>';
+  if(k==='alliances') return Array.isArray(v)?(v.length?escHtml(v.join(', ')):'<em>empty</em>'):escHtml(JSON.stringify(v));
+  if(k==='event_date') return presFmtDate(v);
+  return escHtml(typeof v==='object'?JSON.stringify(v):String(v));
+}
+function presLogDetail(e){
+  var isQ=e.table_name==='presidency_queues';
+  var subject=isQ?(PRES_TYPE_LABEL[e.row_key]||escHtml(e.row_key))+' queue':'record';
+  if(e.op==='INSERT') return 'Added '+subject+(isQ?'':': '+presDescribeRecord(e.new_row));
+  if(e.op==='DELETE') return 'Deleted '+subject+(isQ?'':': '+presDescribeRecord(e.old_row));
+  var o=e.old_row||{}, n=e.new_row||{}, skip=['updated_at','updated_by','created_at','created_by','id'];
+  var changes=Object.keys(n).filter(function(k){ return skip.indexOf(k)<0&&JSON.stringify(o[k])!==JSON.stringify(n[k]); });
+  var head='Edited '+subject+(isQ?'':' '+presDescribeRecord(o));
+  if(!changes.length) return head+' <span style="color:var(--t3);">(no field changes)</span>';
+  return head+changes.map(function(k){
+    return '<div style="margin-top:3px;font-size:11px;"><span style="color:var(--t3);">'+escHtml(k)+':</span> '+presLogFieldVal(k,o[k])+' <span style="color:var(--t3);">→</span> '+presLogFieldVal(k,n[k])+'</div>';
+  }).join('');
+}
+async function renderPresLog(el){
+  if(!isSuperAdmin(SESSION.name)){ PRES_TAB='board'; renderPresContent(); return; }
+  if(!PRES_LOG_LOADED){
+    el.innerHTML='<div class="empty"><p>Loading log…</p></div>';
+    await presLoadLog();
+    if(PRES_TAB!=='log'||!document.body.contains(el)) return;
+  }
+  var opCol={INSERT:'var(--green)',UPDATE:'var(--gold)',DELETE:'var(--red)'};
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'+
+      '<div style="flex:1;font-size:11px;color:var(--t3);">Every change is written by the database itself. Latest 200 entries.</div>'+
+      '<button class="btn btn-g btn-sm" id="presLogRefresh">↻ Refresh</button>'+
+    '</div>'+
+    (PRES_LOG.length?PRES_LOG.map(function(e){
+      return '<div class="card" style="padding:10px 12px;margin-bottom:6px;">'+
+        '<div style="display:flex;gap:8px;align-items:baseline;font-size:11px;">'+
+          '<span style="font-weight:800;color:var(--t);">'+escHtml(e.actor||'?')+'</span>'+
+          '<span style="font-weight:800;color:'+(opCol[e.op]||'var(--t2)')+';">'+escHtml(e.op)+'</span>'+
+          '<span style="flex:1;text-align:right;color:var(--t3);">'+presFmtTime(e.at)+'</span>'+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--t2);margin-top:4px;line-height:1.5;">'+presLogDetail(e)+'</div>'+
+      '</div>';
+    }).join(''):'<div class="empty"><div class="empty-icon">🔍</div><p>No log entries yet.</p></div>');
+  document.getElementById('presLogRefresh').addEventListener('click',function(){ PRES_LOG_LOADED=false; renderPresLog(el); });
+}
+
+// ── PRESIDENCY LEDGER END ─────────────────────────────────────
 
 async function init(){
   if(SESSION){
