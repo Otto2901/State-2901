@@ -3597,7 +3597,7 @@ function renderPresidencyGuideContent(rc){
     guideStep(1,'<strong>SFC</strong> and <strong>SvS Supreme</strong> presidencies rotate between our alliances in <strong>two separate queues</strong>. The <strong>Board</strong> shows who is next up in each.')+
     guideStep(2,'When we <strong>win</strong>, the next alliance holds the presidency and moves to the back of that queue.')+
     guideStep(3,'When we <strong>lose</strong>, the winning state takes the presidency, so nobody\'s turn is used. The same alliance stays next up for the next won event.')+
-    guideStep(4,'A <strong>TM</strong> badge means that term also carried Transfer Manager authority. TM terms are counted separately in the <strong>Fairness</strong> table and do not affect the order.')+
+    guideStep(4,'A <strong>TM</strong> badge means that term also carried Transfer Manager authority. TM terms are counted separately in the <strong>Presidency Tally</strong> table and do not affect the order.')+
     guideStep(5,'<strong>History</strong> keeps every event, won or lost. Entries marked <strong>PAST ENTRY</strong> were added afterwards for the record.');
   if(isPresidencyAdmin(SESSION.name)){
     html+=guideSection('As a Presidency Admin, in the Manage tab you can:','var(--green)');
@@ -5647,7 +5647,7 @@ function renderPresBoard(el){
     '<div style="font-size:12px;color:var(--t3);">No records yet.</div>';
   el.innerHTML=queueCard('sfc')+queueCard('supreme')+
     '<div class="card brk">'+
-      '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:12px;">Fairness</div>'+
+      '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:12px;">Presidency Tally</div>'+
       table+
     '</div>';
 }
@@ -5715,7 +5715,7 @@ function openPresRecordForm(mode,rec){
   var titles={live:'Record result',past:'Add past record',edit:'Edit record'};
   var notes={
     live:'A win rotates the queue: the winning alliance moves to the back. A loss leaves the queue unchanged.',
-    past:'Past entries are for history and fairness counts only. They do not change the rotation queue.',
+    past:'Past entries are for history and the Presidency Tally only. They do not change the rotation queue.',
     edit:'Editing a record does not change the rotation queue. Adjust the order in Manage if needed.'
   };
   var alls=presKnownAlliances();
