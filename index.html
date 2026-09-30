@@ -3594,8 +3594,8 @@ function renderRallyTimerGuideContent(rc){
 function renderPresidencyGuideContent(rc){
   var html=
     guideSection('How it works')+
-    guideStep(1,'<strong>SFC</strong> and <strong>SvS Supreme</strong> presidencies rotate between our alliances in <strong>two separate queues</strong>. The <strong>Board</strong> shows the <strong>current president</strong> and who is <strong>next up</strong> in each.')+
-    guideStep(2,'When we <strong>win</strong>, the admin records it on the day it is won. The next alliance holds the presidency, counts in the <strong>Presidency Tally</strong> immediately and moves to the back of the queue. It stays shown as current president until the next event is recorded.')+
+    guideStep(1,'<strong>SFC</strong> and <strong>SvS Supreme</strong> presidencies rotate between our alliances in <strong>two separate queues</strong>. The <strong>Board</strong> shows the <strong>current president</strong> (from the most recent event, SFC or Supreme, since only one can hold it at a time) and who is <strong>next up</strong> in each queue.')+
+    guideStep(2,'When we <strong>win</strong>, the admin records it on the day it is won. The next alliance holds the presidency, counts in the <strong>Presidency Tally</strong> immediately and moves to the back of the queue. It stays shown as current president until the next SFC or Supreme event is recorded.')+
     guideStep(3,'When we <strong>lose</strong>, the winning state takes the presidency, so nobody\'s turn is used. The same alliance stays next up for the next won event.')+
     guideStep(4,'A <strong>TM</strong> badge means that term also carried Transfer Manager authority. TM terms are counted separately in the <strong>Presidency Tally</strong> table and do not affect the order.')+
     guideStep(5,'<strong>History</strong> keeps every event, won or lost. Entries marked <strong>PAST ENTRY</strong> were added afterwards for the record.');
@@ -5614,25 +5614,27 @@ function renderPresContent(){
 function renderPresBoard(el){
   var st=presStats();
   var recs=presSortedRecords();
+  var lbl=function(txt){ return '<div style="font-size:10px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">'+txt+'</div>'; };
+  // Only one presidency exists at a time, so the newest record across both
+  // types decides who holds it: a win stays current until the next SFC or
+  // Supreme event is recorded, a loss means the winning state holds it.
+  var last=recs[0];
+  var typeTag=last?'<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:6px;color:var(--t2);border:1px solid var(--b2);">'+escHtml(PRES_TYPE_LABEL[last.type]||last.type)+'</span>':'';
+  var currentHtml=!last?'':
+    '<div class="card brk pres-current" style="margin-bottom:12px;">'+
+      (last.outcome==='won'?
+        lbl('Current president'+typeTag)+
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+presChip(last.alliance,true)+
+          (last.president_name?'<span style="font-size:14px;font-weight:700;color:var(--t);">'+escHtml(last.president_name)+'</span>':'')+
+          (last.has_tm?'<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;color:#d9c27a;border:1px solid #d9c27a;">TM</span>':'')+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--t3);margin-top:6px;">since '+presFmtDate(last.event_date)+'</div>':
+        lbl('Current president'+typeTag)+
+        '<div style="font-size:14px;font-weight:700;color:var(--red);opacity:.85;">No presidency</div>'+
+        '<div style="font-size:11px;color:var(--t3);margin-top:4px;">Lost '+escHtml(PRES_TYPE_LABEL[last.type]||last.type)+' on '+presFmtDate(last.event_date)+', the winning state holds it</div>')+
+    '</div>';
   function queueCard(type){
     var q=PRES_QUEUES[type]||[];
-    var last=recs.find(function(r){ return r.type===type; });
-    var lbl=function(txt){ return '<div style="font-size:10px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">'+txt+'</div>'; };
-    // The newest record decides who holds the title now: a win stays current
-    // until the next event is recorded, a loss means the winning state holds it.
-    var currentHtml=!last?'':
-      '<div class="pres-current" style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--b);">'+
-        (last.outcome==='won'?
-          lbl('Current president')+
-          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+presChip(last.alliance,true)+
-            (last.president_name?'<span style="font-size:14px;font-weight:700;color:var(--t);">'+escHtml(last.president_name)+'</span>':'')+
-            (last.has_tm?'<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;color:#d9c27a;border:1px solid #d9c27a;">TM</span>':'')+
-          '</div>'+
-          '<div style="font-size:11px;color:var(--t3);margin-top:6px;">since '+presFmtDate(last.event_date)+'</div>':
-          lbl('Current president')+
-          '<div style="font-size:14px;font-weight:700;color:var(--red);opacity:.85;">No presidency</div>'+
-          '<div style="font-size:11px;color:var(--t3);margin-top:4px;">Lost on '+presFmtDate(last.event_date)+', the winning state holds it</div>')+
-      '</div>';
     var body=q.length?
       lbl('Next up')+
       '<div>'+presChip(q[0])+'</div>'+
@@ -5640,7 +5642,7 @@ function renderPresBoard(el){
       '<div style="font-size:12px;color:var(--t3);">No rotation order set yet.</div>';
     return '<div class="card brk" style="margin-bottom:12px;">'+
       '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:12px;">'+PRES_TYPE_LABEL[type]+'</div>'+
-      currentHtml+body+
+      body+
     '</div>';
   }
   var names=Object.keys(st.byAlliance);
@@ -5662,7 +5664,7 @@ function renderPresBoard(el){
       })()+
     '</table>':
     '<div style="font-size:12px;color:var(--t3);">No records yet.</div>';
-  el.innerHTML=queueCard('sfc')+queueCard('supreme')+
+  el.innerHTML=currentHtml+queueCard('sfc')+queueCard('supreme')+
     '<div class="card brk">'+
       '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:12px;">Presidency Tally</div>'+
       table+
