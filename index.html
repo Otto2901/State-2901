@@ -5654,8 +5654,13 @@ function renderPresBoard(el){
         return '<tr><td '+td.replace('center','left')+'>'+presChip(a)+'</td><td '+td+'>'+s.sfc+'</td><td '+td+'>'+s.supreme+'</td><td '+td+'>'+s.tm+'</td>'+
           '<td '+td.replace('13px','11px')+'>'+(s.last?presFmtDate(s.last):'–')+'</td></tr>';
       }).join('')+
-    '</table>'+
-    '<div style="font-size:11px;color:var(--t3);margin-top:10px;">Lost events: SFC '+st.lost.sfc+' · Supreme '+st.lost.supreme+'</div>':
+      (function(){
+        var tot={sfc:0,supreme:0,tm:0};
+        names.forEach(function(a){ var s=st.byAlliance[a]; tot.sfc+=s.sfc; tot.supreme+=s.supreme; tot.tm+=s.tm; });
+        var tt=td.replace('border-top:1px solid var(--b)','border-top:2px solid var(--b2)').replace('color:var(--t)','color:#d9c27a').replace('font-weight:700','font-weight:800');
+        return '<tr class="pres-total"><td '+tt.replace('center','left').replace('13px','11px')+'>TOTAL</td><td '+tt+'>'+tot.sfc+'</td><td '+tt+'>'+tot.supreme+'</td><td '+tt+'>'+tot.tm+'</td><td '+tt+'></td></tr>';
+      })()+
+    '</table>':
     '<div style="font-size:12px;color:var(--t3);">No records yet.</div>';
   el.innerHTML=queueCard('sfc')+queueCard('supreme')+
     '<div class="card brk">'+
