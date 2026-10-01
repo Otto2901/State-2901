@@ -3731,7 +3731,8 @@ function renderStateRulesModalBody(){
 // ═══════════════════════════════════════════════════════
 // Visitors apply through the minister-apply edge function; the applications
 // table itself is super-admin-only. The public only ever sees free/taken
-// slots, via the minister_taken_slots() RPC which never returns names.
+// slots, via the minister_taken_slots() RPC: assigned slots carry the
+// player's name only, never the Player ID or resources.
 // Positions are keyed, not tied to a day: vp1 = Day 1, edu = Day 4,
 // vp2 = Day 2 or Day 5 (minister_config.second_vp_day).
 // Slot n = n*30 minutes UTC, 0 = 00:00 … 47 = 23:30.
@@ -3740,7 +3741,8 @@ var MIN_CFG=null;          // minister_config row
 var MIN_TAKEN=null;        // Set of 'position:slot'
 var MIN_PUB_TAB='avail';
 var MIN_APPS=[], MIN_ASSIGN=[], MIN_ADMIN_LOADED=false;
-var MIN_ADMIN_VIEW='apps', MIN_ADMIN_FILTER='pending';
+var MIN_ADMIN_VIEW='apps', MIN_ADMIN_FILTER='progress';
+var MIN_TAKEN_NAME={};     // 'position:slot' → player name, public Availability only
 var MIN_ID_POS=null;       // selected position in the IDs view
 
 function minDay(key){
@@ -3787,6 +3789,8 @@ async function minLoadPublic(){
   if(res[1].error) throw res[1].error;
   MIN_CFG=res[0].data||{};
   MIN_TAKEN=new Set((res[1].data||[]).map(function(t){ return t.pos+':'+t.slot; }));
+  MIN_TAKEN_NAME={};
+  (res[1].data||[]).forEach(function(t){ if(t.player_name) MIN_TAKEN_NAME[t.pos+':'+t.slot]=t.player_name; });
 }
 
 // ── Public modal (auth screen button + home card) ──
@@ -3829,7 +3833,7 @@ function renderMinPublicBody(values){
     return;
   }
   el.innerHTML=
-    '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">All times are <strong>UTC</strong> start times, each slot lasts 30 minutes. Pick up to 3 times per position, in order of preference. Taken times can\'t be chosen. Your details are only visible to the state admin.</div>'+
+    '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">All times are <strong>UTC</strong> start times, each slot lasts 30 minutes. Pick up to 3 times per position, in order of preference. Taken times can\'t be chosen. Once you get a time, your name appears in Availability. Your ID and resources stay private.</div>'+
     minFormHtml('mp',values||{},false)+
     '<div class="err" id="mpErr" style="margin-top:4px;"></div>'+
     '<button class="btn btn-p" id="mpSubmit" style="margin-top:6px;">Submit application</button>';
@@ -3839,7 +3843,7 @@ function renderMinPublicBody(values){
 function minAvailabilityHtml(){
   var pos=minPositions();
   var th='style="padding:6px 4px;font-size:10px;font-weight:800;color:var(--t2);text-align:center;line-height:1.35;position:sticky;top:0;background:#1a120a;"';
-  var head='<tr><th '+th.replace('center','left')+'>UTC</th>'+pos.map(function(k){
+  var head='<tr><th '+th.replace('center','left').replace('style="','style="width:78px;')+'>UTC</th>'+pos.map(function(k){
     var free=48-Array.from(MIN_TAKEN).filter(function(x){ return x.indexOf(k+':')===0; }).length;
     var date=minDayDate(minDay(k));
     return '<th '+th+'>Day '+minDay(k)+(date?' · '+date:'')+'<br><span style="color:#c9974b;">'+(k==='edu'?'Education':'VP')+'</span><br><span style="font-weight:600;color:var(--t3);text-transform:none;">'+free+' free</span></th>';
@@ -3848,13 +3852,13 @@ function minAvailabilityHtml(){
   for(var s=0;s<48;s++){
     rows+='<tr><td style="padding:4px;font-size:11px;color:var(--t2);font-variant-numeric:tabular-nums;border-top:1px solid var(--b);white-space:nowrap;">'+minSlotLabel(s)+'</td>'+
       pos.map(function(k){
-        var taken=MIN_TAKEN.has(k+':'+s);
-        return '<td style="padding:3px;border-top:1px solid var(--b);"><div style="text-align:center;font-size:10px;font-weight:700;padding:4px 2px;border-radius:6px;'+
-          (taken?'color:var(--red);background:rgba(181,85,74,.12);opacity:.8;':'color:var(--green);background:rgba(122,156,114,.1);')+'">'+(taken?'Taken':'Free')+'</div></td>';
+        var taken=MIN_TAKEN.has(k+':'+s), nm=MIN_TAKEN_NAME[k+':'+s];
+        return '<td style="padding:3px;border-top:1px solid var(--b);"><div'+(nm?' title="'+escHtml(nm)+'"':'')+' style="text-align:center;font-size:10px;font-weight:700;padding:4px 2px;border-radius:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+
+          (nm?'color:#e6d5b4;background:rgba(201,151,75,.16);':taken?'color:var(--red);background:rgba(181,85,74,.12);opacity:.8;':'color:var(--green);background:rgba(122,156,114,.1);')+'">'+(nm?escHtml(nm):taken?'Taken':'Free')+'</div></td>';
       }).join('')+'</tr>';
   }
   return (minIsOpen()?'':'<div style="font-size:11px;color:var(--gold);margin-bottom:10px;">Applications are closed.</div>')+
-    '<table style="width:100%;border-collapse:collapse;">'+head+rows+'</table>';
+    '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">'+head+rows+'</table>';
 }
 
 // Shared application form (public + super admin add/edit).
@@ -4047,9 +4051,9 @@ function renderAdminMinisters(ac){
   else renderMinApps(body,rerender);
 }
 
-// Stage is derived: DB status stays pending|approved|rejected, and
-// "progress" = pending with at least one time assigned. An app becomes
-// approved only when every requested position has a time (or ✓ Finish).
+// Stage is derived: DB status stays pending|approved|rejected, and every
+// non-approved, non-rejected app is one work queue: "progress". An app
+// becomes approved only when every requested position has a time (or ✓ Finish).
 function minRequested(a){
   return minPositions().filter(function(k){ return ((a.prefs&&a.prefs[k])||[]).length||minAssignFor(a.id,k); });
 }
@@ -4057,16 +4061,18 @@ function minAllAssigned(a){ return minRequested(a).every(function(k){ return !!m
 function minStage(a){
   if(a.status==='rejected') return 'rejected';
   if(a.status==='approved') return 'approved';
-  return MIN_ASSIGN.some(function(x){ return x.application_id===a.id; })?'progress':'pending';
+  return 'progress';
 }
-var MIN_STAGE_LABEL={pending:'Pending',progress:'In progress',approved:'Approved',rejected:'Rejected'};
-var MIN_STAGE_COL={pending:'#d9c27a',progress:'#c9974b',approved:'#7a9c72',rejected:'#b5554a'};
+function minHasAssign(a){ return MIN_ASSIGN.some(function(x){ return x.application_id===a.id; }); }
+var MIN_STAGE_LABEL={progress:'In progress',approved:'Approved',rejected:'Rejected'};
+var MIN_STAGE_COL={progress:'#c9974b',approved:'#7a9c72',rejected:'#b5554a'};
 var MIN_SEARCH='', MIN_EXPANDED=new Set();
 
 function renderMinApps(el,rerender){
-  var counts={pending:0,progress:0,approved:0,rejected:0};
+  var counts={progress:0,approved:0,rejected:0};
   MIN_APPS.forEach(function(a){ counts[minStage(a)]++; });
-  var filters=[['pending','Pending'],['progress','In progress'],['approved','Approved'],['rejected','Rejected'],['all','All']];
+  if(MIN_ADMIN_FILTER==='pending') MIN_ADMIN_FILTER='progress';
+  var filters=[['progress','In progress'],['approved','Approved'],['rejected','Rejected'],['all','All']];
   el.innerHTML=
     (minIsOpen()?'':'<div class="card" style="padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold);">'+
       (MIN_CFG&&MIN_CFG.status==='hidden'?'Module is hidden: players can\'t see it.':MIN_CFG&&MIN_CFG.status==='open'?'Applications are closed until the start date is set.':'Applications are closed: players can see free times but can\'t apply.')+
@@ -4074,7 +4080,7 @@ function renderMinApps(el,rerender){
     '<div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;">'+filters.map(function(f){
       var on=MIN_ADMIN_FILTER===f[0];
       var c=f[0]==='all'?MIN_APPS.length:counts[f[0]];
-      return '<button class="tog min-filter" data-f="'+f[0]+'" style="flex:1 1 30%;padding:7px 4px;font-size:11px;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);white-space:nowrap;">'+f[1]+' ('+c+')</button>';
+      return '<button class="tog min-filter" data-f="'+f[0]+'" style="flex:1 1 auto;padding:7px 4px;font-size:11px;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);white-space:nowrap;">'+f[1]+' ('+c+')</button>';
     }).join('')+'</div>'+
     '<input class="inp" id="minSearch" type="search" autocomplete="off" placeholder="🔍 Search name or Player ID" value="'+escHtml(MIN_SEARCH)+'" style="margin-bottom:10px;padding:10px 12px;font-size:13px;">'+
     '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
@@ -4157,9 +4163,9 @@ function minAppCardHtml(a){
       }).join('')+
     '</div>'+
     (st==='rejected'?'':posRows)+
-    (st==='progress'&&left?'<div style="font-size:11px;color:#c9974b;margin-top:8px;">'+left+' position'+(left===1?'':'s')+' still without a time.</div>':'')+
+    (st==='progress'&&left&&minHasAssign(a)?'<div style="font-size:11px;color:#c9974b;margin-top:8px;">'+left+' position'+(left===1?'':'s')+' still without a time.</div>':'')+
     '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'+
-      (st==='progress'?'<button class="btn btn-g btn-sm min-finish" data-id="'+a.id+'" style="border-color:rgba(122,156,114,.45);color:#9cc093;">✓ Finish</button>':'')+
+      (st==='progress'&&minHasAssign(a)?'<button class="btn btn-g btn-sm min-finish" data-id="'+a.id+'" style="border-color:rgba(122,156,114,.45);color:#9cc093;">✓ Finish</button>':'')+
       '<button class="btn btn-g btn-sm min-copy" data-id="'+a.id+'">📋 Copy</button>'+
       '<button class="btn btn-g btn-sm min-edit" data-id="'+a.id+'">✏️ Edit</button>'+
       (st==='rejected'?
@@ -4325,7 +4331,7 @@ function openMinAdminForm(app,rerender){
           res=await sb.from('minister_applications').insert([row]).select().single();
           if(res.error){ toast('Error: '+res.error.message); return; }
           MIN_APPS.unshift(res.data);
-          MIN_ADMIN_FILTER='pending';
+          MIN_ADMIN_FILTER='progress';
         }
         close();
         toast(app?'✅ Saved':'✅ Entry added');
@@ -4485,7 +4491,7 @@ function renderMinisterGuideContent(rc){
     guideStep(2,'<strong>Day 1</strong> and the <strong>second VP day</strong> (Day 2 or Day 5) are Vice President. <strong>Day 4</strong> is Minister of Education.')+
     guideSection('For players')+
     guideStep(1,'No login needed. Open <strong>SvS Minister Applications</strong> from the sign-in screen or the home screen.')+
-    guideStep(2,'<strong>Availability</strong> shows which times are free or taken. Names are never shown.')+
+    guideStep(2,'<strong>Availability</strong> shows free times and the names of players who got a time. When your name appears there, your application was approved.')+
     guideStep(3,'In <strong>Apply</strong>, enter your name, Player ID, speedups (in days) and Fire Crystal amounts, then pick up to 3 times per position in order of preference. Tick <strong>Use the same times for all 3 positions</strong> to copy your Day 1 choices.')+
     guideStep(4,'One application per Player ID. To change it, contact the state admin.');
   if(SESSION&&isMinisterAdmin(SESSION.name)){
@@ -4493,7 +4499,7 @@ function renderMinisterGuideContent(rc){
       guideSection('For admins','#e3bc6a')+
       guideStep(1,'Manage everything in <strong>Admin Panel › Ministers</strong>. Only super admin and Minister Apps Admins see names and resources.')+
       guideStep(2,'<strong>Applications</strong>: tap a green preference to assign it, or pick any free time from <strong>Other time…</strong>. A time can only be given to one player per position.')+
-      guideStep(3,'After the first time, the player moves to <strong>In progress</strong>. Once every position they asked for has a time, they move to <strong>Approved</strong> automatically. Not giving one? Tap <strong>✓ Finish</strong>.')+
+      guideStep(3,'New applications appear in <strong>In progress</strong>. Once every position they asked for has a time, they move to <strong>Approved</strong> automatically. Not giving one? Tap <strong>✓ Finish</strong>. Assigned names show publicly in Availability.')+
       guideStep(4,'Approved and Rejected show as short rows: tap one to open it. Use <strong>Search</strong> to find any player by name or ID.')+
       guideStep(5,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
       guideStep(6,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.')+
