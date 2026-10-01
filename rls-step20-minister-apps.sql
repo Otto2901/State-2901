@@ -76,11 +76,11 @@ create table if not exists minister_submit_rate (
 --    are taken without any read access to the assignments table itself.
 -- ─────────────────────────────────────────────────────────────────────────────
 create or replace function minister_taken_slots()
-returns table (position text, slot int)
+returns table (pos text, slot int)
 language sql security definer stable
 set search_path = public
 as $$
-  select a.position, a.slot from minister_assignments a;
+  select a."position", a.slot from minister_assignments a;
 $$;
 
 revoke all on function minister_taken_slots() from public;
