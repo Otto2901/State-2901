@@ -543,19 +543,15 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 ::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px;}
 
 /* RULES MODULE */
-.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 14px 90px;}
-.rules-topic-card{
-  background:var(--surface);border:1px solid var(--b);border-radius:18px;
-  padding:20px 14px 18px;display:flex;flex-direction:column;align-items:center;
-  gap:8px;cursor:pointer;position:relative;overflow:hidden;
-  transition:all .2s var(--ease);
-}
-.rules-topic-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.04) 0%,transparent 55%);pointer-events:none;}
-.rules-topic-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.45);border-color:rgba(92,138,122,.32)!important;}
-.rules-topic-card:active{transform:scale(.96);}
-.rules-topic-icon{font-size:34px;filter:drop-shadow(0 0 8px rgba(92,138,122,.35));}
-.rules-topic-title{font-family:var(--serif);font-size:12px;color:#8fb8a8;text-align:center;letter-spacing:.5px;line-height:1.3;text-wrap:balance;}
-.rules-topic-desc{font-size:10px;color:var(--t2);text-align:center;line-height:1.4;text-wrap:pretty;}
+/* Topic list: grouped list rows (Rules, Library, and the pre-login rules sheet) */
+.rules-grid{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--b);border-radius:14px;overflow:hidden;}
+.rules-topic-card{display:grid;grid-template-columns:40px 1fr auto;grid-template-rows:auto auto;column-gap:12px;align-items:center;padding:12px 14px;cursor:pointer;position:relative;transition:background .15s;}
+.rules-topic-card+.rules-topic-card::before{content:'';position:absolute;top:0;right:0;left:66px;height:1px;background:var(--b);}
+.rules-topic-card::after{content:'›';grid-column:3;grid-row:1 / span 2;color:var(--t3);font-size:20px;}
+.rules-topic-card:active{background:rgba(232,210,168,.06);}
+.rules-topic-icon{grid-column:1;grid-row:1 / span 2;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:22px;background:color-mix(in srgb,#8fb8a8 14%,transparent);}
+.rules-topic-title{grid-column:2;font-size:15px;font-weight:600;color:var(--t);line-height:1.3;}
+.rules-topic-desc{grid-column:2;font-size:12px;color:var(--t2);line-height:1.4;margin-top:1px;}
 .rules-empty{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:12px;padding:60px 20px;text-align:center;
@@ -564,7 +560,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .rules-empty-text{font-size:13px;color:var(--t2);}
 
 /* RULES DETAIL */
-.rules-detail{padding:16px 14px 90px;}
+.rules-detail{padding:0;}
 .rules-detail-back{
   display:inline-flex;align-items:center;gap:6px;
   background:rgba(92,138,122,.09);border:1px solid rgba(92,138,122,.25);
@@ -595,7 +591,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .rules-md blockquote{border-left:3px solid rgba(92,138,122,.45);padding:4px 12px;margin:10px 0;background:rgba(92,138,122,.06);border-radius:0 8px 8px 0;color:var(--t2);}
 
 /* RULES ADMIN */
-.rules-admin-wrap{padding:14px 14px 90px;}
+.rules-admin-wrap{padding:0;}
 .rules-admin-card{background:var(--surface);border:1px solid var(--b);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
 .rules-admin-card-icon{font-size:26px;flex-shrink:0;}
 .rules-admin-card-title{flex:1;font-weight:700;font-size:13px;color:var(--t);}
@@ -838,7 +834,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v33'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v34'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -3899,7 +3895,8 @@ var GUIDE_CONTENT = {
   presidency:{ title:'👑 Presidency Ledger — How to use', render: renderPresidencyGuideContent },
   ministers: { title:'👑 SvS Minister Applications — How to use', render: renderMinisterGuideContent },
   troops:    { title:'🪖 Troops — How to use', render: renderTroopsGuideContent },
-  logs:      { title:'🔍 Logs — How to use', render: renderLogsGuideContent }
+  logs:      { title:'🔍 Logs — How to use', render: renderLogsGuideContent },
+  rules:     { title:'📜 State Rules — How to use', render: renderRulesGuideContent }
 };
 function openGuideModal(key){
   var g=GUIDE_CONTENT[key]; if(!g) return;
@@ -3940,6 +3937,17 @@ function renderRotationGuideContent(rc){
     html+=guideSection('Super Admin only','var(--gold)');
     html+=guideStep('•','Reorder alliances between Top 4 / Bot 5, rename/add/remove alliances.');
     html+=guideStep('•','Force-open/close the selection window, clear selections, and reset & rotate the week.');
+  }
+  rc.innerHTML=html;
+}
+function renderRulesGuideContent(rc){
+  var html=
+    guideSection('How it works')+
+    guideStep(1,'State Rules lists every rule topic of State 2901. Tap a topic to read it in full, and <strong>← Back</strong> to return to the list.')+
+    guideStep(2,'The same rules are also visible before signing in, from <strong>View State Rules</strong> on the login screen.');
+  if(isSuperAdmin(SESSION.name)){
+    html+=guideSection('Super Admin only','var(--gold)');
+    html+=guideStep('•','In the <strong>Admin</strong> tab you can add, edit, reorder and delete topics. Changes show for everyone right away.');
   }
   rc.innerHTML=html;
 }
@@ -5448,14 +5456,17 @@ function renderRulesApp(app){
   }).join('');
 
   app.innerHTML =
-    buildModuleHeader('rules','📜','State Rules','Rules & Regulations')+
-    '<div class="sub-nav">'+tabsHtml+'</div>'+
-    '<div id="rulesContent"></div>';
+    buildModuleHeader('rules','📜','State Rules','Rules & Regulations','rules')+
+    '<div class="nav">'+tabsHtml+'</div>'+
+    '<div id="rulesContent" class="content"></div>';
 
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; RULES_SELECTED=null; render(); });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('rules'); });
   app.querySelectorAll('.nav-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
-      RULES_TAB=btn.dataset.tab; RULES_SELECTED=null; renderRulesContent();
+      RULES_TAB=btn.dataset.tab; RULES_SELECTED=null;
+      app.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.toggle('on',b.dataset.tab===RULES_TAB); });
+      renderRulesContent();
     });
   });
   renderRulesContent();
@@ -5679,13 +5690,13 @@ function renderLibraryApp(app){
   if(!isLibraryAdmin(SESSION.name)){
     app.innerHTML =
       buildModuleHeader('library','📚','Library','Announcements & knowledge archive')+
-      '<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
+      '<div class="content"><div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div></div>';
     document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
     return;
   }
   app.innerHTML =
     buildModuleHeader('library','📚','Library','Announcements & knowledge archive','library')+
-    '<div id="libraryContent"></div>';
+    '<div id="libraryContent" class="content"></div>';
   document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
   document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('library'); });
   renderLibraryContent();
@@ -5755,7 +5766,7 @@ function renderLibraryDetail(el){
 }
 
 function renderLibraryGrid(el){
-  var newBtnHtml = '<button class="btn btn-p" id="libraryNewBtn" style="margin-bottom:14px;">+ New Entry</button>';
+  var newBtnHtml = '<button class="btn btn-p" id="libraryNewBtn" style="margin-bottom:14px;">+ New entry</button>';
   if(!LIBRARY_ENTRIES.length){
     el.innerHTML = newBtnHtml +
       '<div class="rules-empty">'+
