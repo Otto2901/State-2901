@@ -3741,6 +3741,7 @@ var MIN_TAKEN=null;        // Set of 'position:slot'
 var MIN_PUB_TAB='avail';
 var MIN_APPS=[], MIN_ASSIGN=[], MIN_ADMIN_LOADED=false;
 var MIN_ADMIN_VIEW='apps', MIN_ADMIN_FILTER='pending';
+var MIN_ID_POS=null;       // selected position in the IDs view
 
 function minDay(key){
   if(key==='vp1') return 1;
@@ -4026,13 +4027,13 @@ function renderAdminMinisters(ac){
     return;
   }
   var isSup=isSuperAdmin(SESSION.name);
-  var views=[['apps','Applications'],['schedule','Schedule']];
+  var views=[['apps','Applications'],['schedule','Schedule'],['ids','IDs']];
   if(isSup) views.push(['setup','Setup']);
   if(MIN_ADMIN_VIEW==='setup'&&!isSup) MIN_ADMIN_VIEW='apps';
   ac.innerHTML=
-    '<div style="display:flex;gap:8px;margin-bottom:14px;">'+views.map(function(v){
+    '<div style="display:flex;gap:6px;margin-bottom:14px;">'+views.map(function(v){
       var on=MIN_ADMIN_VIEW===v[0];
-      return '<button class="tog min-view" data-v="'+v[0]+'" style="flex:1;padding:9px;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+v[1]+'</button>';
+      return '<button class="tog min-view" data-v="'+v[0]+'" style="flex:1;min-width:0;padding:9px 4px;font-size:12px;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+v[1]+'</button>';
     }).join('')+
     '<button class="tog" id="minAdmGuide" title="How to use" aria-label="How to use" style="padding:9px 12px;border-color:var(--b2);color:var(--t);">❓</button></div>'+
     '<div id="minAdmBody"></div>';
@@ -4041,6 +4042,7 @@ function renderAdminMinisters(ac){
   var body=ac.querySelector('#minAdmBody');
   var rerender=function(){ renderAdminMinisters(ac); };
   if(MIN_ADMIN_VIEW==='schedule') renderMinSchedule(body,rerender);
+  else if(MIN_ADMIN_VIEW==='ids') renderMinIdList(body,rerender);
   else if(MIN_ADMIN_VIEW==='setup'&&isSup) renderMinSetup(body,rerender);
   else renderMinApps(body,rerender);
 }
@@ -4258,6 +4260,61 @@ function openMinAdminForm(app,rerender){
   });
 }
 
+// In-game helper: per-day list of assigned times with a one-tap ID copy.
+// Copied rows are marked done in localStorage (per device, convenience only),
+// keyed position:slot:application_id so a re-assigned slot starts unmarked.
+function minDoneGet(){ try{ return JSON.parse(localStorage.getItem('min-id-done')||'[]'); }catch(e){ return []; } }
+function minDoneSet(list){ try{ localStorage.setItem('min-id-done',JSON.stringify(list)); }catch(e){} }
+function renderMinIdList(el,rerender){
+  var pos=minPositions();
+  if(pos.indexOf(MIN_ID_POS)<0) MIN_ID_POS=pos[0];
+  var done=minDoneGet();
+  var list=MIN_ASSIGN.filter(function(x){ return x.position===MIN_ID_POS; }).sort(function(x,y){ return x.slot-y.slot; });
+  el.innerHTML=
+    '<div style="display:flex;gap:6px;margin-bottom:12px;">'+pos.map(function(k){
+      var on=MIN_ID_POS===k, date=minDayDate(minDay(k));
+      var n=MIN_ASSIGN.filter(function(x){ return x.position===k; }).length;
+      return '<button class="tog min-id-pos" data-pos="'+k+'" style="flex:1;min-width:0;padding:8px 4px;font-size:11px;line-height:1.35;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+
+        'Day '+minDay(k)+(date?' · '+date:'')+'<br><span style="color:#c9974b;">'+(k==='edu'?'Education':'VP')+'</span> <span style="color:var(--t3);">('+n+')</span></button>';
+    }).join('')+'</div>'+
+    (list.length?
+      '<div style="display:flex;align-items:center;margin-bottom:8px;">'+
+        '<div style="flex:1;font-size:11px;color:var(--t3);">Times are UTC. Tap 📋 to copy the Player ID.</div>'+
+        '<button class="btn btn-g btn-sm" id="minIdClear" style="padding:6px 10px;font-size:11px;">Clear marks</button>'+
+      '</div>'+
+      list.map(function(x){
+        var a=minAppById(x.application_id);
+        var key=x.position+':'+x.slot+':'+x.application_id;
+        var isDone=done.indexOf(key)>=0;
+        return '<div class="card min-id-row'+(isDone?' done':'')+'" style="display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:8px;'+(isDone?'opacity:.45;':'')+'">'+
+          '<div style="font-size:18px;font-weight:800;color:#c9974b;font-variant-numeric:tabular-nums;width:54px;flex-shrink:0;">'+minSlotStart(x.slot)+'</div>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-size:17px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;letter-spacing:.5px;">'+(isDone?'✓ ':'')+escHtml(a?a.player_id:'?')+'</div>'+
+            '<div style="font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(a?a.player_name:'Unknown player')+'</div>'+
+          '</div>'+
+          '<button class="btn btn-g min-id-copy" data-key="'+escHtml(key)+'" data-id="'+escHtml(a?a.player_id:'')+'" aria-label="Copy ID '+escHtml(a?a.player_id:'')+'" style="width:52px;height:46px;padding:0;font-size:20px;flex-shrink:0;"'+(a?'':' disabled')+'>📋</button>'+
+        '</div>';
+      }).join(''):
+      '<div class="empty"><div class="empty-icon">🗓️</div><p>No times assigned for this day yet.</p></div>');
+  el.querySelectorAll('.min-id-pos').forEach(function(b){ b.addEventListener('click',function(){ MIN_ID_POS=b.dataset.pos; renderMinIdList(el,rerender); }); });
+  var clr=el.querySelector('#minIdClear');
+  if(clr) clr.addEventListener('click',function(){
+    var prefix=MIN_ID_POS+':';
+    minDoneSet(minDoneGet().filter(function(k){ return k.indexOf(prefix)!==0; }));
+    renderMinIdList(el,rerender);
+  });
+  el.querySelectorAll('.min-id-copy').forEach(function(b){
+    b.addEventListener('click',function(){
+      var id=b.dataset.id, key=b.dataset.key; if(!id) return;
+      navigator.clipboard.writeText(id).then(function(){
+        var d=minDoneGet(); if(d.indexOf(key)<0){ d.push(key); minDoneSet(d); }
+        toast('📋 '+id+' copied');
+        renderMinIdList(el,rerender);
+      },function(){ toast('Copy failed'); });
+    });
+  });
+}
+
 function renderMinSchedule(el,rerender){
   var pos=minPositions();
   var th='style="padding:6px 4px;font-size:10px;font-weight:800;color:var(--t2);text-align:center;line-height:1.35;"';
@@ -4362,7 +4419,8 @@ function renderMinisterGuideContent(rc){
       guideStep(1,'Manage everything in <strong>Admin Panel › Ministers</strong>. Only super admin and Minister Apps Admins see names and resources.')+
       guideStep(2,'<strong>Applications</strong>: tap a green preference to assign it, or pick any free time from <strong>Other time…</strong>. A time can only be given to one player per position.')+
       guideStep(3,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
-      guideStep(4,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.');
+      guideStep(4,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.')+
+      guideStep(5,'<strong>IDs</strong>: pick the day, tap 📋 to copy a player\'s ID for in-game assignment. Copied rows get a ✓, <strong>Clear marks</strong> resets that day.');
   }
   if(SESSION&&isSuperAdmin(SESSION.name)){
     html+=
