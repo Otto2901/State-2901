@@ -3835,7 +3835,7 @@ function renderMinPublicBody(values){
   }
   el.innerHTML=
     '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">All times are <strong>UTC</strong> start times, each slot lasts 30 minutes. Pick up to 3 times per position, in order of preference. Taken times can\'t be chosen. Once you get a time, your name appears in Availability. Your ID and resources stay private.</div>'+
-    minFormHtml('mp',values||{},false)+
+    minFormHtml('mp',values||{},false,(values&&values._troops)||true)+
     '<div class="err" id="mpErr" style="margin-top:4px;"></div>'+
     '<button class="btn btn-p" id="mpSubmit" style="margin-top:6px;">Submit application</button>';
   minWireForm(el,'mp');
@@ -3864,7 +3864,39 @@ function minAvailabilityHtml(){
 
 // Shared application form (public + super admin add/edit).
 // adminMode: taken slots stay selectable (admin decides), no honeypot.
-function minFormHtml(px,v,adminMode){
+// Troop levels: permanent data in player_troop_reports, super admin only.
+var MIN_TROOP_TYPES=[['inf','Infantry'],['lan','Lancer'],['mar','Marksman']];
+var MIN_TIERS=['T9','T10','T11'];
+var MIN_FCS=[['below','Below FC5'],['FC5','FC5'],['FC6','FC6'],['FC7','FC7'],['FC8','FC8'],['FC9','FC9'],['FC10','FC10']];
+function minFcLabel(v){ return v==='below'?'<FC5':v; }
+// {inf:{tier,fc},...} → {inf_tier,inf_fc,...} (the table/prefill shape)
+function minTroopsFlat(tr){
+  if(!tr) return null;
+  var o={};
+  MIN_TROOP_TYPES.forEach(function(t){ if(tr[t[0]]){ o[t[0]+'_tier']=tr[t[0]].tier; o[t[0]+'_fc']=tr[t[0]].fc; } });
+  return o;
+}
+function minTroopLine(rep){
+  if(!rep) return '';
+  return MIN_TROOP_TYPES.map(function(t){ return t[1].slice(0,3)+' '+escHtml(rep[t[0]+'_tier'])+'·'+escHtml(minFcLabel(rep[t[0]+'_fc'])); }).join(' · ');
+}
+// tv = existing troop values {inf_tier,inf_fc,...} for prefill, or null
+function minTroopFormHtml(px,tv){
+  tv=tv||{};
+  var sel=function(id,opts,cur,label){
+    return '<select class="sel" id="'+id+'" aria-label="'+label+'" style="padding:9px 26px 9px 10px;font-size:13px;background-position:right 8px center;">'+
+      '<option value="">Select…</option>'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(cur===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>';
+  };
+  return '<div class="lbl" style="margin-top:4px;">Troops · highest level</div>'+
+    '<div class="card" style="padding:10px 12px;margin-bottom:12px;">'+MIN_TROOP_TYPES.map(function(t,i){
+      return '<div style="display:grid;grid-template-columns:84px 1fr 1fr;gap:8px;align-items:center;'+(i?'margin-top:8px;':'')+'">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--t);">'+t[1]+'</div>'+
+        sel(px+'Tr_'+t[0]+'_tier',MIN_TIERS.map(function(x){ return [x,x]; }),tv[t[0]+'_tier'],t[1]+' tier')+
+        sel(px+'Tr_'+t[0]+'_fc',MIN_FCS,tv[t[0]+'_fc'],t[1]+' FC level')+
+      '</div>';
+    }).join('')+'</div>';
+}
+function minFormHtml(px,v,adminMode,troopOpt){
   var prefs=v.prefs||{};
   function inp(id,label,val,attrs){
     return '<div class="field" style="margin-bottom:10px;"><label class="lbl" for="'+px+id+'">'+label+'</label><input class="inp" id="'+px+id+'" autocomplete="off" value="'+escHtml(val==null?'':String(val))+'" '+(attrs||'')+'></div>';
@@ -3904,6 +3936,8 @@ function minFormHtml(px,v,adminMode){
       numInp('Rfc','Refined FC',v.refined_fc,'1')+
       numInp('Sh','FC Shards',v.fc_shards,'1')+
     '</div>'+
+    // troopOpt: undefined/true = editable section, {values} = prefilled, false = hidden
+    (troopOpt===false?'':minTroopFormHtml(px,troopOpt&&troopOpt!==true?troopOpt:null))+
     '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t);margin:6px 0 12px;cursor:pointer;"><input type="checkbox" id="'+px+'Same"> Use the same times for all 3 positions</label>'+
     posHtml+
     (adminMode?'':'<input id="'+px+'Web" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">');
@@ -3966,7 +4000,18 @@ function minReadForm(root,px){
   }
   if(!Object.keys(prefs).length) return {err:'Pick at least one time for at least one position.'};
   d.prefs=prefs;
-  return {data:d};
+  // Troops are returned separately: they go to player_troop_reports, not the application row
+  var troops=null;
+  if(root.querySelector('#'+px+'Tr_inf_tier')){
+    troops={};
+    for(var t=0;t<MIN_TROOP_TYPES.length;t++){
+      var ty=MIN_TROOP_TYPES[t][0];
+      var tier=val('Tr_'+ty+'_tier'), fc=val('Tr_'+ty+'_fc');
+      if(!tier||!fc) return {err:'Fill in the '+MIN_TROOP_TYPES[t][1]+' tier and FC level.'};
+      troops[ty]={tier:tier,fc:fc};
+    }
+  }
+  return {data:d,troops:troops};
 }
 
 async function submitMinPublic(el){
@@ -3974,7 +4019,7 @@ async function submitMinPublic(el){
   errEl.textContent='';
   var r=minReadForm(el,'mp');
   if(r.err){ errEl.textContent=r.err; return; }
-  var payload=Object.assign({},r.data,{website:(el.querySelector('#mpWeb')||{}).value||''});
+  var payload=Object.assign({},r.data,{troops:r.troops,website:(el.querySelector('#mpWeb')||{}).value||''});
   btn.disabled=true; btn.textContent='Sending...';
   var resp, out;
   try{
@@ -3988,7 +4033,7 @@ async function submitMinPublic(el){
   if(!resp.ok){
     if(out&&out.code==='slot_taken'){
       try{ await minLoadPublic(); }catch(e){}
-      renderMinPublicBody(r.data);
+      renderMinPublicBody(Object.assign({},r.data,{_troops:minTroopsFlat(r.troops)}));
       var e2=document.getElementById('mpErr'); if(e2) e2.textContent=out.error;
       return;
     }
@@ -4016,8 +4061,17 @@ async function minLoadAdmin(){
   MIN_APPS=res[1].data||[];
   MIN_ASSIGN=res[2].data||[];
   MIN_TAKEN=new Set(MIN_ASSIGN.map(function(a){ return a.position+':'+a.slot; }));
+  // Troop reports are super admin only (RLS too); minister_admin never loads them
+  MIN_TROOPS=[];
+  if(isSuperAdmin(SESSION.name)){
+    var tr=await sb.from('player_troop_reports').select('*').order('created_at',{ascending:false});
+    if(tr.error) console.warn('troop reports:',tr.error.message); else MIN_TROOPS=tr.data||[];
+  }
   MIN_ADMIN_LOADED=true;
 }
+var MIN_TROOPS=[];         // player_troop_reports rows, newest first
+var MIN_TROOP_SEARCH='', MIN_TROOP_OPEN=new Set();
+function minTroopFor(appId){ return MIN_TROOPS.find(function(t){ return t.application_id===appId; }); }
 function minAssignFor(appId,pos){ return MIN_ASSIGN.find(function(a){ return a.application_id===appId&&a.position===pos; }); }
 function minAssignAt(pos,slot){ return MIN_ASSIGN.find(function(a){ return a.position===pos&&a.slot===slot; }); }
 function minAppById(id){ return MIN_APPS.find(function(a){ return a.id===id; }); }
@@ -4033,14 +4087,14 @@ function renderAdminMinisters(ac){
   }
   var isSup=isSuperAdmin(SESSION.name);
   var views=[['apps','Apps'],['schedule','Schedule'],['ids','IDs'],['rank','Rank']];
-  if(isSup) views.push(['setup','Setup']);
-  if(MIN_ADMIN_VIEW==='setup'&&!isSup) MIN_ADMIN_VIEW='apps';
+  if(isSup) views.push(['troops','Troops'],['setup','Setup']);
+  if((MIN_ADMIN_VIEW==='setup'||MIN_ADMIN_VIEW==='troops')&&!isSup) MIN_ADMIN_VIEW='apps';
   ac.innerHTML=
-    '<div style="display:flex;gap:6px;margin-bottom:14px;">'+views.map(function(v){
+    '<div style="display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;">'+views.map(function(v){
       var on=MIN_ADMIN_VIEW===v[0];
-      return '<button class="tog min-view" data-v="'+v[0]+'" style="flex:1;min-width:0;padding:9px 4px;font-size:12px;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+v[1]+'</button>';
+      return '<button class="tog min-view" data-v="'+v[0]+'" style="flex:1 1 auto;padding:9px 5px;font-size:12px;white-space:nowrap;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+v[1]+'</button>';
     }).join('')+
-    '<button class="tog" id="minAdmGuide" title="How to use" aria-label="How to use" style="padding:9px 12px;border-color:var(--b2);color:var(--t);">❓</button></div>'+
+    '<button class="tog" id="minAdmGuide" title="How to use" aria-label="How to use" style="flex:0 0 auto;padding:9px 7px;border-color:var(--b2);color:var(--t);">❓</button></div>'+
     '<div id="minAdmBody"></div>';
   ac.querySelectorAll('.min-view').forEach(function(b){ b.addEventListener('click',function(){ MIN_ADMIN_VIEW=b.dataset.v; renderAdminMinisters(ac); }); });
   ac.querySelector('#minAdmGuide').addEventListener('click',function(){ openGuideModal('ministers'); });
@@ -4049,6 +4103,7 @@ function renderAdminMinisters(ac){
   if(MIN_ADMIN_VIEW==='schedule') renderMinSchedule(body,rerender);
   else if(MIN_ADMIN_VIEW==='ids') renderMinIdList(body,rerender);
   else if(MIN_ADMIN_VIEW==='rank') renderMinRank(body,rerender);
+  else if(MIN_ADMIN_VIEW==='troops'&&isSup) renderMinTroops(body,rerender);
   else if(MIN_ADMIN_VIEW==='setup'&&isSup) renderMinSetup(body,rerender);
   else renderMinApps(body,rerender);
 }
@@ -4179,6 +4234,10 @@ function minAppCardHtml(a){
         return '<div style="background:var(--surface2);border-radius:8px;padding:6px 8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--t3);">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;">'+x[1]+'</div></div>';
       }).join('')+
     '</div>'+
+    (isSuperAdmin(SESSION.name)?(function(){
+      var rep=minTroopFor(a.id);
+      return '<div style="font-size:11px;color:'+(rep?'var(--t)':'var(--t3)')+';margin:-4px 0 8px;font-variant-numeric:tabular-nums;">🪖 '+(rep?minTroopLine(rep):'No troop levels')+'</div>';
+    })():'')+
     (st==='rejected'?'':posRows)+
     (st==='progress'&&left&&minHasAssign(a)?'<div style="font-size:11px;color:#c9974b;margin-top:8px;">'+left+' position'+(left===1?'':'s')+' still without a time.</div>':'')+
     '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'+
@@ -4356,13 +4415,15 @@ async function minUnassign(pos,slot,rerender){
 function openMinAdminForm(app,rerender){
   if(!isMinisterAdmin(SESSION.name)) return;
   var formBody=null;
+  var isSup=isSuperAdmin(SESSION.name);
+  var rep=app?minTroopFor(app.id):null;
   openModal({
     title:app?'Edit application':'Add entry',
     size:'lg',
     bodyRender:function(b){
       formBody=b;
       b.innerHTML=(app?'':'<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Adds an application on a player\'s behalf. Taken times can still be picked here as preferences.</div>')+
-        minFormHtml('ma',app||{},true);
+        minFormHtml('ma',app||{},true,isSup?(rep||true):false);
       minWireForm(b,'ma');
     },
     actions:[
@@ -4381,6 +4442,19 @@ function openMinAdminForm(app,rerender){
           if(res.error){ toast('Error: '+res.error.message); return; }
           MIN_APPS.unshift(res.data);
           MIN_ADMIN_FILTER='progress';
+        }
+        // Troop report: update the one tied to this application, or add a new dated record
+        if(isSup&&r.troops){
+          var flat=minTroopsFlat(r.troops), tres;
+          var existing=minTroopFor(res.data.id);
+          if(existing){
+            tres=await sb.from('player_troop_reports').update(Object.assign({},flat,{player_id:res.data.player_id,player_name:res.data.player_name})).eq('id',existing.id).select().single();
+            if(!tres.error) MIN_TROOPS=MIN_TROOPS.map(function(x){ return x.id===existing.id?tres.data:x; });
+          } else {
+            tres=await sb.from('player_troop_reports').insert([Object.assign({},flat,{player_id:res.data.player_id,player_name:res.data.player_name,source:'admin',entered_by:SESSION.name,svs_start_date:(MIN_CFG&&MIN_CFG.prep_start_date)||null,application_id:res.data.id})]).select().single();
+            if(!tres.error) MIN_TROOPS.unshift(tres.data);
+          }
+          if(tres.error) toast('Saved, but troop levels failed: '+tres.error.message);
         }
         close();
         toast(app?'✅ Saved':'✅ Entry added');
@@ -4443,6 +4517,71 @@ function renderMinIdList(el,rerender){
       },function(){ toast('Copy failed'); });
     });
   });
+}
+
+// Troops: permanent troop level reports, one row per Player ID (latest
+// report), tap to see history. Kept across New SvS. Super admin only.
+function renderMinTroops(el,rerender){
+  if(!isSuperAdmin(SESSION.name)){ el.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
+  var byPlayer={}, order=[];
+  MIN_TROOPS.forEach(function(r){ // newest first, so the first seen is the latest
+    if(!byPlayer[r.player_id]){ byPlayer[r.player_id]=[]; order.push(r.player_id); }
+    byPlayer[r.player_id].push(r);
+  });
+  var dt=function(s){ return new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}); };
+  el.innerHTML=
+    '<div style="display:flex;gap:8px;margin-bottom:10px;">'+
+      '<input class="inp" id="minTrSearch" type="search" autocomplete="off" placeholder="🔍 Search name or Player ID" value="'+escHtml(MIN_TROOP_SEARCH)+'" style="flex:1;padding:10px 12px;font-size:13px;">'+
+      '<button class="btn btn-g btn-sm" id="minTrCsv" style="flex-shrink:0;"'+(MIN_TROOPS.length?'':' disabled')+'>⬇ CSV</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">'+order.length+' players · '+MIN_TROOPS.length+' reports. Kept permanently, New SvS doesn\'t delete them.</div>'+
+    '<div id="minTrList"></div>';
+  var listEl=el.querySelector('#minTrList');
+  function renderList(){
+    var q=MIN_TROOP_SEARCH.trim().toLowerCase();
+    var ids=order.filter(function(id){
+      if(!q) return true;
+      var l=byPlayer[id][0];
+      return String(l.player_name||'').toLowerCase().indexOf(q)>=0||String(id).indexOf(q)>=0;
+    });
+    listEl.innerHTML=ids.length?ids.map(function(id){
+      var hist=byPlayer[id], l=hist[0], open=MIN_TROOP_OPEN.has(id);
+      return '<div class="card" style="padding:10px 12px;margin-bottom:6px;">'+
+        '<button class="min-tr-row" data-pid="'+escHtml(id)+'" style="display:block;width:100%;text-align:left;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;color:inherit;">'+
+          '<div style="display:flex;gap:8px;align-items:baseline;">'+
+            '<div style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(l.player_name)+' <span style="font-weight:600;color:var(--t3);font-variant-numeric:tabular-nums;">· '+escHtml(id)+'</span></div>'+
+            '<div style="font-size:10px;color:var(--t3);white-space:nowrap;">'+dt(l.created_at)+(hist.length>1?' · '+hist.length+' reports '+(open?'▲':'▼'):'')+'</div>'+
+          '</div>'+
+          '<div style="font-size:12px;color:var(--t);margin-top:3px;font-variant-numeric:tabular-nums;">🪖 '+minTroopLine(l)+'</div>'+
+        '</button>'+
+        (open&&hist.length>1?'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--b);">'+hist.slice(1).map(function(r){
+          return '<div style="font-size:11px;color:var(--t2);margin-bottom:4px;font-variant-numeric:tabular-nums;"><span style="color:var(--t3);">'+dt(r.created_at)+(r.svs_start_date?' · SvS '+escHtml(r.svs_start_date):'')+'</span><br>'+minTroopLine(r)+'</div>';
+        }).join('')+'</div>':'')+
+      '</div>';
+    }).join(''):'<div class="empty"><div class="empty-icon">🪖</div><p>'+(q?'No match.':'No troop reports yet.')+'</p></div>';
+    listEl.querySelectorAll('.min-tr-row').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=b.dataset.pid; if(byPlayer[id].length<2) return;
+        if(MIN_TROOP_OPEN.has(id)) MIN_TROOP_OPEN.delete(id); else MIN_TROOP_OPEN.add(id);
+        renderList();
+      });
+    });
+  }
+  el.querySelector('#minTrSearch').addEventListener('input',function(e){ MIN_TROOP_SEARCH=e.target.value; renderList(); });
+  el.querySelector('#minTrCsv').addEventListener('click',minExportTroopsCsv);
+  renderList();
+}
+function minExportTroopsCsv(){
+  var cols=['created_at','svs_start_date','player_id','player_name','inf_tier','inf_fc','lan_tier','lan_fc','mar_tier','mar_fc','source','entered_by'];
+  // Names are visitor input: neutralise spreadsheet formulas, then CSV-quote
+  var cell=function(v){ v=v==null?'':String(v); if(/^[=+\-@\t\r]/.test(v)) v="'"+v; return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  var csv=[cols.join(',')].concat(MIN_TROOPS.map(function(r){ return cols.map(function(c){ return cell(r[c]); }).join(','); })).join('\r\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob), link=document.createElement('a');
+  link.href=url; link.download='troop-reports-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+  toast('⬇ '+MIN_TROOPS.length+' reports exported');
 }
 
 // Rank: everyone who asked for (or holds) a position, strongest first, so
@@ -4632,7 +4771,7 @@ function renderMinSetup(el,rerender){
     '</div>'+
     '<div class="card" style="border-color:rgba(181,85,74,.3);">'+
       '<div style="font-family:var(--serif);font-size:15px;color:var(--red);margin-bottom:6px;">New SvS</div>'+
-      '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">Deletes every application and every assigned time, clears the start date and sets the module to Hidden. Copy the schedule first if you need it.</div>'+
+      '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">Deletes every application and every assigned time, clears the start date and sets the module to Hidden. Troop reports are kept. Copy the schedule first if you need it.</div>'+
       '<button class="btn btn-d" id="minReset">Start new SvS</button>'+
     '</div>';
   el.querySelector('#minSaveCfg').addEventListener('click',async function(){
@@ -4646,7 +4785,7 @@ function renderMinSetup(el,rerender){
     rerender();
   });
   el.querySelector('#minReset').addEventListener('click',async function(){
-    if(!await confirmDanger('Delete all '+MIN_APPS.length+' applications and '+MIN_ASSIGN.length+' assigned times, and hide the module?',{title:'Start new SvS',confirmLabel:'Delete everything',requireTyped:'RESET'})) return;
+    if(!await confirmDanger('Delete all '+MIN_APPS.length+' applications and '+MIN_ASSIGN.length+' assigned times, and hide the module? Troop reports are kept.',{title:'Start new SvS',confirmLabel:'Delete everything',requireTyped:'RESET'})) return;
     var r1=await sb.from('minister_assignments').delete().gte('slot',0);
     if(r1.error){ toast('Error: '+r1.error.message); return; }
     var r2=await sb.from('minister_applications').delete().not('id','is',null);
@@ -4667,7 +4806,7 @@ function renderMinisterGuideContent(rc){
     guideSection('For players')+
     guideStep(1,'No login needed. Open <strong>SvS Minister Applications</strong> from the sign-in screen or the home screen.')+
     guideStep(2,'<strong>Availability</strong> shows free times and the names of players who got a time. When your name appears there, your application was approved.')+
-    guideStep(3,'In <strong>Apply</strong>, enter your name, Player ID, speedups (in days) and Fire Crystal amounts, then pick up to 3 times per position in order of preference. Tick <strong>Use the same times for all 3 positions</strong> to copy your Day 1 choices.')+
+    guideStep(3,'In <strong>Apply</strong>, enter your name, Player ID, speedups (in days), Fire Crystal amounts and your highest troop tier and FC level for each troop type, then pick up to 3 times per position in order of preference. Tick <strong>Use the same times for all 3 positions</strong> to copy your Day 1 choices.')+
     guideStep(4,'One application per Player ID. To change it, contact the state admin.');
   if(SESSION&&isMinisterAdmin(SESSION.name)){
     html+=
@@ -4687,7 +4826,8 @@ function renderMinisterGuideContent(rc){
       guideStep(1,'<strong>Setup › Module status</strong>: <strong>Open</strong> = players can apply. <strong>Closed</strong> = players still see free/taken times but can\'t apply. <strong>Hidden</strong> = the button and home card disappear for everyone.')+
       guideStep(2,'Set the <strong>Prep Day 1 date</strong> and the <strong>second VP day</strong> (Day 2 or Day 5). Open needs a date.')+
       guideStep(3,'Deleting applications and <strong>New SvS</strong> (clears everything and hides the module) are super admin only.')+
-      guideStep(4,'Give the <strong>Minister Apps Admin</strong> role in Admin Panel › Roles to let someone assign times for you.');
+      guideStep(4,'Give the <strong>Minister Apps Admin</strong> role in Admin Panel › Roles to let someone assign times for you.')+
+      guideStep(5,'<strong>Troops</strong>: every application also saves the player\'s troop levels as a dated report. The list shows each player\'s latest report, tap to see history, <strong>⬇ CSV</strong> exports everything. Reports are kept forever, New SvS doesn\'t delete them. Only super admin sees them.');
   }
   rc.innerHTML=html;
 }

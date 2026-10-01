@@ -29,6 +29,9 @@ async function sha256Hex(input: string): Promise<string> {
 }
 
 const POSITIONS = ['vp1', 'edu', 'vp2'];
+const TROOP_TYPES = ['inf', 'lan', 'mar'];
+const TIERS = ['T9', 'T10', 'T11'];
+const FC_LEVELS = ['below', 'FC5', 'FC6', 'FC7', 'FC8', 'FC9', 'FC10'];
 const PER_IP_LIMIT = 3;
 const PER_IP_WINDOW_MS = 60 * 60 * 1000;
 const GLOBAL_DAILY_LIMIT = 300;
@@ -107,6 +110,16 @@ Deno.serve(async (req) => {
   }
   if (Object.keys(prefs).length === 0) return json({ error: 'Pick at least one position and time.' }, 400);
 
+  // Troop levels: required, whitelisted, stored permanently in player_troop_reports
+  const tr = body?.troops;
+  const troopRow: Record<string, string> = {};
+  for (const t of TROOP_TYPES) {
+    const tier = tr?.[t]?.tier, fc = tr?.[t]?.fc;
+    if (!TIERS.includes(tier) || !FC_LEVELS.includes(fc)) return json({ error: 'Fill in your troop levels.' }, 400);
+    troopRow[t + '_tier'] = tier;
+    troopRow[t + '_fc'] = fc;
+  }
+
   const { data: cfg } = await db.from('minister_config').select('prep_start_date, status').eq('id', 1).maybeSingle();
   if (cfg?.status !== 'open' || !cfg?.prep_start_date) return json({ error: 'Applications are closed.' }, 403);
 
@@ -140,15 +153,26 @@ Deno.serve(async (req) => {
     }
   }
 
-  const { error: insErr } = await db.from('minister_applications').insert({
+  const { data: appRow, error: insErr } = await db.from('minister_applications').insert({
     player_name: playerName,
     player_id: playerId,
     ...resources,
     prefs,
     source: 'public',
     status: 'pending'
-  });
+  }).select('id').single();
   if (insErr) return json({ error: 'Server error.' }, 500);
+
+  // The application matters more: a failed troop report is logged, not fatal
+  const { error: trErr } = await db.from('player_troop_reports').insert({
+    player_id: playerId,
+    player_name: playerName,
+    ...troopRow,
+    source: 'public',
+    svs_start_date: cfg.prep_start_date,
+    application_id: appRow?.id ?? null
+  });
+  if (trErr) console.error('troop report insert failed', trErr.message);
 
   return json({ ok: true });
 });
