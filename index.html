@@ -395,6 +395,33 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .rot-act-btn:disabled{opacity:.3;cursor:not-allowed;}
 
 /* TRANSFER */
+.team-hdr{display:flex;align-items:baseline;gap:10px;margin:16px 4px 8px;}
+.team-name{flex:1;min-width:0;font-size:15px;font-weight:800;color:var(--t);}
+.team-count{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;}
+.war-lead{padding:12px 14px;background:rgba(232,210,168,.03);border-bottom:1px solid var(--b);}
+.war-lead-top{display:flex;align-items:baseline;gap:8px;}
+.war-lead-lbl{font-size:11px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;}
+.war-lead-name{font-size:16px;font-weight:800;color:var(--t);}
+.war-lead-heroes{font-size:13px;color:var(--t2);margin-top:4px;}
+.war-pcts{display:flex;gap:12px;margin-top:6px;font-size:12px;color:var(--t3);font-variant-numeric:tabular-nums;}
+.war-pcts b{color:var(--t);font-weight:800;}
+.inv-row{display:flex;align-items:flex-start;gap:10px;padding:12px 12px 12px 14px;position:relative;}
+.inv-row+.inv-row::before{content:'';position:absolute;top:0;right:0;left:14px;height:1px;background:var(--b);}
+.inv-rank{width:18px;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;padding-top:2px;}
+.inv-main{flex:1;min-width:0;}
+.inv-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.inv-name{font-size:15px;font-weight:700;color:var(--t);}
+.inv-meta{font-size:12px;color:var(--t2);margin-top:3px;font-variant-numeric:tabular-nums;}
+.inv-notes{font-size:12px;color:var(--t3);margin-top:3px;}
+.inv-actions{display:flex;gap:6px;flex-shrink:0;}
+.inv-actions .icon-btn{width:32px;height:32px;font-size:13px;}
+.tr-pill{font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.3px;}
+.tr-pill.ok{color:#a6cf9c;background:color-mix(in srgb,var(--green) 16%,transparent);}
+.tr-pill.no{color:#dd948a;background:color-mix(in srgb,var(--red) 16%,transparent);}
+.tr-pill.wait{color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent);}
+.tr-pill.special{color:#c9a3ea;background:rgba(185,138,224,.14);}
+.icon-btn.ok{color:#a6cf9c;font-weight:800;}
+.icon-btn.danger{color:#dd948a;font-weight:800;}
 .tr-stat{background:var(--surface);border:1px solid var(--b);border-radius:var(--r);padding:12px;text-align:center;}
 .tr-stat-n{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;}
 .tr-stat-l{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
@@ -811,7 +838,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v32'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v33'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -2758,131 +2785,116 @@ function renderTransferList(tc){
   var overQuota=active.slice(p.normal_limit);
 
   function statusHtml(s){
-    return s==='accepted'?'<span class="tr-status-accepted">✅ Accepted</span>':
-           s==='rejected'?'<span class="tr-status-rejected">❌ Rejected</span>':
-           '<span class="tr-status-pending">⏳ Pending</span>';
+    return s==='accepted'?'<span class="tr-pill ok">Accepted</span>':
+           s==='rejected'?'<span class="tr-pill no">Rejected</span>':
+           '<span class="tr-pill wait">Pending</span>';
   }
 
-  function inviteRow(inv,idx,bgColor,borderColor,rankColor){
-    var typeLabel=inv.invite_type==='special'?
-      '<span class="tr-badge tr-badge-special">⭐ Special</span>':
-      '<span class="tr-badge tr-badge-normal">📨 Normal</span>';
+  function inviteRow(inv,idx,rankColor){
     var powerOk=inv.invite_type==='special'||(inv.power<=p.power_cap);
-    var powerColor=powerOk?'var(--gold)':'var(--red)';
-    return '<div style="background:'+bgColor+';border:1px solid '+borderColor+';border-radius:12px;padding:12px;margin-bottom:8px;">'+
-      '<div class="tr-row-top">'+
-        '<div class="tr-row-rank" style="color:'+rankColor+';">'+(idx+1)+'</div>'+
-        '<div class="tr-row-info">'+
-          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+
-            '<div class="tr-row-name">'+inv.player_name+'</div>'+
-            typeLabel+
-            statusHtml(inv.status)+
-          '</div>'+
-          '<div class="tr-row-id">ID: '+inv.player_id+'</div>'+
-          '<div class="tr-row-meta">'+
-            '<span class="tr-badge tr-badge-power" style="color:'+powerColor+';">⚡ '+formatPower(inv.power)+'</span>'+
-            '<span class="tr-badge tr-badge-fc">'+inv.fc_level+'</span>'+
-            (inv.state_num?'<span class="tr-badge tr-badge-state">State '+inv.state_num+'</span>':'')+
-            (inv.alliance?'<span class="tr-badge tr-badge-alliance">'+inv.alliance+'</span>':'')+
-          '</div>'+
-          (inv.notes?'<div style="font-size:11px;color:var(--t2);margin-top:4px;">📝 '+inv.notes+'</div>':'')+
-        '</div>'+
-        '<div class="tr-actions">'+
-          '<button class="tr-btn tr-btn-edit tr-edit" data-id="'+inv.id+'">✏️</button>'+
-          (inv.status!=='accepted'?'<button class="tr-btn tr-btn-accept tr-accept" data-id="'+inv.id+'">✅</button>':'')+
-          (inv.status!=='rejected'?'<button class="tr-btn tr-btn-reject tr-reject" data-id="'+inv.id+'">❌</button>':'')+
-        '</div>'+
+    var meta=['ID '+escHtml(inv.player_id||'')];
+    if(inv.fc_level) meta.push(escHtml(inv.fc_level));
+    if(inv.state_num) meta.push('State '+escHtml(inv.state_num));
+    if(inv.alliance) meta.push(escHtml(inv.alliance));
+    return '<div class="inv-row">'+
+      '<span class="inv-rank" style="color:'+rankColor+';">'+(idx+1)+'</span>'+
+      '<div class="inv-main">'+
+        '<div class="inv-top"><span class="inv-name">'+escHtml(inv.player_name)+'</span>'+
+          (inv.invite_type==='special'?'<span class="tr-pill special">Special</span>':'')+
+          statusHtml(inv.status)+'</div>'+
+        '<div class="inv-meta"><b style="color:'+(powerOk?'var(--gold)':'var(--red)')+';">'+formatPower(inv.power)+'</b> · '+meta.join(' · ')+'</div>'+
+        (inv.notes?'<div class="inv-notes">'+escHtml(inv.notes)+'</div>':'')+
+      '</div>'+
+      '<div class="inv-actions">'+
+        '<button class="icon-btn tr-edit" data-id="'+inv.id+'" title="Edit" aria-label="Edit invite">✏️</button>'+
+        (inv.status!=='accepted'?'<button class="icon-btn ok tr-accept" data-id="'+inv.id+'" title="Mark accepted" aria-label="Mark accepted">✓</button>':'')+
+        (inv.status!=='rejected'?'<button class="icon-btn danger tr-reject" data-id="'+inv.id+'" title="Mark rejected" aria-label="Mark rejected">✕</button>':'')+
       '</div>'+
     '</div>';
   }
 
-  // Add invite form
   var fcOpts=['FC-30','FC-1','FC-2','FC-3','FC-4','FC-5','FC-6','FC-7','FC-8'].map(function(f){
     return '<option value="'+f+'">'+f+'</option>';
   }).join('');
-  
   var allianceOpts='<option value="">— Alliance —</option>'+getAllAlliances().map(function(a){ return '<option value="'+a+'">'+a+'</option>'; }).join('');
+  var addFormHtml=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
+      '<input class="inp" id="trId" placeholder="Player ID" autocomplete="off" inputmode="numeric">'+
+      '<input class="inp" id="trName" placeholder="Player name" autocomplete="off">'+
+      '<input class="inp" id="trPower" placeholder="Power (e.g. 290M)" autocomplete="off">'+
+      '<select class="sel" id="trFc">'+fcOpts+'</select>'+
+      '<input class="inp" id="trState" placeholder="State number" autocomplete="off" inputmode="numeric">'+
+      '<select class="sel" id="trAlliance">'+allianceOpts+'</select>'+
+      '<select class="sel" id="trType">'+
+        '<option value="normal">Normal invite</option>'+
+        '<option value="special">Special invite</option>'+
+      '</select>'+
+      '<input class="inp" id="trNotes" placeholder="Notes (optional)" autocomplete="off">'+
+    '</div>'+
+    '<div style="font-size:12px;color:var(--t3);">Normal invites must be at or under the '+formatPower(p.power_cap)+' power cap.</div>';
+
+  function statTile(label,used,limit,acc,color){
+    var pct=Math.min(100,Math.round((used/Math.max(1,limit))*100));
+    return '<div class="home-tile" style="cursor:default;">'+
+      '<span class="home-eyebrow">'+label+'</span>'+
+      '<span class="home-tile-v" style="color:'+color+';font-variant-numeric:tabular-nums;">'+used+' / '+limit+'</span>'+
+      '<div class="tr-bar" style="margin-top:0;"><div class="tr-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div>'+
+      '<span class="pres-then">'+acc+' accepted</span>'+
+    '</div>';
+  }
+  function section(label,color,rows){
+    return '<div class="glabel" style="color:'+color+';">'+label+'</div><div class="group">'+rows+'</div>';
+  }
 
   tc.innerHTML=
-    // Stats
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">'+
-      '<div class="tr-stat">'+
-        '<div class="tr-stat-n" style="color:#2a9fd6;">'+normal.length+'/'+p.normal_limit+'</div>'+
-        '<div class="tr-stat-l">Normal Invites</div>'+
-        '<div class="tr-bar"><div class="tr-bar-fill" style="width:'+normalPct+'%;background:linear-gradient(90deg,#2a9fd6,var(--ac));"></div></div>'+
-        '<div style="font-size:10px;color:var(--green);margin-top:4px;">'+normalAcc+' accepted</div>'+
-      '</div>'+
-      '<div class="tr-stat">'+
-        '<div class="tr-stat-n" style="color:#bf5af2;">'+special.length+'/'+p.special_limit+'</div>'+
-        '<div class="tr-stat-l">Special Invites</div>'+
-        '<div class="tr-bar"><div class="tr-bar-fill" style="width:'+specialPct+'%;background:linear-gradient(90deg,#bf5af2,#da8fff);"></div></div>'+
-        '<div style="font-size:10px;color:var(--green);margin-top:4px;">'+specialAcc+' accepted</div>'+
-      '</div>'+
+    '<div class="hero">'+
+      '<span class="hero-top"><span class="home-eyebrow">Transfer period</span><span class="home-pill open"><span class="dot"></span>Active</span></span>'+
+      '<span class="hero-mid"><span class="hero-big" style="font-size:22px;color:var(--t);">'+escHtml(p.name||'')+'</span></span>'+
+      '<span class="hero-meta"><span>Power cap for normal invites</span><b style="color:var(--gold);">'+formatPower(p.power_cap)+'</b></span>'+
     '</div>'+
-    '<div style="background:color-mix(in srgb,var(--gold) 6%,transparent);border:1px solid color-mix(in srgb,var(--gold) 15%,transparent);border-radius:10px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--gold);">'+
-      '⚡ Power cap: '+formatPower(p.power_cap)+' · Period: '+p.name+
+    '<div class="home-tiles">'+
+      statTile('Normal invites',normal.length,p.normal_limit,normalAcc,'#5fa8d8')+
+      statTile('Special invites',special.length,p.special_limit,specialAcc,'#b98ae0')+
     '</div>'+
-    // Add form
-    '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-bottom:14px;">'+
-      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">➕ Add Invite</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
-        '<input class="inp" id="trId" placeholder="Player ID" autocomplete="off">'+
-        '<input class="inp" id="trName" placeholder="Player Name" autocomplete="off">'+
-        '<input class="inp" id="trPower" placeholder="Power (e.g. 290M)" autocomplete="off">'+
-        '<select class="sel" id="trFc">'+fcOpts+'</select>'+
-        '<input class="inp" id="trState" placeholder="State Number" autocomplete="off">'+
-        '<select class="sel" id="trAlliance">'+allianceOpts+'</select>'+
-      '</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
-        '<select class="sel" id="trType">'+
-          '<option value="normal">📨 Normal Invite</option>'+
-          '<option value="special">⭐ Special Invite</option>'+
-        '</select>'+
-        '<input class="inp" id="trNotes" placeholder="Notes (optional)" autocomplete="off">'+
-      '</div>'+
-      '<button class="btn btn-p" id="trAddBtn">Add Invite</button>'+
-    '</div>'+
-    // List
-    // IN QUOTA section
-    (inQuota.length?
-      '<div style="font-size:11px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px;">🟢 In Quota ('+inQuota.length+'/'+p.normal_limit+')</div>'+
-      inQuota.map(function(inv,i){ return inviteRow(inv,i,'color-mix(in srgb,var(--green) 6%,transparent)','color-mix(in srgb,var(--green) 20%,transparent)','var(--green)'); }).join('')
-      :'')+
-    // OVER QUOTA section
-    (overQuota.length?
-      '<div style="font-size:11px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:12px;">🟡 Over Quota — Waiting List ('+overQuota.length+')</div>'+
-      overQuota.map(function(inv,i){ return inviteRow(inv,p.normal_limit+i,'color-mix(in srgb,var(--orange) 6%,transparent)','color-mix(in srgb,var(--orange) 20%,transparent)','var(--orange)'); }).join('')
-      :'')+
-    // REJECTED section  
-    (rejected.length?
-      '<div style="font-size:11px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:12px;">🔴 Rejected ('+rejected.length+')</div>'+
-      rejected.map(function(inv,i){ return inviteRow(inv,i,'color-mix(in srgb,var(--red) 4%,transparent)','color-mix(in srgb,var(--red) 15%,transparent)','var(--red)'); }).join('')
-      :'')+
-    (invites.length===0?'<div class="empty"><div class="empty-icon">📭</div><p>No invites yet. Add one above.</p></div>':'');
+    '<button class="btn btn-p" id="trOpenAdd" style="margin-top:12px;">+ Add invite</button>'+
+    (inQuota.length?section('In quota<span class="glabel-n">'+inQuota.length+' of '+p.normal_limit+'</span>','#a6cf9c',
+      inQuota.map(function(inv,i){ return inviteRow(inv,i,'#a6cf9c'); }).join('')):'')+
+    (overQuota.length?section('Waiting list<span class="glabel-n">'+overQuota.length+' over quota</span>','var(--orange)',
+      overQuota.map(function(inv,i){ return inviteRow(inv,p.normal_limit+i,'var(--orange)'); }).join('')):'')+
+    (rejected.length?section('Rejected<span class="glabel-n">'+rejected.length+'</span>','#dd948a',
+      rejected.map(function(inv,i){ return inviteRow(inv,i,'#dd948a'); }).join('')):'')+
+    (invites.length===0?'<div class="empty"><div class="empty-icon">📭</div><p>No invites yet. Tap Add invite to start.</p></div>':'');
 
-  // Add invite
-  document.getElementById('trAddBtn').addEventListener('click',async function(){
-    var pid=document.getElementById('trId').value.trim();
-    var pname=document.getElementById('trName').value.trim();
-    var power=parsePower(document.getElementById('trPower').value);
-    var fc=document.getElementById('trFc').value;
-    var state=document.getElementById('trState').value.trim();
-    var alliance=document.getElementById('trAlliance').value;
-    var type=document.getElementById('trType').value;
-    var notes=document.getElementById('trNotes').value.trim();
-    if(!pid||!pname){ toast('Player ID and Name required'); return; }
-    // Check limits
-    if(type==='normal'&&normal.length>=p.normal_limit){ toast('Normal invite limit reached ('+p.normal_limit+')'); return; }
-    if(type==='special'&&special.length>=p.special_limit){ toast('Special invite limit reached ('+p.special_limit+')'); return; }
-    // Check power cap for normal
-    if(type==='normal'&&power>p.power_cap){ toast('Power exceeds cap ('+formatPower(p.power_cap)+') for normal invite!'); return; }
-    var row={period_id:p.id,player_id:pid,player_name:pname,power:power,fc_level:fc,state_num:state,alliance:alliance,invite_type:type,status:'pending',notes:notes,added_by:SESSION.name};
-    var r=await sb.from('transfer_invites').insert([row]).select().single();
-    if(r.error){ toast('Error: '+r.error.message); return; }
-    TRANSFER_INVITES.push(r.data);
-    toast('✅ Invite added!');
-    ['trId','trName','trPower','trState','trNotes'].forEach(function(id){ document.getElementById(id).value=''; });
-    render();
+  // Add invite: the form lives in a sheet so the list comes first.
+  document.getElementById('trOpenAdd').addEventListener('click',function(){
+    openModal({
+      title:'Add invite',
+      bodyHtml:addFormHtml,
+      actions:[
+        {label:'Cancel',kind:'ghost'},
+        {label:'Add invite',kind:'primary',onClick:async function(close){
+          var pid=document.getElementById('trId').value.trim();
+          var pname=document.getElementById('trName').value.trim();
+          var power=parsePower(document.getElementById('trPower').value);
+          var fc=document.getElementById('trFc').value;
+          var state=document.getElementById('trState').value.trim();
+          var alliance=document.getElementById('trAlliance').value;
+          var type=document.getElementById('trType').value;
+          var notes=document.getElementById('trNotes').value.trim();
+          if(!pid||!pname){ toast('Player ID and Name required'); return; }
+          if(type==='normal'&&normal.length>=p.normal_limit){ toast('Normal invite limit reached ('+p.normal_limit+')'); return; }
+          if(type==='special'&&special.length>=p.special_limit){ toast('Special invite limit reached ('+p.special_limit+')'); return; }
+          if(type==='normal'&&power>p.power_cap){ toast('Power exceeds cap ('+formatPower(p.power_cap)+') for normal invite!'); return; }
+          var row={period_id:p.id,player_id:pid,player_name:pname,power:power,fc_level:fc,state_num:state,alliance:alliance,invite_type:type,status:'pending',notes:notes,added_by:SESSION.name};
+          var r=await sb.from('transfer_invites').insert([row]).select().single();
+          if(r.error){ toast('Error: '+r.error.message); return; }
+          TRANSFER_INVITES.push(r.data);
+          close();
+          toast('✅ Invite added!');
+          render();
+        }}
+      ]
+    });
   });
 
   // Edit
@@ -2929,19 +2941,19 @@ function renderTransferAdmin(tc){
   var p=TRANSFER_PERIOD;
 
   tc.innerHTML=
-    '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">📅 Current Period</div>'+
+    '<div class="glabel" style="margin-top:4px;">Current period</div>'+
+    '<div class="panel">'+
       '<div style="margin-bottom:8px;"><label style="font-size:11px;color:var(--t2);">Period Name</label><input class="inp" id="trPName" value="'+p.name+'" style="margin-top:4px;"></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">'+
         '<div><label style="font-size:11px;color:var(--t2);">Normal Limit</label><input class="inp" id="trNLimit" type="number" value="'+p.normal_limit+'" style="margin-top:4px;"></div>'+
         '<div><label style="font-size:11px;color:var(--t2);">Special Invites</label><input class="inp" id="trSLimit" type="number" value="'+p.special_limit+'" style="margin-top:4px;"></div>'+
         '<div><label style="font-size:11px;color:var(--t2);">Power Cap</label><input class="inp" id="trPCap" value="'+formatPower(p.power_cap)+'" style="margin-top:4px;"></div>'+
       '</div>'+
-      '<button class="btn btn-p" id="trSavePeriod" style="margin-bottom:8px;">💾 Save Period Settings</button>'+
-      '<button class="btn btn-d" id="trNewPeriod">🔄 End Period & Start New</button>'+
+      '<button class="btn btn-p" id="trSavePeriod" style="margin-bottom:8px;">Save period settings</button>'+
+      '<button class="btn btn-d" id="trNewPeriod">End period & start new</button>'+
     '</div>'+
-    '<div style="background:color-mix(in srgb,var(--gold) 4%,transparent);border:1px solid color-mix(in srgb,var(--gold) 13%,transparent);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">✈️ Transfer Managers</div>'+
+    '<div class="glabel">Transfer managers</div>'+
+    '<div class="panel">'+
       '<div style="font-size:12px;color:var(--t2);margin-bottom:10px;">Add players with "TRANSFER" alliance to give them access.</div>'+
       '<div style="display:flex;gap:8px;margin-bottom:10px;">'+
         '<select class="sel" id="trMgrPlayer" style="flex:1;">'+groupedPlayerOpts(ALL_PLAYERS)+'</select>'+
@@ -3031,8 +3043,8 @@ function renderTransferEdit(tc){
   }).join('');
 
   tc.innerHTML=
-    '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">✏️ Edit Invite — '+inv.player_name+'</div>'+
+    '<div class="glabel" style="margin-top:4px;">Edit invite · '+escHtml(inv.player_name)+'</div>'+
+    '<div class="panel">'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'+
         '<div><label style="font-size:11px;color:var(--t2);">Player ID</label><input class="inp" id="edId" value="'+inv.player_id+'" style="margin-top:4px;"></div>'+
         '<div><label style="font-size:11px;color:var(--t2);">Player Name</label><input class="inp" id="edName" value="'+inv.player_name+'" style="margin-top:4px;"></div>'+
@@ -3045,10 +3057,10 @@ function renderTransferEdit(tc){
       '</div>'+
       '<div style="margin-bottom:12px;"><label style="font-size:11px;color:var(--t2);">Notes</label><input class="inp" id="edNotes" value="'+(inv.notes||'')+'" style="margin-top:4px;"></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
-        '<button class="btn btn-p" id="edSave">💾 Save Changes</button>'+
-        '<button class="btn btn-d" id="edDelete" style="background:color-mix(in srgb,var(--red) 12%,transparent);border-color:color-mix(in srgb,var(--red) 30%,transparent);color:var(--red);">🗑 Delete</button>'+
+        '<button class="btn btn-p" id="edSave">Save changes</button>'+
+        '<button class="btn btn-d" id="edDelete" style="background:color-mix(in srgb,var(--red) 12%,transparent);border-color:color-mix(in srgb,var(--red) 30%,transparent);color:var(--red);">Delete</button>'+
       '</div>'+
-      '<button class="btn btn-g" id="edCancel" style="margin-top:8px;">← Back to List</button>'+
+      '<button class="btn btn-g" id="edCancel" style="margin-top:8px;">Back to list</button>'+
     '</div>';
 
   document.getElementById('edSave').addEventListener('click',async function(){
@@ -5911,10 +5923,7 @@ function renderCjBoard(el, viewAlliance, isSuper, isCjAdm, myAlliance){
         return '<option value="'+al+'"'+(CJ_VIEW_ALLIANCE===al?' selected':'')+'>'+al+'</option>';
       }).join('');
     superAlliancePicker =
-      '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">'+
-        '<label style="font-size:11px;font-weight:700;color:rgba(230,213,180,.5);text-transform:uppercase;letter-spacing:.8px;flex-shrink:0;">View Alliance</label>'+
-        '<select class="sel" id="cjAllianceSel" style="flex:1;">'+alOpts+'</select>'+
-      '</div>';
+      '<select class="sel" id="cjAllianceSel" aria-label="View alliance" style="margin-bottom:6px;">'+alOpts+'</select>';
   }
 
   // Filter teams
@@ -5948,41 +5957,29 @@ function renderCjBoard(el, viewAlliance, isSuper, isCjAdm, myAlliance){
 
   alKeys.forEach(function(al){
     var alTeams = grouped[al];
-    if(alKeys.length>1){
-      html += '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgba(230,213,180,.45);margin-bottom:8px;margin-top:4px;">'+al+'</div>';
-    }
-
-    // Copy all teams button (admin only)
-    if(isCjAdm && (isSuper || al===myAlliance)){
-      html += '<button class="btn btn-g btn-sm" id="cjCopyAll_'+al+'" style="margin-bottom:10px;width:100%;">📋 Copy All Teams</button>';
+    var canCopy = isCjAdm && (isSuper || al===myAlliance);
+    if(alKeys.length>1||canCopy){
+      html += '<div class="glabel-row" style="margin-top:4px;"><span class="glabel" style="color:'+(ALLIANCE_COLORS[al]||'var(--t3)')+';">'+escHtml(al)+'<span class="glabel-n">'+alTeams.length+' team'+(alTeams.length===1?'':'s')+'</span></span>'+
+        (canCopy?'<button class="link-btn" id="cjCopyAll_'+al+'">Copy all</button>':'')+'</div>';
     }
 
     alTeams.forEach(function(team){
       var members = CJ_MEMBERS.filter(function(m){ return m.team_id===team.id; })
         .sort(function(a,b){ return a.position-b.position; });
       var memberCount = members.length;
-      var countColor = memberCount>=6?'var(--green)':memberCount===0?'var(--t3)':'var(--orange)';
+      var countColor = memberCount>=6?'#a6cf9c':memberCount===0?'var(--t3)':'var(--orange)';
 
       html +=
-        '<div class="card" style="margin-bottom:12px;">'+
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
-            '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(team.team_name)+'</div>'+
-            '<div style="display:flex;align-items:center;gap:8px;">'+
-              '<span style="font-size:12px;font-weight:700;color:'+countColor+';">'+memberCount+'/6</span>'+
-              (isCjAdm&&(isSuper||al===myAlliance)?
-                '<button class="btn btn-g btn-sm" id="cjCopyTeam_'+team.id+'">📋 Copy</button>':'')+
-            '</div>'+
-          '</div>'+
+        '<div class="team-hdr"><span class="team-name">'+escHtml(team.team_name)+'</span>'+
+          '<span class="team-count" style="color:'+countColor+';">'+memberCount+' / 6</span>'+
+          (canCopy?'<button class="link-btn" id="cjCopyTeam_'+team.id+'">Copy</button>':'')+
+        '</div>'+
+        '<div class="group" style="margin-bottom:14px;">'+
           (memberCount===0
-            ? '<div style="font-size:12px;color:var(--t3);text-align:center;padding:10px 0;">No members yet</div>'
-            : '<div style="display:flex;flex-direction:column;gap:4px;">'+
-                members.map(function(m,i){
-                  return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06);">'+
-                    '<span style="font-size:11px;font-weight:800;color:var(--t3);width:16px;text-align:right;">'+(i+1)+'.</span>'+
-                    '<span style="font-size:13px;font-weight:600;">'+escHtml(m.player_name)+'</span>'+
-                  '</div>';
-                }).join('')+
-              '</div>')+
+            ? '<div class="ord-row"><span class="ord-kind" style="color:var(--t3);">No members yet</span></div>'
+            : members.map(function(m,i){
+                return '<div class="ord-row"><span class="ord-n">'+(i+1)+'</span><span class="ord-kind" style="color:var(--t);font-size:15px;font-weight:600;">'+escHtml(m.player_name)+'</span></div>';
+              }).join(''))+
         '</div>';
     });
   });
@@ -6566,39 +6563,29 @@ function renderWarBoard(el, isAdm){
   var html='';
   alKeys.forEach(function(al){
     if(alKeys.length>1){
-      html+='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgba(230,213,180,.45);margin-bottom:8px;margin-top:4px;">'+escHtml(al)+'</div>';
+      html+='<div class="glabel" style="margin-top:4px;color:'+(ALLIANCE_COLORS[al]||'var(--t3)')+';">'+escHtml(al)+'</div>';
     }
     grouped[al].forEach(function(team){
       var members=WAR_MEMBERS.filter(function(m){ return m.team_id===team.id; }).sort(function(a,b){ return a.position-b.position; });
+      var heroes=[team.hero1,team.hero2,team.hero3].map(warHeroName).map(escHtml).join(' · ');
       html+=
-        '<div class="card" style="margin-bottom:12px;">'+
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;">'+
-            '<div style="min-width:0;">'+
-              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">'+
-                '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(team.team_name)+'</div>'+warTypeBadgeHtml(team)+
-              '</div>'+
-              '<div style="font-size:11px;color:var(--t3);">Leader: '+escHtml(team.leader_name)+'</div>'+
-            '</div>'+
-            '<div style="display:flex;gap:6px;flex-shrink:0;">'+
-              (isAdm?'<button class="btn btn-g btn-sm warCopyTeam" data-id="'+team.id+'">📋 Copy</button>':'')+
-              (isAdm?'<button class="btn btn-g btn-sm warDupBoard" data-id="'+team.id+'">⧉</button>':'')+
-            '</div>'+
+        '<div class="team-hdr" style="align-items:center;"><span class="team-name" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+escHtml(team.team_name)+warTypeBadgeHtml(team)+'</span>'+
+          (isAdm?'<button class="link-btn warCopyTeam" data-id="'+team.id+'">Copy</button>':'')+
+          (isAdm?'<button class="link-btn warDupBoard" data-id="'+team.id+'" title="Duplicate team" aria-label="Duplicate team">Duplicate</button>':'')+
+        '</div>'+
+        '<div class="group" style="margin-bottom:14px;">'+
+          '<div class="war-lead">'+
+            '<div class="war-lead-top"><span class="war-lead-lbl">Leader</span><span class="war-lead-name">'+escHtml(team.leader_name||'—')+'</span></div>'+
+            '<div class="war-lead-heroes">'+heroes+'</div>'+
+            '<div class="war-pcts"><span>Inf <b>'+(team.infantry_pct||0)+'%</b></span><span>Lan <b>'+(team.lancer_pct||0)+'%</b></span><span>Mar <b>'+(team.marksman_pct||0)+'%</b></span></div>'+
           '</div>'+
-          '<div style="font-size:12px;margin-bottom:10px;color:var(--t2);">'+
-            [team.hero1,team.hero2,team.hero3].map(warHeroName).map(escHtml).join(' / ')+
-            ' — Inf '+team.infantry_pct+'% Lan '+team.lancer_pct+'% Mar '+team.marksman_pct+'%</div>'+
           (members.length?
-            '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:rgba(230,213,180,.45);margin-bottom:6px;">Squad ('+members.length+')</div>'+
-            '<div style="display:flex;flex-direction:column;gap:4px;">'+
-              members.map(function(m,i){
-                return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06);font-size:12px;">'+
-                  '<span style="font-weight:800;color:var(--t3);width:16px;text-align:right;flex-shrink:0;">'+(i+1)+'.</span>'+
-                  '<span style="font-weight:600;flex-shrink:0;">'+escHtml(m.player_name)+'</span>'+
-                  '<span style="color:var(--t3);">'+escHtml(warHeroName(m.hero1))+'</span>'+
-                '</div>';
-              }).join('')+
-            '</div>'
-            :'<div style="font-size:11px;color:var(--t3);">No squad members yet</div>')+
+            members.map(function(m,i){
+              return '<div class="ord-row"><span class="ord-n">'+(i+1)+'</span>'+
+                '<span class="ord-kind" style="color:var(--t);font-size:15px;font-weight:600;">'+escHtml(m.player_name)+'</span>'+
+                '<span class="ord-st">'+escHtml(warHeroName(m.hero1))+'</span></div>';
+            }).join('')
+            :'<div class="ord-row"><span class="ord-kind" style="color:var(--t3);">No squad members yet</span></div>')+
         '</div>';
     });
   });
