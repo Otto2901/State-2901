@@ -501,6 +501,7 @@ var ROLE_INFO = {
   rally_admin:      { label:'Rally Timer Admin',guideKey:'rallytimer', desc:'You can open the Rally Timer march-sync calculator.' },
   presidency_admin: { label:'Presidency Admin', guideKey:'presidency', desc:'You can record SFC and SvS Supreme results, add past records, edit records, and reorder the presidency queues in the Presidency Ledger.' },
   minister_admin:   { label:'Minister Apps Admin', guideKey:'ministers', desc:'You can view SvS minister applications, add and edit entries, and assign or free time slots in Admin Panel › Ministers.' },
+  troops_admin:     { label:'Troops Viewer',   guideKey:'troops',   desc:'You can view the troop level reports of players and export them as CSV in Admin Panel › Troops. View only.' },
   moderator:       { label:'Moderator',       guideKey:null,       desc:'You have moderator status.' }
 };
 function createSb(token){
@@ -529,6 +530,7 @@ function isWarAdmin(name){ return isSuperAdmin(name)||hasRole(name,'war_admin');
 function isRallyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'rally_admin'); }
 function isPresidencyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'presidency_admin'); }
 function isMinisterAdmin(name){ return isSuperAdmin(name)||hasRole(name,'minister_admin'); }
+function isTroopsAdmin(name){ return isSuperAdmin(name)||hasRole(name,'troops_admin'); }
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
@@ -912,6 +914,18 @@ function pushPin(k){
   AUTH_ERR=''; render();
   if(PIN_INP.length===6) setTimeout(doConfirmPin,120);
 }
+// Desktop: type the PIN on the keyboard. Registered once (not per render),
+// active only on a PIN step with no dialog open and no text field focused.
+document.addEventListener('keydown',function(e){
+  if(SESSION||(AUTH_STEP!=='pin-login'&&AUTH_STEP!=='pin-new')) return;
+  if(e.ctrlKey||e.metaKey||e.altKey||e.repeat) return;
+  if(document.querySelector('.modal-overlay,#guideModalOverlay,#stateRulesModalOverlay')) return;
+  var t=e.target, tag=t&&t.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(t&&t.isContentEditable)) return;
+  if(/^[0-9]$/.test(e.key)){ e.preventDefault(); if(PIN_INP.length<6) pushPin(e.key); }
+  else if(e.key==='Backspace'){ e.preventDefault(); pushPin('DEL'); }
+  else if(e.key==='Escape'){ e.preventDefault(); AUTH_STEP='name'; PIN_INP=''; AUTH_ERR=''; render(); }
+});
 function logout(){
   SESSION=null; localStorage.removeItem('wos-session'); sb=createSb();
   AUTH_STEP='name'; NAME_INP=''; PIN_INP=''; AUTH_ERR='';
@@ -996,7 +1010,7 @@ function renderHome(app){
   }
   var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super">Super Admin</span>':
     getRoles(SESSION.name).map(function(r){
-      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'||r==='war_admin'||r==='rally_admin'||r==='presidency_admin'||r==='minister_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
+      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'||r==='war_admin'||r==='rally_admin'||r==='presidency_admin'||r==='minister_admin'||r==='troops_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
       return '<span class="role-badge '+cls+'">'+r.replace(/_/g,' ')+'</span>';
     }).join(' ');
 
@@ -1475,9 +1489,16 @@ function renderAuth(app){
   var stepChanged=(_lastAuthStep!==AUTH_STEP);
   _lastAuthStep=AUTH_STEP;
   var inner='';
+  // While minister apps are visible, visitors come for those, not for an account:
+  // the apply button goes on top as the primary action, login is framed as members only
+  var minOn=minIsVisible();
+  var ministerBtnHtml='';
   if(AUTH_STEP==='name'){
-    inner='<div class="home-hdr-seal"><div class="home-hdr-logo" style="font-size:44px;">🏰</div></div><div class="auth-title">State 2901</div><div class="auth-state">State Management System</div><div class="auth-sub">Enter your in-game name to continue.</div>'+
-      '<div class="auth-card card"><div class="field"><label class="lbl">Your In-Game Name</label><input class="inp" id="nameInp" placeholder="Name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>'+
+    var minTopHtml=!minOn?'':'<div class="auth-card"><button class="btn btn-p" id="ministerAppsBtn" style="padding:16px;font-size:15px;">👑 SvS Minister Applications<div style="font-size:11px;font-weight:600;margin-top:3px;letter-spacing:0;opacity:.85;">No account or PIN needed · see free times & apply</div></button></div>'+
+      '<div style="font-size:11px;color:var(--t3);text-align:center;letter-spacing:.3px;">State members with an account, log in below</div>';
+    inner='<div class="home-hdr-seal"><div class="home-hdr-logo" style="font-size:44px;">🏰</div></div><div class="auth-title">State 2901</div><div class="auth-state">State Management System</div>'+
+      (minOn?minTopHtml:'<div class="auth-sub">Enter your in-game name to continue.</div>')+
+      '<div class="auth-card card">'+(minOn?'<div style="font-size:12px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Member login</div>':'')+'<div class="field"><label class="lbl">Your In-Game Name</label><input class="inp" id="nameInp" placeholder="Name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>'+
       '<div class="err">'+AUTH_ERR+'</div><button class="btn btn-p" id="nameNext">Continue →</button></div>';
   } else {
     var isNew=AUTH_STEP==='pin-new';
@@ -1489,17 +1510,18 @@ function renderAuth(app){
     var numpad=keys.map(function(k){ if(!k[0]) return '<div class="nk nk-empty"></div>'; return '<div class="nk '+(k[1]==='DEL'?'nk-del':'')+'" data-k="'+k[1]+'">'+k[0]+'</div>'; }).join('');
     inner='<div class="home-hdr-seal"><div class="home-hdr-logo" style="font-size:40px;">🔐</div></div><div class="auth-title">'+(isNew?'Set Your PIN':'Enter PIN')+'</div><div class="auth-state">· State 2901 ·</div>'+
       '<div class="auth-sub">'+(isNew?'Hi <strong style="color:var(--ac)">'+NAME_INP+'</strong>! Set a 6-digit PIN.':'Welcome back, <strong style="color:var(--ac)">'+NAME_INP+'</strong>!')+'</div>'+
+      (isNew&&minOn?'<div class="auth-card"><button class="btn btn-p" id="ministerAppsBtn" style="padding:14px;font-size:14px;line-height:1.4;">👑 Here to apply for a minister slot?<div style="font-size:11px;font-weight:600;margin-top:3px;letter-spacing:0;opacity:.85;">No account needed. Tap here to apply.</div></button></div>':'')+
       '<div class="auth-card card"><div class="pin-dots">'+dots+'</div><div class="numpad">'+numpad+'</div><div class="err">'+AUTH_ERR+'</div><button class="btn btn-g" id="backBtn">← Back</button></div>';
   }
   var rulesLinkHtml='<div style="text-align:center;margin-top:14px;"><button id="stateRulesLink" style="background:none;border:none;color:rgba(196,155,92,.65);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:Manrope,sans-serif;">📜 View State Rules</button></div>';
   // Public, no-login module: big entry button under the auth card
-  var ministerBtnHtml=!minIsVisible()?'':'<div class="auth-card"><button class="btn btn-g" id="ministerAppsBtn" style="padding:16px;font-size:15px;border-color:rgba(201,151,75,.45);">👑 SvS Minister Applications<div style="font-size:11px;font-weight:600;color:var(--t2);margin-top:3px;letter-spacing:0;">No login needed · see free times & apply</div></button></div>';
+  if(AUTH_STEP==='pin-login'&&minOn) ministerBtnHtml='<div class="auth-card"><button class="btn btn-g" id="ministerAppsBtn" style="padding:16px;font-size:15px;border-color:rgba(201,151,75,.45);">👑 SvS Minister Applications<div style="font-size:11px;font-weight:600;color:var(--t2);margin-top:3px;letter-spacing:0;">No login needed · see free times & apply</div></button></div>';
   app.innerHTML='<div class="auth'+(stepChanged?' gate-in':'')+'">'+inner+ministerBtnHtml+rulesLinkHtml+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
   if(AUTH_STEP==='name'){
     var inp=document.getElementById('nameInp'); inp.value=NAME_INP;
     inp.addEventListener('input',function(e){ NAME_INP=e.target.value; });
     inp.addEventListener('keydown',function(e){ if(e.key==='Enter') doNameNext(); });
-    inp.focus();
+    if(!minOn) inp.focus(); // no keyboard pop-up steering visitors into login
     document.getElementById('nameNext').addEventListener('click',doNameNext);
     var agb=document.getElementById('authGuideBtn');
   } else {
@@ -3067,6 +3089,7 @@ function renderAdminPanel(app){
   if(isSuper||isTrMgr)    tabs.push({id:'transfer',icon:'✈️',label:'Transfer'});
   if(isSuper)              tabs.push({id:'stats',icon:'📊',label:'Stats'});
   if(isMinisterAdmin(SESSION.name)) tabs.push({id:'ministers',icon:'👑',label:'Ministers'});
+  if(isTroopsAdmin(SESSION.name)) tabs.push({id:'troops',icon:'🪖',label:'Troops'});
 
   // Ensure ADMIN_TAB is valid
   if(!tabs.find(function(t){ return t.id===ADMIN_TAB; })) ADMIN_TAB=tabs[0]?tabs[0].id:null;
@@ -3103,6 +3126,7 @@ function renderAdminPanel(app){
   if(ADMIN_TAB==='transfer') renderTransferAdmin(ac);
   if(ADMIN_TAB==='stats')    renderAdminStats(ac);
   if(ADMIN_TAB==='ministers') renderAdminMinisters(ac);
+  if(ADMIN_TAB==='troops')   renderAdminTroops(ac);
 }
 
 // ── PLAYERS TAB ──────────────────────────────────────────
@@ -3173,7 +3197,7 @@ function renderAdminPlayers(ac){
 
   function playerRowHtml(p){
     var role=getRole(p.name);
-    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin"||role==="rally_admin"||role==="presidency_admin"||role==="minister_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
+    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin"||role==="rally_admin"||role==="presidency_admin"||role==="minister_admin"||role==="troops_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
     var playerReps=ALLIANCE_REPS.filter(function(r){ return r.player_name===p.name; });
     var repTags=playerReps.map(function(r){
       if(r.alliance==='TRANSFER') return '<span style="font-size:9px;background:rgba(143,122,168,.12);color:#b494c4;border:1px solid rgba(143,122,168,.35);border-radius:5px;padding:1px 5px;">✈️ Transfer Rep</span>';
@@ -3431,7 +3455,7 @@ function renderAdminRoles(ac){
   var rolesHtml=Object.keys(byPlayer).sort().map(function(pname){
     var roles=byPlayer[pname];
     var badgesHtml=roles.map(function(r){
-      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'||r.role==='rally_admin'||r.role==='presidency_admin'||r.role==='minister_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
+      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'||r.role==='rally_admin'||r.role==='presidency_admin'||r.role==='minister_admin'||r.role==='troops_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
       return '<span class="role-badge '+badgeCls+'" style="margin-right:4px;">'+r.role.replace(/_/g," ")+'</span>'+
         '<button class="btn btn-d btn-sm revoke-role" data-player="'+pname+'" data-role="'+r.role+'" style="padding:3px 8px;font-size:10px;margin-right:4px;">✕</button>';
     }).join('');
@@ -3462,6 +3486,7 @@ function renderAdminRoles(ac){
           '<option value="rally_admin">⏱️ Rally Timer Admin</option>'+
           '<option value="presidency_admin">👑 Presidency Admin</option>'+
           '<option value="minister_admin">🗓️ Minister Apps Admin</option>'+
+          '<option value="troops_admin">🪖 Troops Viewer</option>'+
         '</select>'+
         '<button class="btn btn-g btn-sm" id="grantRoleBtn">Grant</button>'+
       '</div>'+
@@ -3530,7 +3555,8 @@ var GUIDE_CONTENT = {
   warteam:  { title:'⚔️ War Team Builder — How to use',   render: renderWarTeamGuideContent },
   rallytimer:{ title:'⏱️ Rally Timer — How to use',       render: renderRallyTimerGuideContent },
   presidency:{ title:'👑 Presidency Ledger — How to use', render: renderPresidencyGuideContent },
-  ministers: { title:'👑 SvS Minister Applications — How to use', render: renderMinisterGuideContent }
+  ministers: { title:'👑 SvS Minister Applications — How to use', render: renderMinisterGuideContent },
+  troops:    { title:'🪖 Troops — How to use', render: renderTroopsGuideContent }
 };
 function openGuideModal(key){
   var g=GUIDE_CONTENT[key]; if(!g) return;
@@ -4061,9 +4087,9 @@ async function minLoadAdmin(){
   MIN_APPS=res[1].data||[];
   MIN_ASSIGN=res[2].data||[];
   MIN_TAKEN=new Set(MIN_ASSIGN.map(function(a){ return a.position+':'+a.slot; }));
-  // Troop reports are super admin only (RLS too); minister_admin never loads them
+  // Troop reports: super admin + troops_admin only (RLS too); a plain minister_admin never loads them
   MIN_TROOPS=[];
-  if(isSuperAdmin(SESSION.name)){
+  if(isTroopsAdmin(SESSION.name)){
     var tr=await sb.from('player_troop_reports').select('*').order('created_at',{ascending:false});
     if(tr.error) console.warn('troop reports:',tr.error.message); else MIN_TROOPS=tr.data||[];
   }
@@ -4087,8 +4113,8 @@ function renderAdminMinisters(ac){
   }
   var isSup=isSuperAdmin(SESSION.name);
   var views=[['apps','Apps'],['schedule','Schedule'],['ids','IDs'],['rank','Rank']];
-  if(isSup) views.push(['troops','Troops'],['setup','Setup']);
-  if((MIN_ADMIN_VIEW==='setup'||MIN_ADMIN_VIEW==='troops')&&!isSup) MIN_ADMIN_VIEW='apps';
+  if(isSup) views.push(['setup','Setup']);
+  if(MIN_ADMIN_VIEW==='setup'&&!isSup) MIN_ADMIN_VIEW='apps';
   ac.innerHTML=
     '<div style="display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;">'+views.map(function(v){
       var on=MIN_ADMIN_VIEW===v[0];
@@ -4103,7 +4129,6 @@ function renderAdminMinisters(ac){
   if(MIN_ADMIN_VIEW==='schedule') renderMinSchedule(body,rerender);
   else if(MIN_ADMIN_VIEW==='ids') renderMinIdList(body,rerender);
   else if(MIN_ADMIN_VIEW==='rank') renderMinRank(body,rerender);
-  else if(MIN_ADMIN_VIEW==='troops'&&isSup) renderMinTroops(body,rerender);
   else if(MIN_ADMIN_VIEW==='setup'&&isSup) renderMinSetup(body,rerender);
   else renderMinApps(body,rerender);
 }
@@ -4521,8 +4546,22 @@ function renderMinIdList(el,rerender){
 
 // Troops: permanent troop level reports, one row per Player ID (latest
 // report), tap to see history. Kept across New SvS. Super admin only.
-function renderMinTroops(el,rerender){
-  if(!isSuperAdmin(SESSION.name)){ el.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
+// Admin Panel › Troops: super admin + troops_admin, view and CSV only (RLS: select only)
+var TROOPS_LOADED=false;
+function renderAdminTroops(ac){
+  if(!isTroopsAdmin(SESSION.name)){ ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
+  if(!TROOPS_LOADED){
+    ac.innerHTML='<div style="text-align:center;color:var(--t2);font-size:12px;padding:30px 0;">Loading...</div>';
+    sb.from('player_troop_reports').select('*').order('created_at',{ascending:false}).then(function(tr){
+      if(tr.error){ ac.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load: '+escHtml(tr.error.message||'')+'</p></div>'; return; }
+      MIN_TROOPS=tr.data||[]; TROOPS_LOADED=true; renderAdminTroops(ac);
+    });
+    return;
+  }
+  renderMinTroops(ac);
+}
+function renderMinTroops(el){
+  if(!isTroopsAdmin(SESSION.name)){ el.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
   var byPlayer={}, order=[];
   MIN_TROOPS.forEach(function(r){ // newest first, so the first seen is the latest
     if(!byPlayer[r.player_id]){ byPlayer[r.player_id]=[]; order.push(r.player_id); }
@@ -4531,8 +4570,10 @@ function renderMinTroops(el,rerender){
   var dt=function(s){ return new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}); };
   el.innerHTML=
     '<div style="display:flex;gap:8px;margin-bottom:10px;">'+
-      '<input class="inp" id="minTrSearch" type="search" autocomplete="off" placeholder="🔍 Search name or Player ID" value="'+escHtml(MIN_TROOP_SEARCH)+'" style="flex:1;padding:10px 12px;font-size:13px;">'+
+      '<input class="inp" id="minTrSearch" type="search" autocomplete="off" placeholder="🔍 Name or ID" value="'+escHtml(MIN_TROOP_SEARCH)+'" style="flex:1;padding:10px 12px;font-size:13px;">'+
       '<button class="btn btn-g btn-sm" id="minTrCsv" style="flex-shrink:0;"'+(MIN_TROOPS.length?'':' disabled')+'>⬇ CSV</button>'+
+      '<button class="btn btn-g btn-sm" id="minTrReload" title="Refresh" aria-label="Refresh" style="flex-shrink:0;">↻</button>'+
+      '<button class="btn btn-g btn-sm" id="minTrGuide" title="How to use" aria-label="How to use" style="flex-shrink:0;">❓</button>'+
     '</div>'+
     '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">'+order.length+' players · '+MIN_TROOPS.length+' reports. Kept permanently, New SvS doesn\'t delete them.</div>'+
     '<div id="minTrList"></div>';
@@ -4569,6 +4610,8 @@ function renderMinTroops(el,rerender){
   }
   el.querySelector('#minTrSearch').addEventListener('input',function(e){ MIN_TROOP_SEARCH=e.target.value; renderList(); });
   el.querySelector('#minTrCsv').addEventListener('click',minExportTroopsCsv);
+  el.querySelector('#minTrReload').addEventListener('click',function(){ TROOPS_LOADED=false; renderAdminTroops(el); });
+  el.querySelector('#minTrGuide').addEventListener('click',function(){ openGuideModal('troops'); });
   renderList();
 }
 function minExportTroopsCsv(){
@@ -4827,7 +4870,24 @@ function renderMinisterGuideContent(rc){
       guideStep(2,'Set the <strong>Prep Day 1 date</strong> and the <strong>second VP day</strong> (Day 2 or Day 5). Open needs a date.')+
       guideStep(3,'Deleting applications and <strong>New SvS</strong> (clears everything and hides the module) are super admin only.')+
       guideStep(4,'Give the <strong>Minister Apps Admin</strong> role in Admin Panel › Roles to let someone assign times for you.')+
-      guideStep(5,'<strong>Troops</strong>: every application also saves the player\'s troop levels as a dated report. The list shows each player\'s latest report, tap to see history, <strong>⬇ CSV</strong> exports everything. Reports are kept forever, New SvS doesn\'t delete them. Only super admin sees them.');
+      guideStep(5,'Every application also saves the player\'s troop levels. See them in <strong>Admin Panel › Troops</strong>.');
+  }
+  rc.innerHTML=html;
+}
+function renderTroopsGuideContent(rc){
+  var html=
+    guideSection('What this is')+
+    guideStep(1,'Every SvS minister application saves the player\'s troop levels as a dated report: tier (T9 to T11) and FC level for Infantry, Lancer and Marksman.')+
+    guideStep(2,'Reports are kept forever. New SvS doesn\'t delete them, so each player builds a history over time.')+
+    guideSection('Using the list')+
+    guideStep(1,'Each player appears once, with their <strong>latest</strong> report and its date. If the same Player ID applies again with new levels, the new report is shown automatically.')+
+    guideStep(2,'Tap a player with more than one report to see their older reports.')+
+    guideStep(3,'<strong>Search</strong> by name or Player ID. <strong>↻</strong> loads new reports. <strong>⬇ CSV</strong> exports every report for a spreadsheet.')+
+    guideStep(4,'This list is view only. Nobody can edit or delete reports from here.');
+  if(SESSION&&isSuperAdmin(SESSION.name)){
+    html+=
+      guideSection('Super admin only','#e3bc6a')+
+      guideStep(1,'Give the <strong>Troops Viewer</strong> role in Admin Panel › Roles to let someone see this list. They get this tab only, not minister applications.');
   }
   rc.innerHTML=html;
 }
