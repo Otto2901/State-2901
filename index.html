@@ -3744,6 +3744,7 @@ var MIN_APPS=[], MIN_ASSIGN=[], MIN_ADMIN_LOADED=false;
 var MIN_ADMIN_VIEW='apps', MIN_ADMIN_FILTER='progress';
 var MIN_TAKEN_NAME={};     // 'position:slot' → player name, public Availability only
 var MIN_ID_POS=null;       // selected position in the IDs view
+var MIN_RANK_POS=null, MIN_RANK_SORT='speed';  // Rank view state
 
 function minDay(key){
   if(key==='vp1') return 1;
@@ -4031,7 +4032,7 @@ function renderAdminMinisters(ac){
     return;
   }
   var isSup=isSuperAdmin(SESSION.name);
-  var views=[['apps','Applications'],['schedule','Schedule'],['ids','IDs']];
+  var views=[['apps','Apps'],['schedule','Schedule'],['ids','IDs'],['rank','Rank']];
   if(isSup) views.push(['setup','Setup']);
   if(MIN_ADMIN_VIEW==='setup'&&!isSup) MIN_ADMIN_VIEW='apps';
   ac.innerHTML=
@@ -4047,6 +4048,7 @@ function renderAdminMinisters(ac){
   var rerender=function(){ renderAdminMinisters(ac); };
   if(MIN_ADMIN_VIEW==='schedule') renderMinSchedule(body,rerender);
   else if(MIN_ADMIN_VIEW==='ids') renderMinIdList(body,rerender);
+  else if(MIN_ADMIN_VIEW==='rank') renderMinRank(body,rerender);
   else if(MIN_ADMIN_VIEW==='setup'&&isSup) renderMinSetup(body,rerender);
   else renderMinApps(body,rerender);
 }
@@ -4064,28 +4066,12 @@ function minStage(a){
   return 'progress';
 }
 function minHasAssign(a){ return MIN_ASSIGN.some(function(x){ return x.application_id===a.id; }); }
-// Estimated SvS Prep points a player would bring on a position's day, from
-// the per-unit values in minister_config.score_weights (vp group for both
-// VP days, edu group for Education). Speedups are stored in days, weights
-// are per minute. null = no weights set for that group.
-var MIN_W_KEYS=['construction','research','general','fc','rfc','shards'];
-function minWeights(pos){
-  var w=MIN_CFG&&MIN_CFG.score_weights&&MIN_CFG.score_weights[pos==='edu'?'edu':'vp'];
-  if(!w) return null;
-  return MIN_W_KEYS.some(function(k){ return Number(w[k])>0; })?w:null;
-}
-function minScore(a,pos){
-  var w=minWeights(pos); if(!w||!a) return null;
+// Speed score: the bottleneck for a minister day is speedups (FC is useless
+// without them), so rank by the day's speedup type + General, in days.
+// General counts toward every day a player applied for (accepted trade-off).
+function minSpeed(a,pos){
   var n=function(v){ v=Number(v); return isFinite(v)?v:0; };
-  return n(a.speed_construction)*1440*n(w.construction)+n(a.speed_research)*1440*n(w.research)+n(a.speed_general)*1440*n(w.general)+
-    n(a.fire_crystal)*n(w.fc)+n(a.refined_fc)*n(w.rfc)+n(a.fc_shards)*n(w.shards);
-}
-function minFmtPts(n){
-  if(n==null) return '';
-  if(n>=1e9) return (n/1e9).toFixed(n>=1e10?0:1).replace(/\.0$/,'')+'B';
-  if(n>=1e6) return (n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,'')+'M';
-  if(n>=1e3) return Math.round(n/1e3)+'K';
-  return String(Math.round(n));
+  return (pos==='edu'?n(a.speed_research):n(a.speed_construction))+n(a.speed_general);
 }
 var MIN_STAGE_LABEL={progress:'In progress',approved:'Approved',rejected:'Rejected'};
 var MIN_STAGE_COL={progress:'#c9974b',approved:'#7a9c72',rejected:'#b5554a'};
@@ -4105,7 +4091,6 @@ function renderMinApps(el,rerender){
     (minIsOpen()?'':'<div class="card" style="padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold);">'+
       (MIN_CFG&&MIN_CFG.status==='hidden'?'Module is hidden: players can\'t see it.':MIN_CFG&&MIN_CFG.status==='open'?'Applications are closed until the start date is set.':'Applications are closed: players can see free times but can\'t apply.')+
       (isSuperAdmin(SESSION.name)?' Change it in Setup.':'')+'</div>')+
-    (isSuperAdmin(SESSION.name)&&!minWeights('vp')&&!minWeights('edu')?'<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">💡 Set <strong>Scoring</strong> in Setup to see estimated points and ⇄ Swap suggestions.</div>':'')+
     '<div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;">'+filters.map(function(f){
       var on=MIN_ADMIN_FILTER===f[0];
       var c=f[0]==='all'?MIN_APPS.length:counts[f[0]];
@@ -4151,9 +4136,8 @@ function minAppCardHtml(a){
   var posRows=minPositions().map(function(k){
     var as=minAssignFor(a.id,k);
     var prefs=(a.prefs&&a.prefs[k])||[];
-    var myScore=minScore(a,k);
     var head='<div style="display:flex;gap:8px;align-items:baseline;"><div style="flex:1;font-size:11px;font-weight:800;color:#c9974b;">'+escHtml(minPosLabel(k))+'</div>'+
-      (myScore!=null?'<div title="Estimated SvS Prep points for this day" style="font-size:11px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;">≈ '+minFmtPts(myScore)+' pts</div>':'')+'</div>';
+      '<div title="'+(k==='edu'?'Research':'Construction')+' + General speedups" style="font-size:11px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;">⚡ '+minNum(minSpeed(a,k))+'d</div></div>';
     if(as){
       return '<div style="padding:8px 0;border-top:1px solid var(--b);">'+head+
         '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'+
@@ -4165,12 +4149,8 @@ function minAppCardHtml(a){
       var holder=minAssignAt(k,s);
       var label=['1st','2nd','3rd'][i]+' '+minSlotStart(s);
       if(holder){
-        var h=minAppById(holder.application_id), hScore=minScore(h,k);
-        // Stronger applicant than the current holder: offer a swap
-        if(myScore!=null&&hScore!=null&&myScore>hScore){
-          return '<button class="tog min-swap" data-id="'+a.id+'" data-pos="'+k+'" data-slot="'+s+'" title="Swap: '+escHtml(h.player_name)+' holds this time with fewer points" style="padding:5px 8px;font-size:11px;border-color:rgba(217,160,70,.6);color:#e0b060;background:rgba(217,160,70,.08);">⇄ '+label+' · '+escHtml(h.player_name)+' '+minFmtPts(hScore)+'</button>';
-        }
-        return '<span title="Taken by '+escHtml(h?h.player_name:'another player')+(hScore!=null?' · '+minFmtPts(hScore)+' pts':'')+'" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--b2);color:var(--t3);text-decoration:line-through;">'+label+'</span>';
+        var h=minAppById(holder.application_id);
+        return '<span title="Taken by '+escHtml(h?h.player_name:'another player')+'" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--b2);color:var(--t3);text-decoration:line-through;">'+label+'</span>';
       }
       return '<button class="tog min-assign" data-id="'+a.id+'" data-pos="'+k+'" data-slot="'+s+'" title="Assign '+minSlotLabel(s)+'" style="padding:5px 8px;font-size:11px;border-color:rgba(122,156,114,.45);color:#9cc093;">'+label+'</button>';
     }).join(''):'<span style="font-size:11px;color:var(--t3);">Not requested</span>';
@@ -4248,9 +4228,6 @@ function renderMinAppList(el,rerender){
   });
   el.querySelectorAll('.min-assign').forEach(function(b){
     b.addEventListener('click',function(){ minAssign(b.dataset.id,b.dataset.pos,parseInt(b.dataset.slot,10),rerender); });
-  });
-  el.querySelectorAll('.min-swap').forEach(function(b){
-    b.addEventListener('click',function(){ minSwap(b.dataset.id,b.dataset.pos,parseInt(b.dataset.slot,10),rerender); });
   });
   el.querySelectorAll('.min-other').forEach(function(s){
     s.addEventListener('change',function(){ if(s.value!=='') minAssign(s.dataset.id,s.dataset.pos,parseInt(s.value,10),rerender); });
@@ -4337,13 +4314,14 @@ async function minAssign(appId,pos,slot,rerender){
   toast('✅ '+a.player_name+' → '+MIN_POS_TITLE[pos]+' '+minSlotStart(slot)+(left?' · '+left+' more to go':' · approved'));
   rerender();
 }
-// Give a taken slot to a stronger applicant. The previous holder goes back
-// to In progress. Not atomic: if the new insert fails, the old row is restored.
+// Give a taken slot to another applicant (used by Rank › Replace). The
+// previous holder goes back to In progress. Not atomic: if the new insert
+// fails, the old row is restored.
 async function minSwap(appId,pos,slot,rerender){
   var a=minAppById(appId), old=minAssignAt(pos,slot); if(!a||!old) return;
   var h=minAppById(old.application_id);
   var hn=h?h.player_name:'the current holder';
-  if(!await confirmDanger('Give '+minSlotLabel(slot)+' UTC ('+MIN_POS_TITLE[pos]+', Day '+minDay(pos)+') to '+a.player_name+' ('+minFmtPts(minScore(a,pos))+' pts) instead of '+hn+(h?' ('+minFmtPts(minScore(h,pos))+' pts)':'')+'?\n\n'+hn+' goes back to In progress.',{title:'Swap time',confirmLabel:'Swap',danger:false})) return;
+  if(!await confirmDanger('Give '+minSlotLabel(slot)+' UTC ('+MIN_POS_TITLE[pos]+', Day '+minDay(pos)+') to '+a.player_name+' (⚡ '+minNum(minSpeed(a,pos))+'d) instead of '+hn+(h?' (⚡ '+minNum(minSpeed(h,pos))+'d)':'')+'?\n\n'+hn+' goes back to In progress.',{title:'Replace',confirmLabel:'Replace',danger:false})) return;
   var d=await sb.from('minister_assignments').delete().eq('position',pos).eq('slot',slot).select();
   if(d.error){ toast('Error: '+d.error.message); return; }
   if(!d.data||!d.data.length){ toast('Not swapped: permission denied'); return; }
@@ -4467,6 +4445,132 @@ function renderMinIdList(el,rerender){
   });
 }
 
+// Rank: everyone who asked for (or holds) a position, strongest first, so
+// weak assigned players and stronger waiting ones stand out. Goal is max
+// total output, so Replace… may give a waiting player a time they didn't ask for.
+function renderMinRank(el,rerender){
+  var pos=minPositions();
+  if(pos.indexOf(MIN_RANK_POS)<0) MIN_RANK_POS=pos[0];
+  var k=MIN_RANK_POS;
+  var sorts={speed:function(a){ return minSpeed(a,k); },fc:function(a){ return Number(a.fire_crystal)||0; },rfc:function(a){ return Number(a.refined_fc)||0; },shards:function(a){ return Number(a.fc_shards)||0; }};
+  var val=sorts[MIN_RANK_SORT]||sorts.speed;
+  var rows=MIN_APPS.filter(function(a){
+    return a.status!=='rejected'&&(((a.prefs&&a.prefs[k])||[]).length||minAssignFor(a.id,k));
+  }).map(function(a){ return {a:a,as:minAssignFor(a.id,k),v:val(a)}; });
+  rows.sort(function(x,y){ return (y.v-x.v)||((Number(y.a.fire_crystal)||0)-(Number(x.a.fire_crystal)||0)); });
+  var assigned=rows.filter(function(r){ return r.as; }), waiting=rows.filter(function(r){ return !r.as; });
+  var weakest=assigned.length?Math.min.apply(null,assigned.map(function(r){ return r.v; })):null;
+  var strongestWaiting=waiting.length?Math.max.apply(null,waiting.map(function(r){ return r.v; })):null;
+  var strongerCount=weakest==null?0:waiting.filter(function(r){ return r.v>weakest; }).length;
+  var spType=k==='edu'?'Research':'Construction';
+  var fmt=function(r){ return MIN_RANK_SORT==='speed'?'⚡ '+minNum(r.v)+'d':minNum(r.v); };
+  var freeCount=48-MIN_ASSIGN.filter(function(x){ return x.position===k; }).length;
+  el.innerHTML=
+    '<div style="display:flex;gap:6px;margin-bottom:10px;">'+pos.map(function(p){
+      var on=p===k, date=minDayDate(minDay(p));
+      return '<button class="tog min-rank-pos" data-pos="'+p+'" style="flex:1;min-width:0;padding:8px 4px;font-size:11px;line-height:1.35;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+
+        'Day '+minDay(p)+(date?' · '+date:'')+'<br><span style="color:#c9974b;">'+(p==='edu'?'Education':'VP')+'</span></button>';
+    }).join('')+'</div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">'+
+      '<span style="font-size:11px;color:var(--t3);">Sort by</span>'+
+      [['speed','⚡ Speedups'],['fc','FC'],['rfc','Refined FC'],['shards','Shards']].map(function(s){
+        var on=MIN_RANK_SORT===s[0];
+        return '<button class="tog min-rank-sort" data-s="'+s[0]+'" style="padding:5px 9px;font-size:11px;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+s[1]+'</button>';
+      }).join('')+
+    '</div>'+
+    '<div class="card" style="padding:10px 12px;margin-bottom:10px;font-size:12px;line-height:1.6;color:var(--t2);">'+
+      '<strong style="color:var(--t);">'+assigned.length+'</strong> assigned · <strong style="color:var(--t);">'+waiting.length+'</strong> waiting · '+freeCount+' free times'+
+      (strongerCount?'<div style="color:#e0b060;font-weight:700;">⚠ '+strongerCount+' waiting player'+(strongerCount===1?' is':'s are')+' stronger than the weakest assigned.</div>':'')+
+      (MIN_RANK_SORT==='speed'?'<div style="font-size:11px;color:var(--t3);">⚡ = '+spType+' + General speedups, in days.</div>':'')+
+    '</div>'+
+    (rows.length?rows.map(function(r,i){
+      var a=r.a;
+      var stronger=!r.as&&weakest!=null&&r.v>weakest;
+      var weak=r.as&&strongestWaiting!=null&&r.v<strongestWaiting;
+      var border=stronger?'rgba(217,160,70,.6)':weak?'rgba(181,85,74,.35)':'';
+      return '<div class="card min-rank-row" data-id="'+a.id+'" style="padding:10px 12px;margin-bottom:6px;'+(border?'border-color:'+border+';':'')+'">'+
+        '<div style="display:flex;align-items:center;gap:10px;">'+
+          '<div style="width:26px;flex-shrink:0;font-size:13px;font-weight:800;color:var(--t3);font-variant-numeric:tabular-nums;">'+(i+1)+'</div>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-size:13px;font-weight:800;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(a.player_name)+
+              ' <span style="font-weight:600;color:var(--t3);font-variant-numeric:tabular-nums;">· '+escHtml(a.player_id)+'</span></div>'+
+            '<div style="font-size:11px;margin-top:2px;">'+
+              (r.as?'<span style="color:#7a9c72;font-weight:700;">✓ '+minSlotStart(r.as.slot)+'</span>':'<span style="color:var(--t3);">waiting</span>')+
+              (stronger?' <span style="color:#e0b060;font-weight:700;">· stronger than an assigned player</span>':'')+
+              (weak?' <span style="color:var(--red);opacity:.85;">· weak</span>':'')+
+            '</div>'+
+            '<div style="font-size:10px;color:var(--t3);margin-top:3px;font-variant-numeric:tabular-nums;">'+
+              (k==='edu'?'Res ':'Constr ')+minNum(k==='edu'?a.speed_research:a.speed_construction)+'d · Gen '+minNum(a.speed_general)+'d · FC '+minNum(a.fire_crystal)+' · RFC '+minNum(a.refined_fc)+' · Sh '+minNum(a.fc_shards)+
+            '</div>'+
+          '</div>'+
+          '<div style="flex-shrink:0;text-align:right;font-size:14px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;">'+fmt(r)+'</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;">'+
+          (r.as?
+            '<button class="btn btn-g btn-sm min-rank-remove" data-slot="'+r.as.slot+'">Remove</button>':
+            (assigned.length?'<button class="btn btn-g btn-sm min-rank-replace" data-id="'+a.id+'"'+(stronger?' style="border-color:rgba(217,160,70,.6);color:#e0b060;"':'')+'>⇄ Replace…</button>':'')+
+            (freeCount?'<button class="btn btn-g btn-sm min-rank-free" data-id="'+a.id+'">+ Free time…</button>':''))+
+        '</div>'+
+      '</div>';
+    }).join(''):'<div class="empty"><div class="empty-icon">📊</div><p>No one applied for this position yet.</p></div>');
+
+  el.querySelectorAll('.min-rank-pos').forEach(function(b){ b.addEventListener('click',function(){ MIN_RANK_POS=b.dataset.pos; renderMinRank(el,rerender); }); });
+  el.querySelectorAll('.min-rank-sort').forEach(function(b){ b.addEventListener('click',function(){ MIN_RANK_SORT=b.dataset.s; renderMinRank(el,rerender); }); });
+  el.querySelectorAll('.min-rank-remove').forEach(function(b){
+    b.addEventListener('click',function(){ minUnassign(k,parseInt(b.dataset.slot,10),rerender); });
+  });
+  el.querySelectorAll('.min-rank-replace').forEach(function(b){
+    b.addEventListener('click',function(){
+      var a=minAppById(b.dataset.id); if(!a) return;
+      var av=minSpeed(a,k);
+      var list=assigned.slice().sort(function(x,y){ return minSpeed(x.a,k)-minSpeed(y.a,k); });
+      openModal({
+        title:'Replace who? · '+escHtml(MIN_POS_TITLE[k])+' Day '+minDay(k),
+        bodyRender:function(body){
+          body.innerHTML=
+            '<div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.6;"><strong style="color:var(--t);">'+escHtml(a.player_name)+'</strong> has ⚡ '+minNum(av)+'d. Weakest assigned first. The replaced player goes back to In progress.</div>'+
+            list.map(function(r){
+              var sp=minSpeed(r.a,k), lower=sp<av;
+              return '<button class="card min-rank-pick" data-slot="'+r.as.slot+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;cursor:pointer;font-family:inherit;'+(lower?'border-color:rgba(217,160,70,.5);':'')+'">'+
+                '<span style="font-size:13px;font-weight:800;color:#c9974b;font-variant-numeric:tabular-nums;width:46px;">'+minSlotStart(r.as.slot)+'</span>'+
+                '<span style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(r.a.player_name)+'</span>'+
+                '<span style="font-size:13px;font-weight:800;color:'+(lower?'#e0b060':'var(--t2)')+';font-variant-numeric:tabular-nums;">⚡ '+minNum(sp)+'d</span>'+
+              '</button>';
+            }).join('');
+          body.querySelectorAll('.min-rank-pick').forEach(function(p){
+            p.addEventListener('click',function(){
+              var ov=p.closest('.modal-overlay'), cb=ov&&ov.querySelector('.modal-close'); if(cb) cb.click();
+              minSwap(a.id,k,parseInt(p.dataset.slot,10),rerender);
+            });
+          });
+        },
+        actions:[{label:'Cancel',kind:'ghost'}]
+      });
+    });
+  });
+  el.querySelectorAll('.min-rank-free').forEach(function(b){
+    b.addEventListener('click',function(){
+      var a=minAppById(b.dataset.id); if(!a) return;
+      var prefs=(a.prefs&&a.prefs[k])||[];
+      var opts='';
+      for(var s=0;s<48;s++) if(!MIN_TAKEN.has(k+':'+s)) opts+='<option value="'+s+'">'+minSlotLabel(s)+(prefs.indexOf(s)>=0?' · '+['1st','2nd','3rd'][prefs.indexOf(s)]+' choice':'')+'</option>';
+      openModal({
+        title:'Free time · '+escHtml(a.player_name),
+        size:'sm',
+        bodyHtml:'<div style="font-size:12px;color:var(--t2);margin-bottom:10px;">'+escHtml(MIN_POS_TITLE[k])+', Day '+minDay(k)+'. Times are UTC.</div><select class="sel" id="minRankFreeSel">'+opts+'</select>',
+        actions:[
+          {label:'Cancel',kind:'ghost'},
+          {label:'Assign',kind:'primary',onClick:function(close){
+            var v=(document.getElementById('minRankFreeSel')||{}).value;
+            close();
+            if(v!=null&&v!=='') minAssign(a.id,k,parseInt(v,10),rerender);
+          }}
+        ]
+      });
+    });
+  });
+}
+
 function renderMinSchedule(el,rerender){
   var pos=minPositions();
   var th='style="padding:6px 4px;font-size:10px;font-weight:800;color:var(--t2);text-align:center;line-height:1.35;"';
@@ -4526,25 +4630,6 @@ function renderMinSetup(el,rerender){
       '</select></div>'+
       '<button class="btn btn-p" id="minSaveCfg">Save</button>'+
     '</div>'+
-    (function(){
-      var sw=c.score_weights||{};
-      var fields=[['construction','Construction','per min'],['research','Research','per min'],['general','General','per min'],['fc','Fire Crystal','per item'],['rfc','Refined FC','per item'],['shards','FC Shards','per item']];
-      function group(g,title){
-        var w=sw[g]||{};
-        return '<div style="font-size:12px;font-weight:800;color:#c9974b;margin:10px 0 6px;">'+title+'</div>'+
-          '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+fields.map(function(f){
-            return '<div><label class="lbl" for="minW_'+g+'_'+f[0]+'" style="margin-bottom:4px;">'+f[1]+' <span style="text-transform:none;font-weight:600;color:var(--t3);">'+f[2]+'</span></label>'+
-              '<input class="inp min-w" id="minW_'+g+'_'+f[0]+'" data-g="'+g+'" data-k="'+f[0]+'" type="number" min="0" step="any" inputmode="decimal" value="'+escHtml(w[f[0]]!=null?String(w[f[0]]):'')+'" placeholder="0" style="padding:9px;"></div>';
-          }).join('')+'</div>';
-      }
-      return '<div class="card brk" style="margin-bottom:12px;">'+
-        '<div style="font-family:var(--serif);font-size:15px;color:#c9974b;margin-bottom:6px;">Scoring</div>'+
-        '<div style="font-size:11px;color:var(--t3);line-height:1.6;">Use the points from the in-game SvS Prep task list. Speedups: points per 1 minute. Items: points per 1 item. Applications then show an estimated score per day, and ⇄ Swap appears when a stronger player wants a taken time. Kept across New SvS.</div>'+
-        group('vp','Vice President days')+
-        group('edu','Minister of Education day')+
-        '<button class="btn btn-p" id="minSaveW" style="margin-top:12px;">Save scoring</button>'+
-      '</div>';
-    })()+
     '<div class="card" style="border-color:rgba(181,85,74,.3);">'+
       '<div style="font-family:var(--serif);font-size:15px;color:var(--red);margin-bottom:6px;">New SvS</div>'+
       '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">Deletes every application and every assigned time, clears the start date and sets the module to Hidden. Copy the schedule first if you need it.</div>'+
@@ -4558,20 +4643,6 @@ function renderMinSetup(el,rerender){
     if(r.error){ toast('Error: '+r.error.message); return; }
     MIN_CFG=r.data;
     toast('✅ Saved');
-    rerender();
-  });
-  el.querySelector('#minSaveW').addEventListener('click',async function(){
-    var sw={vp:{},edu:{}}, bad=false;
-    el.querySelectorAll('.min-w').forEach(function(i){
-      var v=i.value.trim()===''?0:Number(i.value);
-      if(!isFinite(v)||v<0) bad=true;
-      sw[i.dataset.g][i.dataset.k]=v;
-    });
-    if(bad){ toast('Point values must be 0 or more'); return; }
-    var r=await sb.from('minister_config').update({score_weights:sw,updated_by:SESSION.name,updated_at:new Date().toISOString()}).eq('id',1).select().single();
-    if(r.error){ toast('Error: '+r.error.message); return; }
-    MIN_CFG=r.data;
-    toast('✅ Scoring saved');
     rerender();
   });
   el.querySelector('#minReset').addEventListener('click',async function(){
@@ -4605,7 +4676,7 @@ function renderMinisterGuideContent(rc){
       guideStep(2,'<strong>Applications</strong>: tap a green preference to assign it, or pick any free time from <strong>Other time…</strong>. A time can only be given to one player per position.')+
       guideStep(3,'New applications appear in <strong>In progress</strong>, first come first served: <strong>#1</strong> applied first, with the exact UTC time on each card. Tap <strong>↻ Refresh</strong> to load new ones. Once every position they asked for has a time, they move to <strong>Approved</strong> automatically. Not giving one? Tap <strong>✓ Finish</strong>. Assigned names show publicly in Availability.')+
       guideStep(4,'Approved and Rejected show as short rows: tap one to open it. Use <strong>Search</strong> to find any player by name or ID.')+
-      guideStep(5,'Each position shows <strong>≈ points</strong> the player would bring that day. If a time they want is held by someone with fewer points, an amber <strong>⇄ Swap</strong> chip appears: tap it to give them the time, the other player goes back to In progress.')+
+      guideStep(5,'<strong>⚡</strong> on each position is the player\'s speedups for that day: Construction + General for VP, Research + General for Education. <strong>Rank</strong> lists everyone for a day by it. Amber = waiting but stronger than someone assigned: <strong>Replace…</strong> gives them that player\'s time, even if they didn\'t ask for it, and the replaced player goes back to In progress.')+
       guideStep(6,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
       guideStep(7,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.')+
       guideStep(8,'<strong>IDs</strong>: pick the day, tap 📋 to copy a player\'s ID for in-game assignment. Copied rows get a ✓, <strong>Clear marks</strong> resets that day.');
@@ -4616,8 +4687,7 @@ function renderMinisterGuideContent(rc){
       guideStep(1,'<strong>Setup › Module status</strong>: <strong>Open</strong> = players can apply. <strong>Closed</strong> = players still see free/taken times but can\'t apply. <strong>Hidden</strong> = the button and home card disappear for everyone.')+
       guideStep(2,'Set the <strong>Prep Day 1 date</strong> and the <strong>second VP day</strong> (Day 2 or Day 5). Open needs a date.')+
       guideStep(3,'Deleting applications and <strong>New SvS</strong> (clears everything and hides the module) are super admin only.')+
-      guideStep(4,'Give the <strong>Minister Apps Admin</strong> role in Admin Panel › Roles to let someone assign times for you.')+
-      guideStep(5,'<strong>Setup › Scoring</strong>: enter the in-game SvS Prep points, separately for VP days and the Education day: per 1 minute of each speedup type and per 1 FC, Refined FC and FC Shard. Kept across New SvS.');
+      guideStep(4,'Give the <strong>Minister Apps Admin</strong> role in Admin Panel › Roles to let someone assign times for you.');
   }
   rc.innerHTML=html;
 }
