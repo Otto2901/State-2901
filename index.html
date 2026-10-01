@@ -4067,6 +4067,11 @@ function minHasAssign(a){ return MIN_ASSIGN.some(function(x){ return x.applicati
 var MIN_STAGE_LABEL={progress:'In progress',approved:'Approved',rejected:'Rejected'};
 var MIN_STAGE_COL={progress:'#c9974b',approved:'#7a9c72',rejected:'#b5554a'};
 var MIN_SEARCH='', MIN_EXPANDED=new Set();
+var MIN_QUEUE_NO={};       // application id → position in the In progress queue
+function minAppTime(a){
+  var d=new Date(a.created_at);
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'})+' · '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZone:'UTC'})+' UTC';
+}
 
 function renderMinApps(el,rerender){
   var counts={progress:0,approved:0,rejected:0};
@@ -4149,10 +4154,12 @@ function minAppCardHtml(a){
   var left=minRequested(a).filter(function(k){ return !minAssignFor(a.id,k); }).length;
   return '<div class="card" style="padding:12px 14px;margin-bottom:10px;">'+
     '<div style="display:flex;align-items:flex-start;gap:8px;">'+
+      (MIN_QUEUE_NO[a.id]?'<div title="Queue position" style="flex-shrink:0;min-width:34px;height:34px;padding:0 6px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#c9974b;border:1px solid rgba(201,151,75,.45);background:rgba(201,151,75,.1);font-variant-numeric:tabular-nums;">#'+MIN_QUEUE_NO[a.id]+'</div>':'')+
       '<div style="flex:1;min-width:0;">'+
         '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(a.player_name)+
           badge(MIN_STAGE_LABEL[st].toUpperCase(),MIN_STAGE_COL[st])+(a.source==='admin'?badge('ADMIN ENTRY','#a3b3c2'):'')+'</div>'+
-        '<div style="font-size:11px;color:var(--t2);margin-top:2px;">ID '+escHtml(a.player_id)+' · '+new Date(a.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC'+(a.entered_by?' · by '+escHtml(a.entered_by):'')+'</div>'+
+        '<div style="font-size:11px;color:var(--t2);margin-top:2px;">ID '+escHtml(a.player_id)+(a.entered_by?' · by '+escHtml(a.entered_by):'')+'</div>'+
+        '<div style="font-size:11px;font-weight:700;color:var(--t);margin-top:2px;font-variant-numeric:tabular-nums;">🕒 Applied '+minAppTime(a)+'</div>'+
       '</div>'+
       (MIN_EXPANDED.has(a.id)?'<button class="btn btn-g btn-sm min-collapse" data-id="'+a.id+'" aria-label="Collapse">▲</button>':'')+
     '</div>'+
@@ -4182,6 +4189,12 @@ function renderMinAppList(el,rerender){
     if(q) return String(a.player_name||'').toLowerCase().indexOf(q)>=0||String(a.player_id||'').indexOf(q)>=0;
     return MIN_ADMIN_FILTER==='all'||minStage(a)===MIN_ADMIN_FILTER;
   });
+  // In progress is a first-come queue: oldest on top, numbered #1, #2…
+  // over the whole queue, so the number doesn't change while searching.
+  var byAge=function(x,y){ return new Date(x.created_at)-new Date(y.created_at); };
+  MIN_QUEUE_NO={};
+  MIN_APPS.filter(function(a){ return minStage(a)==='progress'; }).sort(byAge).forEach(function(a,i){ MIN_QUEUE_NO[a.id]=i+1; });
+  if(!q&&MIN_ADMIN_FILTER==='progress') list.sort(byAge);
   el.innerHTML=
     (q?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">Searching all applications · '+list.length+' found</div>':'')+
     (list.length?list.map(function(a){
@@ -4499,7 +4512,7 @@ function renderMinisterGuideContent(rc){
       guideSection('For admins','#e3bc6a')+
       guideStep(1,'Manage everything in <strong>Admin Panel › Ministers</strong>. Only super admin and Minister Apps Admins see names and resources.')+
       guideStep(2,'<strong>Applications</strong>: tap a green preference to assign it, or pick any free time from <strong>Other time…</strong>. A time can only be given to one player per position.')+
-      guideStep(3,'New applications appear in <strong>In progress</strong>. Once every position they asked for has a time, they move to <strong>Approved</strong> automatically. Not giving one? Tap <strong>✓ Finish</strong>. Assigned names show publicly in Availability.')+
+      guideStep(3,'New applications appear in <strong>In progress</strong>, first come first served: <strong>#1</strong> applied first, with the exact UTC time on each card. Tap <strong>↻ Refresh</strong> to load new ones. Once every position they asked for has a time, they move to <strong>Approved</strong> automatically. Not giving one? Tap <strong>✓ Finish</strong>. Assigned names show publicly in Availability.')+
       guideStep(4,'Approved and Rejected show as short rows: tap one to open it. Use <strong>Search</strong> to find any player by name or ID.')+
       guideStep(5,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
       guideStep(6,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.')+
