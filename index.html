@@ -3895,9 +3895,12 @@ function minAvailabilityHtml(){
 // Troop levels: permanent data in player_troop_reports, super admin only.
 var MIN_TROOP_TYPES=[['inf','Infantry'],['lan','Lancer'],['mar','Marksman']];
 // Alliance on applications + troop reports. List comes from state_alliances()
-// (public RPC over alliance_colors); logged-in fallback is ALLIANCE_COLORS.
+// (public RPC, Rotation order); logged in, the Rotation list is already loaded.
 var MIN_ALLIANCES=null;
-function minAllyList(){ return (MIN_ALLIANCES&&MIN_ALLIANCES.length)?MIN_ALLIANCES.map(function(a){ return a.alliance; }):Object.keys(ALLIANCE_COLORS).sort(); }
+function minAllyList(){
+  if(MIN_ALLIANCES&&MIN_ALLIANCES.length) return MIN_ALLIANCES.map(function(a){ return a.alliance; });
+  return SESSION?getAllAlliances().slice():Object.keys(ALLIANCE_COLORS);
+}
 function minAllyColor(t){
   if(t==='OTHER') return '#a3b3c2';
   var f=MIN_ALLIANCES&&MIN_ALLIANCES.find(function(a){ return a.alliance===t; });
