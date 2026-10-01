@@ -3906,6 +3906,21 @@ function minTroopLine(rep){
   if(!rep) return '';
   return MIN_TROOP_TYPES.map(function(t){ return t[1].slice(0,3)+' '+escHtml(rep[t[0]+'_tier'])+'·'+escHtml(minFcLabel(rep[t[0]+'_fc'])); }).join(' · ');
 }
+// Troops tab: one column per troop type, tier big, FC as a pill.
+// Brighter = stronger, so the strongest players stand out at a glance.
+function minTroopGrid(rep,small){
+  var tierCol={T11:'#e3bc6a',T10:'var(--t)',T9:'var(--t3)'};
+  var fcIdx=function(v){ return v==='below'?0:parseInt(String(v).replace('FC',''),10)-4; }; // below=0, FC5=1 .. FC10=6
+  return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">'+MIN_TROOP_TYPES.map(function(t){
+    var tier=rep[t[0]+'_tier'], fc=rep[t[0]+'_fc'], lvl=fcIdx(fc)||0;
+    return '<div style="background:rgba(255,240,210,.03);border:1px solid var(--b);border-radius:10px;padding:'+(small?'5px 4px':'8px 4px')+';text-align:center;">'+
+      '<div style="font-size:9px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;">'+t[1]+'</div>'+
+      '<div style="font-size:'+(small?'14px':'18px')+';font-weight:800;color:'+(tierCol[tier]||'var(--t)')+';line-height:1.25;font-variant-numeric:tabular-nums;">'+escHtml(tier)+'</div>'+
+      '<div style="display:inline-block;margin-top:2px;padding:1px 8px;border-radius:999px;font-size:'+(small?'10px':'11px')+';font-weight:700;font-variant-numeric:tabular-nums;'+
+        'background:rgba(201,151,75,'+(0.06+lvl*0.05).toFixed(2)+');color:'+(lvl?'#e6d5b4':'var(--t3)')+';">'+escHtml(minFcLabel(fc))+'</div>'+
+    '</div>';
+  }).join('')+'</div>';
+}
 // tv = existing troop values {inf_tier,inf_fc,...} for prefill, or null
 function minTroopFormHtml(px,tv){
   tv=tv||{};
@@ -4593,10 +4608,10 @@ function renderMinTroops(el){
             '<div style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(l.player_name)+' <span style="font-weight:600;color:var(--t3);font-variant-numeric:tabular-nums;">· '+escHtml(id)+'</span></div>'+
             '<div style="font-size:10px;color:var(--t3);white-space:nowrap;">'+dt(l.created_at)+(hist.length>1?' · '+hist.length+' reports '+(open?'▲':'▼'):'')+'</div>'+
           '</div>'+
-          '<div style="font-size:12px;color:var(--t);margin-top:3px;font-variant-numeric:tabular-nums;">🪖 '+minTroopLine(l)+'</div>'+
+          '<div style="margin-top:8px;">'+minTroopGrid(l)+'</div>'+
         '</button>'+
         (open&&hist.length>1?'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--b);">'+hist.slice(1).map(function(r){
-          return '<div style="font-size:11px;color:var(--t2);margin-bottom:4px;font-variant-numeric:tabular-nums;"><span style="color:var(--t3);">'+dt(r.created_at)+(r.svs_start_date?' · SvS '+escHtml(r.svs_start_date):'')+'</span><br>'+minTroopLine(r)+'</div>';
+          return '<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--t3);margin-bottom:4px;font-variant-numeric:tabular-nums;">'+dt(r.created_at)+(r.svs_start_date?' · SvS '+escHtml(r.svs_start_date):'')+(r.player_name!==l.player_name?' · as '+escHtml(r.player_name):'')+'</div>'+minTroopGrid(r,true)+'</div>';
         }).join('')+'</div>':'')+
       '</div>';
     }).join(''):'<div class="empty"><div class="empty-icon">🪖</div><p>'+(q?'No match.':'No troop reports yet.')+'</p></div>';
