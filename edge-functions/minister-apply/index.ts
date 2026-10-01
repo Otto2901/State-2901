@@ -120,6 +120,14 @@ Deno.serve(async (req) => {
     troopRow[t + '_fc'] = fc;
   }
 
+  // Alliance: required, must be a state alliance tag or OTHER
+  const alliance = String(body?.alliance || '').trim();
+  if (alliance !== 'OTHER') {
+    const { data: allyRow, error: allyErr } = await db.from('alliance_colors').select('alliance').eq('alliance', alliance).maybeSingle();
+    if (allyErr) return json({ error: 'Server error.' }, 500);
+    if (!alliance || !allyRow) return json({ error: 'Select your alliance.' }, 400);
+  }
+
   const { data: cfg } = await db.from('minister_config').select('prep_start_date, status').eq('id', 1).maybeSingle();
   if (cfg?.status !== 'open' || !cfg?.prep_start_date) return json({ error: 'Applications are closed.' }, 403);
 
@@ -156,6 +164,7 @@ Deno.serve(async (req) => {
   const { data: appRow, error: insErr } = await db.from('minister_applications').insert({
     player_name: playerName,
     player_id: playerId,
+    alliance,
     ...resources,
     prefs,
     source: 'public',
@@ -167,6 +176,7 @@ Deno.serve(async (req) => {
   const { error: trErr } = await db.from('player_troop_reports').insert({
     player_id: playerId,
     player_name: playerName,
+    alliance,
     ...troopRow,
     source: 'public',
     svs_start_date: cfg.prep_start_date,

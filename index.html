@@ -3810,10 +3810,12 @@ async function minLoadCfg(){
 async function minLoadPublic(){
   var res=await Promise.all([
     sb.from('minister_config').select('*').eq('id',1).maybeSingle(),
-    sb.rpc('minister_taken_slots')
+    sb.rpc('minister_taken_slots'),
+    sb.rpc('state_alliances')
   ]);
   if(res[0].error) throw res[0].error;
   if(res[1].error) throw res[1].error;
+  if(!res[2].error&&Array.isArray(res[2].data)) MIN_ALLIANCES=res[2].data; // else fall back to ALLIANCE_COLORS
   MIN_CFG=res[0].data||{};
   MIN_TAKEN=new Set((res[1].data||[]).map(function(t){ return t.pos+':'+t.slot; }));
   MIN_TAKEN_NAME={};
@@ -3892,6 +3894,27 @@ function minAvailabilityHtml(){
 // adminMode: taken slots stay selectable (admin decides), no honeypot.
 // Troop levels: permanent data in player_troop_reports, super admin only.
 var MIN_TROOP_TYPES=[['inf','Infantry'],['lan','Lancer'],['mar','Marksman']];
+// Alliance on applications + troop reports. List comes from state_alliances()
+// (public RPC over alliance_colors); logged-in fallback is ALLIANCE_COLORS.
+var MIN_ALLIANCES=null;
+function minAllyList(){ return (MIN_ALLIANCES&&MIN_ALLIANCES.length)?MIN_ALLIANCES.map(function(a){ return a.alliance; }):Object.keys(ALLIANCE_COLORS).sort(); }
+function minAllyColor(t){
+  if(t==='OTHER') return '#a3b3c2';
+  var f=MIN_ALLIANCES&&MIN_ALLIANCES.find(function(a){ return a.alliance===t; });
+  return (f&&f.color)||ALLIANCE_COLORS[t]||'#a3b3c2';
+}
+function minAllyName(t){ return t==='OTHER'?'Other':t; }
+function minAllyTag(t){
+  if(!t) return '';
+  var c=minAllyColor(t);
+  return '<span style="display:inline-block;margin-left:6px;padding:0 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.4px;vertical-align:middle;color:'+c+';border:1px solid '+c+'55;background:'+c+'1a;">'+escHtml(minAllyName(t))+'</span>';
+}
+function minAllyOptions(cur,emptyLabel){
+  var list=minAllyList();
+  if(cur&&cur!=='OTHER'&&list.indexOf(cur)<0) list=list.concat([cur]);
+  return '<option value="">'+emptyLabel+'</option>'+list.map(function(t){ return '<option value="'+escHtml(t)+'"'+(cur===t?' selected':'')+'>'+escHtml(t)+'</option>'; }).join('')+
+    '<option value="OTHER"'+(cur==='OTHER'?' selected':'')+'>Other / not listed</option>';
+}
 var MIN_TIERS=['T9','T10','T11'];
 var MIN_FCS=[['below','Below FC5'],['FC5','FC5'],['FC6','FC6'],['FC7','FC7'],['FC8','FC8'],['FC9','FC9'],['FC10','FC10']];
 function minFcLabel(v){ return v==='below'?'<FC5':v; }
@@ -3966,6 +3989,7 @@ function minFormHtml(px,v,adminMode,troopOpt){
   }).join('');
   return inp('Name','Player name',v.player_name,'maxlength="40"')+
     inp('Id','Player ID',v.player_id,'inputmode="numeric" maxlength="20"')+
+    '<div class="field" style="margin-bottom:10px;"><label class="lbl" for="'+px+'Ally">Alliance</label><select class="sel" id="'+px+'Ally">'+minAllyOptions(v.alliance,'Select…')+'</select></div>'+
     '<div class="lbl" style="margin-top:4px;">Speedups (days)</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+
       numInp('SpC','Construction',v.speed_construction,'any')+
@@ -4019,6 +4043,8 @@ function minReadForm(root,px){
   var d={player_name:val('Name'),player_id:val('Id')};
   if(!d.player_name) return {err:'Enter your player name.'};
   if(!/^\d{1,20}$/.test(d.player_id)) return {err:'Player ID must be digits only.'};
+  d.alliance=val('Ally');
+  if(!d.alliance) return {err:'Select your alliance.'};
   var nums=[['speed_construction','SpC','Construction speedups',false],['speed_research','SpR','Research speedups',false],['speed_general','SpG','General speedups',false],
             ['fire_crystal','Fc','Fire Crystal',true],['refined_fc','Rfc','Refined Fire Crystal',true],['fc_shards','Sh','FC Shards',true]];
   for(var i=0;i<nums.length;i++){
@@ -4112,6 +4138,7 @@ async function minLoadAdmin(){
 }
 var MIN_TROOPS=[];         // player_troop_reports rows, newest first
 var MIN_TROOP_SEARCH='', MIN_TROOP_OPEN=new Set();
+var MIN_TROOP_ALLY='';     // '' = all, '__none' = no alliance, else the tag (by each player's latest report)
 function minTroopFor(appId){ return MIN_TROOPS.find(function(t){ return t.application_id===appId; }); }
 function minAssignFor(appId,pos){ return MIN_ASSIGN.find(function(a){ return a.application_id===appId&&a.position===pos; }); }
 function minAssignAt(pos,slot){ return MIN_ASSIGN.find(function(a){ return a.position===pos&&a.slot===slot; }); }
@@ -4218,7 +4245,7 @@ function minAppCompactHtml(a){
   return '<button class="card min-compact" data-id="'+a.id+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;cursor:pointer;font-family:inherit;">'+
     '<span aria-hidden="true" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+MIN_STAGE_COL[st]+';"></span>'+
     '<span style="flex:1;min-width:0;">'+
-      '<span style="display:block;font-size:13px;font-weight:800;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(a.player_name)+' <span style="font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums;">· '+escHtml(a.player_id)+'</span></span>'+
+      '<span style="display:block;font-size:13px;font-weight:800;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(a.player_name)+minAllyTag(a.alliance)+' <span style="font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums;">· '+escHtml(a.player_id)+'</span></span>'+
       '<span style="display:block;font-size:11px;margin-top:2px;line-height:1.5;">'+(st==='rejected'?'<span style="color:var(--red);">Rejected</span>':(short||'<span style="color:var(--t3);">No times</span>'))+'</span>'+
     '</span>'+
     '<span aria-hidden="true" style="color:var(--t3);font-size:16px;">›</span>'+
@@ -4261,7 +4288,7 @@ function minAppCardHtml(a){
     '<div style="display:flex;align-items:flex-start;gap:8px;">'+
       (MIN_QUEUE_NO[a.id]?'<div title="Queue position" style="flex-shrink:0;min-width:34px;height:34px;padding:0 6px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#c9974b;border:1px solid rgba(201,151,75,.45);background:rgba(201,151,75,.1);font-variant-numeric:tabular-nums;">#'+MIN_QUEUE_NO[a.id]+'</div>':'')+
       '<div style="flex:1;min-width:0;">'+
-        '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(a.player_name)+
+        '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(a.player_name)+minAllyTag(a.alliance)+
           badge(MIN_STAGE_LABEL[st].toUpperCase(),MIN_STAGE_COL[st])+(a.source==='admin'?badge('ADMIN ENTRY','#a3b3c2'):'')+'</div>'+
         '<div style="font-size:11px;color:var(--t2);margin-top:2px;">ID '+escHtml(a.player_id)+(a.entered_by?' · by '+escHtml(a.entered_by):'')+'</div>'+
         '<div style="font-size:11px;font-weight:700;color:var(--t);margin-top:2px;font-variant-numeric:tabular-nums;">🕒 Applied '+minAppTime(a)+'</div>'+
@@ -4488,10 +4515,10 @@ function openMinAdminForm(app,rerender){
           var flat=minTroopsFlat(r.troops), tres;
           var existing=minTroopFor(res.data.id);
           if(existing){
-            tres=await sb.from('player_troop_reports').update(Object.assign({},flat,{player_id:res.data.player_id,player_name:res.data.player_name})).eq('id',existing.id).select().single();
+            tres=await sb.from('player_troop_reports').update(Object.assign({},flat,{player_id:res.data.player_id,player_name:res.data.player_name,alliance:res.data.alliance})).eq('id',existing.id).select().single();
             if(!tres.error) MIN_TROOPS=MIN_TROOPS.map(function(x){ return x.id===existing.id?tres.data:x; });
           } else {
-            tres=await sb.from('player_troop_reports').insert([Object.assign({},flat,{player_id:res.data.player_id,player_name:res.data.player_name,source:'admin',entered_by:SESSION.name,svs_start_date:(MIN_CFG&&MIN_CFG.prep_start_date)||null,application_id:res.data.id})]).select().single();
+            tres=await sb.from('player_troop_reports').insert([Object.assign({},flat,{player_id:res.data.player_id,player_name:res.data.player_name,alliance:res.data.alliance,source:'admin',entered_by:SESSION.name,svs_start_date:(MIN_CFG&&MIN_CFG.prep_start_date)||null,application_id:res.data.id})]).select().single();
             if(!tres.error) MIN_TROOPS.unshift(tres.data);
           }
           if(tres.error) toast('Saved, but troop levels failed: '+tres.error.message);
@@ -4560,7 +4587,7 @@ function renderMinIdList(el,rerender){
 }
 
 // Troops: permanent troop level reports, one row per Player ID (latest
-// report), tap to see history. Kept across New SvS. Super admin only.
+// report), tap to see history. Kept across New SvS.
 // Admin Panel › Troops: super admin + troops_admin, view and CSV only (RLS: select only)
 var TROOPS_LOADED=false;
 function renderAdminTroops(ac){
@@ -4583,6 +4610,21 @@ function renderMinTroops(el){
     byPlayer[r.player_id].push(r);
   });
   var dt=function(s){ return new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}); };
+  var isSup=isSuperAdmin(SESSION.name);
+  // Alliance groups by each player's latest report, so a player who switched alliance moves with it
+  var groupOf=function(id){ return byPlayer[id][0].alliance||'__none'; };
+  var counts={};
+  order.forEach(function(id){ var g=groupOf(id); counts[g]=(counts[g]||0)+1; });
+  var groups=minAllyList().filter(function(t){ return counts[t]; });
+  Object.keys(counts).forEach(function(g){ if(g!=='OTHER'&&g!=='__none'&&groups.indexOf(g)<0) groups.push(g); });
+  if(counts.OTHER) groups.push('OTHER');
+  if(counts.__none) groups.push('__none');
+  if(MIN_TROOP_ALLY&&!counts[MIN_TROOP_ALLY]) MIN_TROOP_ALLY='';
+  var inGroup=function(id){ return !MIN_TROOP_ALLY||groupOf(id)===MIN_TROOP_ALLY; };
+  var chip=function(val,label,n,color){
+    var on=MIN_TROOP_ALLY===val;
+    return '<button class="tog min-tr-ally" data-a="'+escHtml(val)+'" aria-pressed="'+on+'" style="flex:0 0 auto;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap;border-color:'+(on?(color||'rgba(201,151,75,.6)'):'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:'+(color||'var(--t)')+';">'+escHtml(label)+' <span style="color:var(--t3);font-variant-numeric:tabular-nums;">'+n+'</span></button>';
+  };
   el.innerHTML=
     '<div style="display:flex;gap:8px;margin-bottom:10px;">'+
       '<input class="inp" id="minTrSearch" type="search" autocomplete="off" placeholder="🔍 Name or ID" value="'+escHtml(MIN_TROOP_SEARCH)+'" style="flex:1;padding:10px 12px;font-size:13px;">'+
@@ -4590,12 +4632,17 @@ function renderMinTroops(el){
       '<button class="btn btn-g btn-sm" id="minTrReload" title="Refresh" aria-label="Refresh" style="flex-shrink:0;">↻</button>'+
       '<button class="btn btn-g btn-sm" id="minTrGuide" title="How to use" aria-label="How to use" style="flex-shrink:0;">❓</button>'+
     '</div>'+
+    (order.length?'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;-webkit-overflow-scrolling:touch;">'+
+      chip('','All',order.length)+
+      groups.map(function(g){ return chip(g,g==='__none'?'No alliance':minAllyName(g),counts[g],g==='__none'?'var(--t3)':minAllyColor(g)); }).join('')+
+    '</div>':'')+
     '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">'+order.length+' players · '+MIN_TROOPS.length+' reports. Kept permanently, New SvS doesn\'t delete them.</div>'+
     '<div id="minTrList"></div>';
   var listEl=el.querySelector('#minTrList');
   function renderList(){
     var q=MIN_TROOP_SEARCH.trim().toLowerCase();
     var ids=order.filter(function(id){
+      if(!inGroup(id)) return false;
       if(!q) return true;
       var l=byPlayer[id][0];
       return String(l.player_name||'').toLowerCase().indexOf(q)>=0||String(id).indexOf(q)>=0;
@@ -4605,16 +4652,29 @@ function renderMinTroops(el){
       return '<div class="card" style="padding:10px 12px;margin-bottom:6px;">'+
         '<button class="min-tr-row" data-pid="'+escHtml(id)+'" style="display:block;width:100%;text-align:left;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;color:inherit;">'+
           '<div style="display:flex;gap:8px;align-items:baseline;">'+
-            '<div style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(l.player_name)+' <span style="font-weight:600;color:var(--t3);font-variant-numeric:tabular-nums;">· '+escHtml(id)+'</span></div>'+
+            '<div style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(l.player_name)+minAllyTag(l.alliance)+' <span style="font-weight:600;color:var(--t3);font-variant-numeric:tabular-nums;">· '+escHtml(id)+'</span></div>'+
             '<div style="font-size:10px;color:var(--t3);white-space:nowrap;">'+dt(l.created_at)+(hist.length>1?' · '+hist.length+' reports '+(open?'▲':'▼'):'')+'</div>'+
           '</div>'+
           '<div style="margin-top:8px;">'+minTroopGrid(l)+'</div>'+
         '</button>'+
+        // Super admin: set or fix the alliance on the latest report (older reports never asked for it)
+        (isSup?'<div style="display:flex;align-items:center;gap:8px;margin-top:8px;"><label for="minTrA_'+escHtml(l.id)+'" style="font-size:11px;color:var(--t3);">Alliance</label>'+
+          '<select class="sel min-tr-setally" id="minTrA_'+escHtml(l.id)+'" data-rid="'+escHtml(l.id)+'" style="flex:1;padding:6px 26px 6px 8px;font-size:12px;background-position:right 8px center;">'+minAllyOptions(l.alliance||'','— None —')+'</select></div>':'')+
         (open&&hist.length>1?'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--b);">'+hist.slice(1).map(function(r){
           return '<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--t3);margin-bottom:4px;font-variant-numeric:tabular-nums;">'+dt(r.created_at)+(r.svs_start_date?' · SvS '+escHtml(r.svs_start_date):'')+(r.player_name!==l.player_name?' · as '+escHtml(r.player_name):'')+'</div>'+minTroopGrid(r,true)+'</div>';
         }).join('')+'</div>':'')+
       '</div>';
-    }).join(''):'<div class="empty"><div class="empty-icon">🪖</div><p>'+(q?'No match.':'No troop reports yet.')+'</p></div>';
+    }).join(''):'<div class="empty"><div class="empty-icon">🪖</div><p>'+(q||MIN_TROOP_ALLY?'No match.':'No troop reports yet.')+'</p></div>';
+    listEl.querySelectorAll('.min-tr-setally').forEach(function(sel){
+      sel.addEventListener('change',async function(){
+        var rid=sel.dataset.rid; sel.disabled=true;
+        var r=await sb.from('player_troop_reports').update({alliance:sel.value||null}).eq('id',rid).select().single();
+        if(r.error){ toast('Error: '+r.error.message); sel.disabled=false; return; }
+        MIN_TROOPS=MIN_TROOPS.map(function(x){ return x.id===rid?r.data:x; });
+        toast('✅ Alliance saved');
+        renderMinTroops(el);
+      });
+    });
     listEl.querySelectorAll('.min-tr-row').forEach(function(b){
       b.addEventListener('click',function(){
         var id=b.dataset.pid; if(byPlayer[id].length<2) return;
@@ -4624,22 +4684,27 @@ function renderMinTroops(el){
     });
   }
   el.querySelector('#minTrSearch').addEventListener('input',function(e){ MIN_TROOP_SEARCH=e.target.value; renderList(); });
-  el.querySelector('#minTrCsv').addEventListener('click',minExportTroopsCsv);
+  el.querySelectorAll('.min-tr-ally').forEach(function(b){ b.addEventListener('click',function(){ MIN_TROOP_ALLY=b.dataset.a; renderMinTroops(el); }); });
+  // CSV follows the alliance filter: every report of the players in that group
+  el.querySelector('#minTrCsv').addEventListener('click',function(){
+    minExportTroopsCsv(MIN_TROOPS.filter(function(r){ return inGroup(r.player_id); }),MIN_TROOP_ALLY==='__none'?'no-alliance':MIN_TROOP_ALLY);
+  });
   el.querySelector('#minTrReload').addEventListener('click',function(){ TROOPS_LOADED=false; renderAdminTroops(el); });
   el.querySelector('#minTrGuide').addEventListener('click',function(){ openGuideModal('troops'); });
   renderList();
 }
-function minExportTroopsCsv(){
-  var cols=['created_at','svs_start_date','player_id','player_name','inf_tier','inf_fc','lan_tier','lan_fc','mar_tier','mar_fc','source','entered_by'];
+function minExportTroopsCsv(rows,tag){
+  rows=rows||MIN_TROOPS;
+  var cols=['created_at','svs_start_date','player_id','player_name','alliance','inf_tier','inf_fc','lan_tier','lan_fc','mar_tier','mar_fc','source','entered_by'];
   // Names are visitor input: neutralise spreadsheet formulas, then CSV-quote
   var cell=function(v){ v=v==null?'':String(v); if(/^[=+\-@\t\r]/.test(v)) v="'"+v; return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
-  var csv=[cols.join(',')].concat(MIN_TROOPS.map(function(r){ return cols.map(function(c){ return cell(r[c]); }).join(','); })).join('\r\n');
+  var csv=[cols.join(',')].concat(rows.map(function(r){ return cols.map(function(c){ return cell(r[c]); }).join(','); })).join('\r\n');
   var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   var url=URL.createObjectURL(blob), link=document.createElement('a');
-  link.href=url; link.download='troop-reports-'+new Date().toISOString().slice(0,10)+'.csv';
+  link.href=url; link.download='troop-reports-'+(tag?tag+'-':'')+new Date().toISOString().slice(0,10)+'.csv';
   document.body.appendChild(link); link.click(); link.remove();
   setTimeout(function(){ URL.revokeObjectURL(url); },1000);
-  toast('⬇ '+MIN_TROOPS.length+' reports exported');
+  toast('⬇ '+rows.length+' reports exported');
 }
 
 // Rank: everyone who asked for (or holds) a position, strongest first, so
@@ -4864,7 +4929,7 @@ function renderMinisterGuideContent(rc){
     guideSection('For players')+
     guideStep(1,'No login needed. Open <strong>SvS Minister Applications</strong> from the sign-in screen or the home screen.')+
     guideStep(2,'<strong>Availability</strong> shows free times and the names of players who got a time. When your name appears there, your application was approved.')+
-    guideStep(3,'In <strong>Apply</strong>, enter your name, Player ID, speedups (in days), Fire Crystal amounts and your highest troop tier and FC level for each troop type, then pick up to 3 times per position in order of preference. Tick <strong>Use the same times for all 3 positions</strong> to copy your Day 1 choices.')+
+    guideStep(3,'In <strong>Apply</strong>, enter your name, Player ID, alliance, speedups (in days), Fire Crystal amounts and your highest troop tier and FC level for each troop type, then pick up to 3 times per position in order of preference. Tick <strong>Use the same times for all 3 positions</strong> to copy your Day 1 choices.')+
     guideStep(4,'One application per Player ID. To change it, contact the state admin.');
   if(SESSION&&isMinisterAdmin(SESSION.name)){
     html+=
@@ -4897,12 +4962,14 @@ function renderTroopsGuideContent(rc){
     guideSection('Using the list')+
     guideStep(1,'Each player appears once, with their <strong>latest</strong> report and its date. If the same Player ID applies again with new levels, the new report is shown automatically.')+
     guideStep(2,'Tap a player with more than one report to see their older reports.')+
-    guideStep(3,'<strong>Search</strong> by name or Player ID. <strong>↻</strong> loads new reports. <strong>⬇ CSV</strong> exports every report for a spreadsheet.')+
-    guideStep(4,'This list is view only. Nobody can edit or delete reports from here.');
+    guideStep(3,'<strong>Search</strong> by name or Player ID. <strong>↻</strong> loads new reports. <strong>⬇ CSV</strong> exports the reports shown for a spreadsheet.')+
+    guideStep(4,'Tap an alliance above the list to show only its members. A player is grouped by the alliance in their latest application. <strong>No alliance</strong> = reports from before the alliance question was added.')+
+    guideStep(5,'This list is view only. Troop levels cannot be edited or deleted here.');
   if(SESSION&&isSuperAdmin(SESSION.name)){
     html+=
       guideSection('Super admin only','#e3bc6a')+
-      guideStep(1,'Give the <strong>Troops Viewer</strong> role in Admin Panel › Roles to let someone see this list. They get this tab only, not minister applications.');
+      guideStep(1,'Give the <strong>Troops Viewer</strong> role in Admin Panel › Roles to let someone see this list. They get this tab only, not minister applications.')+
+      guideStep(2,'Use the <strong>Alliance</strong> menu on a card to set or fix a player\'s alliance, for example on older reports. Only you can change it.');
   }
   rc.innerHTML=html;
 }
