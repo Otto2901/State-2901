@@ -307,6 +307,83 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .tab-ic{position:relative;display:block;}
 .tab-dot{position:absolute;top:0;right:-2px;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--bg);}
 
+/* DESKTOP — signed in on a wide screen: fixed side rail + wide content.
+   Below 1024px none of this applies and the phone layout is unchanged. */
+#rail{display:none;}
+@media (min-width:1024px){
+  body.has-rail{--rail-w:256px;--gut:max(44px,calc((100vw - var(--rail-w) - 1120px) / 2));}
+  body.has-rail #app{max-width:none;margin:0 0 0 var(--rail-w);}
+  body.has-rail #rail{display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;width:var(--rail-w);z-index:150;padding:26px 14px 16px;overflow-y:auto;scrollbar-width:none;
+    background:linear-gradient(180deg,#17110a 0%,#0e0a06 55%,#0b0906 100%);border-right:1px solid rgba(196,155,92,.1);}
+  body.has-rail #rail::after{content:'';position:fixed;top:0;bottom:0;left:calc(var(--rail-w) - 1px);width:1px;pointer-events:none;
+    background:linear-gradient(180deg,transparent 0%,rgba(217,171,92,.5) 18%,rgba(201,151,75,.22) 60%,transparent 100%);}
+  .rail-brand{display:flex;align-items:center;gap:12px;padding:0 8px 22px;}
+  .rail-seal{width:40px;height:40px;flex-shrink:0;border-radius:12px;display:grid;place-items:center;font-family:var(--serif);font-size:19px;font-weight:900;color:#1a1209;
+    background:var(--grad);box-shadow:0 0 0 1px rgba(255,236,200,.18) inset,0 6px 18px rgba(138,90,38,.35);}
+  .rail-name{font-family:var(--serif);font-size:17px;font-weight:700;letter-spacing:1px;line-height:1.1;
+    background:linear-gradient(135deg,#f0d9ad 0%,#c9974b 55%,#f6e7c8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .rail-date{font-size:11px;font-weight:600;color:var(--t3);margin-top:3px;}
+  .rail-nav{display:flex;flex-direction:column;gap:2px;}
+  .rail-lbl{font-size:11px;font-weight:700;color:var(--t3);padding:16px 10px 6px;}
+  .rail-item{display:flex;align-items:center;gap:11px;width:100%;min-height:40px;padding:6px 10px;border:none;border-radius:10px;background:none;color:var(--t2);
+    font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;text-align:left;cursor:pointer;position:relative;transition:background .15s var(--ease),color .15s var(--ease);}
+  .rail-item:hover{background:var(--surface);color:var(--t);}
+  .rail-item.on{background:var(--surface2);color:var(--t);}
+  .rail-item.on::before{content:'';position:absolute;left:-14px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#f0d9ad,#c9974b);box-shadow:0 0 10px rgba(217,171,92,.5);}
+  .rail-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;font-size:16px;}
+  .rail-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rail-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .rail-foot{margin-top:auto;padding-top:14px;display:flex;flex-direction:column;gap:2px;}
+  .rail-me{display:flex;align-items:center;gap:11px;width:100%;margin-top:10px;padding:10px;border:1px solid var(--b);border-radius:12px;background:var(--surface);
+    color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease);}
+  .rail-me:hover,.rail-me.on{border-color:var(--b2);background:var(--surface2);}
+  .rail-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;background:var(--grad);color:#1a1209;font-size:14px;font-weight:800;}
+  .rail-me-n{display:block;font-size:14px;font-weight:700;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rail-me-r{display:block;font-size:11px;color:var(--t3);margin-top:1px;}
+
+  /* Shell: the rail replaces the tab bar and the back-to-Home buttons */
+  body.has-rail .tabbar,body.has-rail .home-avatar,body.has-rail .mod-back.is-root{display:none;}
+  body.has-rail #app.push-in > *,body.has-rail #app.pop-in > *{animation:deskIn .22s var(--ease);}
+  body.has-rail .mod-nav{padding:0 calc(var(--gut) - 8px);}
+  body.has-rail .mod-nav-title{max-width:40vw;grid-column:2;}
+  body.has-rail .mod-nav-end{grid-column:3;}
+  body.has-rail .mod-large{padding:14px var(--gut) 22px;gap:16px;}
+  body.has-rail .mod-large-ic{width:54px;height:54px;border-radius:15px;font-size:28px;}
+  body.has-rail .mod-large-title{font-size:32px;}
+  body.has-rail .mod-large-sub{font-size:14px;}
+  body.has-rail .nav{margin:0 var(--gut) 20px;max-width:560px;}
+  body.has-rail .content{padding:2px var(--gut) 48px;}
+  body.has-rail .hdr{padding-left:var(--gut);padding-right:var(--gut);}
+  body.has-rail .content-form{max-width:calc(680px + 2 * var(--gut));}
+
+  /* Home becomes an overview: summary up top, the two module groups side by side */
+  body.has-rail .home,body.has-rail .home.has-tabs{padding:44px var(--gut) 40px;}
+  body.has-rail .home-top{margin-bottom:24px;}
+  body.has-rail .home-date{font-size:13px;}
+  body.has-rail .home-title{font-size:46px;letter-spacing:2px;}
+  body.has-rail .home-glance{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:stretch;}
+  body.has-rail .home-glance > :only-child{grid-column:1 / -1;}
+  body.has-rail .home-week{padding:22px 24px;border-radius:20px;}
+  body.has-rail .home-week-al{font-size:40px;}
+  body.has-rail .home-week-cd{font-size:30px;}
+  body.has-rail .home-glance .home-tiles{grid-template-columns:1fr;margin-top:0;}
+  body.has-rail .home-glance .home-tile{justify-content:center;padding:16px 18px;}
+  body.has-rail .home-mods{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;align-items:start;}
+
+  /* Admin section list: groups side by side */
+  body.has-rail #adminContent.adm-root{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:0 24px;align-items:start;}
+  body.has-rail #adminContent.adm-root .glabel{margin-top:4px;}
+}
+@keyframes deskIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+/* Pointer devices get hover feedback the touch layout never needed */
+@media (hover:hover) and (min-width:1024px){
+  .row,.home-tile,.home-week,.rules-topic-card{transition:background .15s var(--ease),border-color .15s var(--ease);}
+  .row:hover,.rules-topic-card:hover{background:rgba(232,210,168,.04);}
+  .home-tile:hover{background:var(--surface2);border-color:var(--b2);}
+  .home-week:hover{border-color:rgba(201,151,75,.4);}
+  .nav-btn:not(.on):hover{color:var(--t);}
+}
+
 /* FOOTER */
 .footer{text-align:center;padding:16px;font-size:10px;color:rgba(230,213,180,.18);letter-spacing:.5px;position:relative;z-index:1;}
 
@@ -603,6 +680,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 </style>
 </head>
 <body>
+<aside id="rail"></aside>
 <div id="app"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -784,7 +862,7 @@ function buildModuleHeader(moduleKey, emoji, title, sub, guideKey, backLabel, ic
   var helpBtn = guideKey?'<button class="mod-help" id="guideBtn" title="How to use" aria-label="How to use">?</button>':'';
   return '<div class="mod-hdr">'+
       '<div class="mod-nav">'+
-        '<button class="mod-back" id="backHome" aria-label="Back to '+(backLabel||'Home')+'">'+icon('chevL')+'<span>'+(backLabel||'Home')+'</span></button>'+
+        '<button class="mod-back'+(backLabel?'':' is-root')+'" id="backHome" aria-label="Back to '+(backLabel||'Home')+'">'+icon('chevL')+'<span>'+(backLabel||'Home')+'</span></button>'+
         '<div class="mod-nav-title" aria-hidden="true">'+title+'</div>'+
         '<div class="mod-nav-end">'+helpBtn+'</div>'+
       '</div>'+
@@ -834,7 +912,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v34'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v35'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1125,6 +1203,7 @@ function viewDepth(){ return !MODULE?(PROFILE_OPEN?1:0):(MODULE==='adminpanel'&&
 function render(){
   var prev=_lastView;
   renderView();
+  renderRail();
   var key=!SESSION?'auth':PROFILE_OPEN?'profile':!MODULE?'home':MODULE==='adminpanel'?'admin|'+(ADMIN_TAB||''):MODULE;
   _lastView={key:key,depth:viewDepth()};
   if(!prev||prev.key===key||key==='auth'||prev.key==='auth') return;
@@ -1222,8 +1301,6 @@ function renderHome(app){
 
   var isAdm=isSuperAdmin(SESSION.name)||!!getRole(SESSION.name);
   var today=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
-  var myP=ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
-  var hasAlliance=isSuperAdmin(SESSION.name)||(myP&&myP.alliance);
 
   // "This week" summary: whose rotation turn it is and how long the window has.
   var weekHtml='';
@@ -1250,22 +1327,14 @@ function renderHome(app){
     }).join('')+'</div>';
   }
 
-  function row(id,key,color,title,sub){
-    return '<button class="row" id="'+id+'">'+iconTile(key,color)+
-      '<span class="row-text"><span class="row-title">'+title+'</span><span class="row-sub">'+sub+'</span></span>'+
-      '<span class="row-chev">'+icon('chevR')+'</span></button>';
+  var mods=homeModules();
+  function rows(group){
+    return mods.filter(function(m){ return m.group===group; }).map(function(m){
+      return '<button class="row" id="'+m.id+'">'+iconTile(m.key,m.color)+
+        '<span class="row-text"><span class="row-title">'+m.title+'</span><span class="row-sub">'+m.sub+'</span></span>'+
+        '<span class="row-chev">'+icon('chevR')+'</span></button>';
+    }).join('');
   }
-  var events=
-    row('goRot','rotation',MOD_COLORS.rotation.text,'Stronghold Rotation','Weekly fort & stronghold selection')+
-    (hasAlliance?row('goCj','crazyjoe',MOD_COLORS.crazyjoe.text,'Crazy Joe','Team assignments for the event'):'')+
-    row('goWar','warteam',MOD_COLORS.warteam.text,'War Team Builder','Rally leader & squad formations')+
-    (isRallyAdmin(SESSION.name)?row('goRally','rallytimer',MOD_COLORS.rallytimer.text,'Rally Timer','March sync calculator'):'')+
-    (minIsVisible()?row('goMinisters','ministers','#d4a95e','SvS Minister Applications','Free times & apply for a minister slot'):'');
-  var state=
-    row('goPresidency','presidency',MOD_COLORS.presidency.text,'Presidency Ledger','SFC & SvS Supreme rotation')+
-    row('goTransfer','transfer',MOD_COLORS.transfer.text,'Transfer Management','Invite tracking & player management')+
-    row('goRules','rules',MOD_COLORS.rules.text,'State Rules','State rules & regulations')+
-    row('goLibrary','library',MOD_COLORS.library.text,'Library','Announcements & knowledge archive');
 
   var notifState = typeof Notification!=='undefined'?Notification.permission:'unsupported';
   var bellDotColor = notifState==='granted'?'var(--green)':notifState==='denied'?'#6b5a42':'var(--gold)';
@@ -1306,10 +1375,11 @@ function renderHome(app){
           '<button id="dismissPushBanner" class="home-note-x" aria-label="Dismiss">✕</button>'+
         '</div>';
       })()+
-      weekHtml+
-      presHtml+
-      '<div class="glabel">Events</div><div class="group">'+events+'</div>'+
-      '<div class="glabel">State</div><div class="group">'+state+'</div>'+
+      ((weekHtml||presHtml)?'<div class="home-glance">'+weekHtml+presHtml+'</div>':'')+
+      '<div class="home-mods">'+
+        '<section><div class="glabel">Events</div><div class="group">'+rows('Events')+'</div></section>'+
+        '<section><div class="glabel">State</div><div class="group">'+rows('State')+'</div></section>'+
+      '</div>'+
       '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
     '</div>'+
     (tabCount>1?'<nav class="tabbar" aria-label="Main">'+tabs+'</nav>':'');
@@ -1344,21 +1414,97 @@ function renderHome(app){
   var dpb=document.getElementById('dismissPushBanner');
   if(dpb) dpb.addEventListener('click',function(){ localStorage.setItem('push-dismissed','1'); render(); });
 
-  document.getElementById('goRot').addEventListener('click', function(){ MODULE='rotation'; ROT_TAB='board'; render(); });
-  document.getElementById('goTransfer').addEventListener('click', function(){ MODULE='transfer'; TR_TAB='list'; render(); });
-  var goCjBtn=document.getElementById('goCj');
-  if(goCjBtn) goCjBtn.addEventListener('click',function(){ MODULE='crazyjoe'; CJ_TAB='board'; CJ_VIEW_ALLIANCE=null; render(); });
-  document.getElementById('goWar').addEventListener('click',function(){ MODULE='warteam'; WAR_TAB='board'; WAR_EDIT_TEAM=null; WAR_EDIT_MEMBERS=[]; WAR_EDIT_HERO=undefined; render(); });
-  var goRallyBtn=document.getElementById('goRally');
-  if(goRallyBtn) goRallyBtn.addEventListener('click', function(){ MODULE='rallytimer'; render(); });
-  var goPresBtn=document.getElementById('goPresidency');
-  if(goPresBtn) goPresBtn.addEventListener('click', function(){ MODULE='presidency'; PRES_TAB='board'; render(); });
-  var goMinBtn=document.getElementById('goMinisters');
-  if(goMinBtn) goMinBtn.addEventListener('click', openMinisterModal);
-  document.getElementById('goRules').addEventListener('click', function(){ MODULE='rules'; RULES_TAB='board'; RULES_SELECTED=null; render(); });
-  document.getElementById('goLibrary').addEventListener('click', function(){ MODULE='library'; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
+  mods.forEach(function(m){ document.getElementById(m.id).addEventListener('click',m.go); });
   var goAdminBtn=document.getElementById('goAdmin');
-  if(goAdminBtn) goAdminBtn.addEventListener('click', function(){ MODULE='adminpanel'; ADMIN_TAB=null; render(); window.scrollTo(0,0); });
+  if(goAdminBtn) goAdminBtn.addEventListener('click', openAdminPanel);
+}
+
+// The module list behind both the Home screen and the desktop side rail, so
+// who sees which module is decided in one place.
+function homeModules(){
+  var myP=ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
+  var hasAlliance=isSuperAdmin(SESSION.name)||(myP&&myP.alliance);
+  function open(mod,reset){ return function(){ PROFILE_OPEN=false; MODULE=mod; if(reset) reset(); render(); }; }
+  return [
+    {id:'goRot',mod:'rotation',group:'Events',key:'rotation',color:MOD_COLORS.rotation.text,title:'Stronghold Rotation',short:'Rotation',sub:'Weekly fort & stronghold selection',
+      go:open('rotation',function(){ ROT_TAB='board'; })},
+    hasAlliance&&{id:'goCj',mod:'crazyjoe',group:'Events',key:'crazyjoe',color:MOD_COLORS.crazyjoe.text,title:'Crazy Joe',short:'Crazy Joe',sub:'Team assignments for the event',
+      go:open('crazyjoe',function(){ CJ_TAB='board'; CJ_VIEW_ALLIANCE=null; })},
+    {id:'goWar',mod:'warteam',group:'Events',key:'warteam',color:MOD_COLORS.warteam.text,title:'War Team Builder',short:'War Teams',sub:'Rally leader & squad formations',
+      go:open('warteam',function(){ WAR_TAB='board'; WAR_EDIT_TEAM=null; WAR_EDIT_MEMBERS=[]; WAR_EDIT_HERO=undefined; })},
+    isRallyAdmin(SESSION.name)&&{id:'goRally',mod:'rallytimer',group:'Events',key:'rallytimer',color:MOD_COLORS.rallytimer.text,title:'Rally Timer',short:'Rally Timer',sub:'March sync calculator',
+      go:open('rallytimer')},
+    minIsVisible()&&{id:'goMinisters',mod:null,group:'Events',key:'ministers',color:'#d4a95e',title:'SvS Minister Applications',short:'Ministers',sub:'Free times & apply for a minister slot',
+      go:openMinisterModal},
+    {id:'goPresidency',mod:'presidency',group:'State',key:'presidency',color:MOD_COLORS.presidency.text,title:'Presidency Ledger',short:'Presidency',sub:'SFC & SvS Supreme rotation',
+      go:open('presidency',function(){ PRES_TAB='board'; })},
+    {id:'goTransfer',mod:'transfer',group:'State',key:'transfer',color:MOD_COLORS.transfer.text,title:'Transfer Management',short:'Transfers',sub:'Invite tracking & player management',
+      go:open('transfer',function(){ TR_TAB='list'; })},
+    {id:'goRules',mod:'rules',group:'State',key:'rules',color:MOD_COLORS.rules.text,title:'State Rules',short:'State Rules',sub:'State rules & regulations',
+      go:open('rules',function(){ RULES_TAB='board'; RULES_SELECTED=null; })},
+    {id:'goLibrary',mod:'library',group:'State',key:'library',color:MOD_COLORS.library.text,title:'Library',short:'Library',sub:'Announcements & knowledge archive',
+      go:open('library',function(){ LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; })}
+  ].filter(Boolean);
+}
+function openAdminPanel(){ PROFILE_OPEN=false; MODULE='adminpanel'; ADMIN_TAB=null; render(); window.scrollTo(0,0); }
+// Players waiting on a super admin: sign-up approvals plus name/ID changes.
+function adminPendingCount(){
+  if(!isSuperAdmin(SESSION.name)) return 0;
+  return ALL_PLAYERS.filter(function(p){ return p.status==='pending'; }).length+ID_REQUESTS.length;
+}
+
+// ── DESKTOP RAIL ──────────────────────────────────────────
+// On wide screens a fixed side rail replaces Home's list and tab bar as the
+// way around the app. It lives outside #app, which render() rewrites.
+var DESKTOP_MQ=window.matchMedia('(min-width:1024px)');
+DESKTOP_MQ.addEventListener('change',function(){ render(); });
+function renderRail(){
+  var rail=document.getElementById('rail');
+  var on=DESKTOP_MQ.matches&&!!SESSION&&!SESSION.pending&&!SESSION.needsProfile&&AUTH_STEP!=='pin-profile'&&
+    !(document.querySelector('#app > .auth'));
+  document.body.classList.toggle('has-rail',on);
+  if(!on){ rail.innerHTML=''; return; }
+  var mods=homeModules();
+  var cur=PROFILE_OPEN?'profile':(MODULE||'home');
+  function item(id,key,color,label,active,extra){
+    return '<button class="rail-item'+(active?' on':'')+'" data-rail="'+id+'"'+(active?' aria-current="page"':'')+'>'+
+      iconTile(key,color,'rail-ic')+'<span class="rail-t">'+label+'</span>'+(extra||'')+'</button>';
+  }
+  function group(name){
+    return '<div class="rail-lbl">'+name+'</div>'+mods.filter(function(m){ return m.group===name; }).map(function(m){
+      return item(m.id,m.key,m.color,m.short,m.mod&&cur===m.mod);
+    }).join('');
+  }
+  var isAdm=isSuperAdmin(SESSION.name)||!!getRole(SESSION.name);
+  var pend=adminPendingCount();
+  var notifState=typeof Notification!=='undefined'?Notification.permission:'unsupported';
+  var dot=notifState==='granted'?'var(--green)':notifState==='denied'?'#6b5a42':'var(--gold)';
+  var roleTxt=isSuperAdmin(SESSION.name)?'Super Admin':(getRoles(SESSION.name).length?getRoles(SESSION.name).length+' role'+(getRoles(SESSION.name).length>1?'s':''):'Member');
+  rail.innerHTML=
+    '<div class="rail-brand"><div class="rail-seal">S</div><div style="min-width:0;"><div class="rail-name">State 2901</div><div class="rail-date">'+
+      new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</div></div></div>'+
+    '<nav class="rail-nav" aria-label="Main">'+
+      item('home','home','var(--ac)','Home',cur==='home')+
+      group('Events')+group('State')+
+    '</nav>'+
+    '<div class="rail-foot">'+
+      (notifState==='unsupported'?'':item('alerts','bell','var(--t2)','Alerts',false,'<span class="rail-dot" style="background:'+dot+';"></span>'))+
+      (isAdm?item('admin','adminpanel','#e3bc6a','Admin',cur==='adminpanel',pend?'<span class="row-badge">'+pend+'</span>':''):'')+
+      '<button class="rail-me'+(cur==='profile'?' on':'')+'" data-rail="profile"'+(cur==='profile'?' aria-current="page"':'')+'>'+
+        '<span class="rail-av">'+escHtml((SESSION.name||'?').charAt(0).toUpperCase())+'</span>'+
+        '<span style="min-width:0;"><span class="rail-me-n">'+escHtml(SESSION.name)+'</span><span class="rail-me-r">'+roleTxt+'</span></span>'+
+      '</button>'+
+    '</div>';
+  rail.querySelectorAll('[data-rail]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var id=b.dataset.rail;
+      if(id==='home'){ PROFILE_OPEN=false; MODULE=null; render(); return; }
+      if(id==='alerts'){ openNotifModal(); return; }
+      if(id==='admin'){ openAdminPanel(); return; }
+      if(id==='profile'){ PROFILE_OPEN=true; render(); return; }
+      var m=mods.find(function(x){ return x.id===id; }); if(m) m.go();
+    });
+  });
 }
 
 
@@ -1516,7 +1662,7 @@ function renderProfile(app){
 
   app.innerHTML=
     buildModuleHeader('profile','👤',escHtml(SESSION.name),(isSuperAdmin(SESSION.name)?'Super Admin':getRoles(SESSION.name).map(function(r){ return r.replace(/_/g,' '); }).join(' · ')||'Member')+' · State 2901')+
-    '<div class="content">'+
+    '<div class="content content-form">'+
       '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:16px;margin-bottom:12px;">'+
         '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">👤 Profile Information</div>'+
         // Name (read only)
@@ -3021,6 +3167,7 @@ function renderTransferEdit(tc){
     var backBtn=document.getElementById('backHome');
     if(backBtn){
       var newBtn=backBtn.cloneNode(true);
+      newBtn.classList.remove('is-root'); // goes back to the list, so keep it on desktop too
       backBtn.parentNode.replaceChild(newBtn,backBtn);
       newBtn.addEventListener('click',function(){ window._trEditing=null; TR_TAB='list'; render(); });
     }
@@ -3231,14 +3378,15 @@ function renderAdminPanel(app){
   if(!ADMIN_TAB){
     var groups=[];
     tabs.forEach(function(t){ var g=groups.find(function(x){ return x.name===t.group; }); if(!g){ g={name:t.group,items:[]}; groups.push(g); } g.items.push(t); });
+    ac.classList.add('adm-root');
     ac.innerHTML=groups.map(function(g,gi){
-      return '<div class="glabel"'+(gi===0?' style="margin-top:4px;"':'')+'>'+g.name+'</div><div class="group">'+g.items.map(function(t){
+      return '<section><div class="glabel"'+(gi===0?' style="margin-top:4px;"':'')+'>'+g.name+'</div><div class="group">'+g.items.map(function(t){
         return '<button class="row" data-tab="'+t.id+'">'+iconTile(ICON_FOR[t.id],t.color)+
           '<span class="row-text"><span class="row-title">'+t.label+'</span><span class="row-sub">'+t.sub+'</span></span>'+
           (t.badge?'<span class="row-badge">'+t.badge+'</span>':'')+
           (t.val!=null?'<span class="row-val">'+t.val+'</span>':'')+
           '<span class="row-chev">'+icon('chevR')+'</span></button>';
-      }).join('')+'</div>';
+      }).join('')+'</div></section>';
     }).join('');
     ac.querySelectorAll('.row[data-tab]').forEach(function(b){
       b.addEventListener('click',function(){ ADMIN_TAB=b.dataset.tab; render(); window.scrollTo(0,0); });
