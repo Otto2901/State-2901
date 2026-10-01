@@ -934,7 +934,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v35'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v36'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1687,12 +1687,7 @@ function renderProfile(app){
     '<div class="content content-form">'+
       '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:16px;margin-bottom:12px;">'+
         '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">👤 Profile Information</div>'+
-        // Name (read only)
-        '<div style="margin-bottom:12px;">'+
-          '<label style="font-size:11px;color:var(--t2);">In-Game Name</label>'+
-          '<div style="font-size:14px;font-weight:700;color:#f2e6d0;margin-top:4px;">'+SESSION.name+'</div>'+
-        '</div>'+
-        // Player Name change request
+        // In-game name + change request
         '<div style="margin-bottom:12px;">'+
           '<label style="font-size:11px;color:var(--t2);">In-Game Name</label>'+
           '<div style="font-size:14px;font-weight:700;color:#f2e6d0;margin-top:4px;display:flex;align-items:center;gap:8px;">'+SESSION.name+
