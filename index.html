@@ -61,11 +61,24 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 @keyframes popIn{from{transform:translateX(-22px);opacity:0;}to{transform:none;opacity:1;}}
 
 /* MODULE TABS — segmented control under the large title (render() moves .nav there) */
-.nav{display:flex;gap:2px;margin:0 16px 14px;padding:3px;background:var(--surface2);border:1px solid var(--b);border-radius:12px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:2;}
+.nav,.seg{display:flex;gap:2px;margin:0 16px 14px;padding:3px;background:var(--surface2);border:1px solid var(--b);border-radius:12px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:2;}
 .nav::-webkit-scrollbar{display:none;}
 .nav-btn{flex:1 0 auto;padding:8px 12px;background:none;border:none;border-radius:9px;color:var(--t2);font-family:'Manrope',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s var(--ease),color .2s var(--ease);}
 .nav-btn .ic{display:none;}
 .nav-btn.on{color:var(--t);background:#2b2116;box-shadow:0 1px 4px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,240,210,.07);}
+.seg{margin:0 0 14px;}
+.icon-btn{width:34px;height:34px;flex-shrink:0;border-radius:10px;background:var(--surface2);border:1px solid var(--b);font-size:14px;cursor:pointer;}
+.icon-btn.danger{background:rgba(181,85,74,.09);border-color:rgba(181,85,74,.22);}
+.icon-btn:active{transform:scale(.94);}
+.hist-row{display:flex;align-items:center;gap:8px;padding:12px 14px;position:relative;}
+.hist-row+.hist-row::before{content:'';position:absolute;top:0;right:0;left:14px;height:1px;background:var(--b);}
+.hist-row.lost .hist-main,.hist-row.lost .hist-meta{opacity:.7;}
+.hist-meta{font-size:12px;color:var(--t2);font-weight:600;}
+.hist-main{font-size:15px;font-weight:800;margin-top:3px;letter-spacing:.2px;}
+.hist-name{font-weight:600;color:var(--t);}
+.hist-notes{font-size:12px;color:var(--t3);margin-top:4px;white-space:pre-wrap;}
+.pres-then{font-size:12px;color:var(--t2);line-height:1.4;}
+.pres-tm{font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;color:#d9c27a;border:1px solid #d9c27a;}
 
 /* ICONS — inline SVG line icons from icon(name) */
 .i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;display:block;}
@@ -252,18 +265,25 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
   background:linear-gradient(135deg,#f0d9ad 0%,#c9974b 40%,#f6e7c8 70%,#f0d9ad 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;background-size:200% auto;animation:shimmer 8s linear infinite;}
 .home-avatar{width:38px;height:38px;border-radius:50%;border:none;flex-shrink:0;cursor:pointer;background:var(--grad);color:#1a1209;font-family:'Manrope',sans-serif;font-size:15px;font-weight:800;box-shadow:0 0 0 2px rgba(227,188,106,.22);}
 .home-avatar:active{transform:scale(.94);}
-.home-week{display:block;width:100%;text-align:left;font-family:inherit;color:inherit;cursor:pointer;background:linear-gradient(160deg,#2a1f12,#16110b 70%);border:1px solid rgba(201,151,75,.22);border-radius:18px;padding:16px;transition:transform .15s var(--ease);}
+.home-week,.hero{display:block;width:100%;text-align:left;font-family:inherit;color:inherit;cursor:pointer;background:linear-gradient(160deg,#2a1f12,#16110b 70%);border:1px solid rgba(201,151,75,.22);border-radius:18px;padding:16px;transition:transform .15s var(--ease);}
 .home-week:active{transform:scale(.985);}
-.home-week-top,.home-week-mid,.home-week-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;}
-.home-week-mid{align-items:baseline;margin-top:10px;}
+.home-week-top,.home-week-mid,.home-week-meta,.hero-top,.hero-mid,.hero-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.home-week-mid,.hero-mid{align-items:baseline;margin-top:10px;}
 .home-eyebrow{font-size:11px;font-weight:800;color:var(--ac);letter-spacing:1px;text-transform:uppercase;}
 .home-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
 .home-pill.open{background:color-mix(in srgb,var(--green) 18%,transparent);color:#a6cf9c;}
 .home-pill.closed{background:color-mix(in srgb,var(--red) 18%,transparent);color:#dd948a;}
 .home-pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
-.home-week-al{font-size:28px;font-weight:800;letter-spacing:.5px;}
-.home-week-cd{font-size:22px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;white-space:nowrap;}
-.home-week-meta{font-size:12px;color:var(--t2);margin-top:4px;}
+.home-week-al,.hero-big{font-size:28px;font-weight:800;letter-spacing:.5px;}
+.home-week-cd,.hero-cd{font-size:22px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.home-week-meta,.hero-meta{font-size:12px;color:var(--t2);margin-top:4px;}
+.hero{cursor:default;margin-bottom:6px;}
+.hero-link{background:none;border:none;padding:0;color:var(--gold);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.glabel-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 4px 8px;}
+.glabel-row .glabel{margin:0;}
+.link-btn{background:none;border:none;padding:2px 0;color:var(--gold);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.link-btn:active{opacity:.6;}
+.glabel-n{font-weight:600;text-transform:none;letter-spacing:0;color:var(--t3);margin-left:6px;}
 .home-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
 .home-tile{display:flex;flex-direction:column;gap:6px;text-align:left;font-family:inherit;color:inherit;cursor:pointer;background:var(--surface);border:1px solid var(--b);border-radius:14px;padding:12px 14px;}
 .home-tile:active{background:var(--surface2);}
@@ -305,17 +325,32 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .rot-turn-alliance{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--gold);line-height:1.15;letter-spacing:.5px;text-wrap:balance;}
 .rot-turn-sub{font-size:12px;color:var(--t2);margin-top:4px;}
 .rot-grid-4{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ord-row{display:flex;align-items:center;gap:12px;padding:11px 14px;position:relative;}
+.ord-row+.ord-row::before{content:'';position:absolute;top:0;right:0;left:46px;height:1px;background:var(--b);}
+.ord-row.now{background:color-mix(in srgb,var(--gold) 8%,transparent);}
+.ord-n{width:20px;font-size:13px;color:var(--t3);font-variant-numeric:tabular-nums;text-align:right;}
+.ord-tag{width:48px;font-size:15px;font-weight:800;letter-spacing:.3px;}
+.ord-kind{flex:1;font-size:12px;color:var(--t2);}
+.ord-st{font-size:12px;color:var(--t3);font-weight:600;}
+.ord-row.now .ord-st{color:var(--gold);font-weight:800;}
+.ord-st.done{color:#a6cf9c;}
+.rep-row{display:flex;align-items:baseline;gap:12px;padding:10px 14px;position:relative;}
+.rep-row+.rep-row::before{content:'';position:absolute;top:0;right:0;left:14px;height:1px;background:var(--b);}
+.rep-tag{width:48px;font-size:14px;font-weight:800;flex-shrink:0;}
+.rep-names{flex:1;font-size:13px;color:var(--t);min-width:0;}
+.rep-none{color:var(--t3);}
 .rot-grid-12{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
-.rot-loc{border-radius:12px;padding:10px;cursor:pointer;transition:all .2s;border:1px solid;text-align:center;}
-.rot-loc-free{background:var(--surface);border-color:var(--b2);}
+.rot-loc{border-radius:12px;padding:11px 8px;cursor:pointer;transition:background .2s,border-color .2s;border:1px solid;text-align:center;}
+.rot-loc-free{background:var(--surface);border-color:var(--b);}
 .rot-loc-free:hover{border-color:rgba(201,151,75,.5);background:rgba(201,151,75,.08);}
-.rot-loc-taken{border-color:rgba(110,95,75,.25);background:rgba(0,0,0,.28);cursor:default;}
+.rot-loc-taken{border-color:var(--b);background:var(--surface2);cursor:default;}
 .rot-loc-mine{border-color:rgba(227,188,106,.4);background:rgba(227,188,106,.08);}
 .rot-loc-open{border-color:rgba(122,156,114,.55);background:rgba(122,156,114,.08);animation:ringPulse 3s ease-in-out infinite;}
-.rot-loc-name{font-size:12px;font-weight:700;color:var(--t);}
-.rot-loc-alliance{font-size:11px;font-weight:700;margin-top:3px;}
+.rot-loc-name{font-size:13px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;}
+.rot-loc-alliance{font-size:12px;font-weight:700;margin-top:3px;}
 .rot-loc-reward{font-size:10px;color:var(--t2);margin-top:3px;line-height:1.3;}
 .rot-loc-taken .rot-loc-name{color:var(--t2);}
+.rot-loc-avail{color:var(--t3);font-weight:600;}
 .rot-loc-mine .rot-loc-name{color:var(--gold);}
 .rot-loc-open .rot-loc-alliance{color:var(--green);}
 .rot-loc-sh{border-left:3px solid var(--gold);}
@@ -344,7 +379,17 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .copy-btn:hover{background:rgba(201,151,75,.1);}
 .reward-inp{width:100%;background:var(--input);border:1px solid var(--b2);border-radius:8px;padding:7px 10px;color:var(--t);font-family:'Manrope',sans-serif;font-size:12px;outline:none;margin-top:4px;}
 .reward-inp:focus{border-color:var(--b-act);}
-.rot-alliance-row{display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(0,0,0,.22);border-radius:8px;margin-bottom:6px;}
+.rot-alliance-row{display:flex;align-items:center;gap:8px;padding:9px 12px;position:relative;}
+.rot-alliance-row+.rot-alliance-row::before{content:'';position:absolute;top:0;right:0;left:12px;height:1px;background:var(--b);}
+.panel{background:var(--surface);border:1px solid var(--b);border-radius:14px;padding:14px;}
+.rep-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--b);border-radius:20px;padding:3px 4px 3px 10px;font-size:12px;font-weight:700;color:var(--t);}
+.rep-chip button{background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;width:20px;height:20px;border-radius:50%;}
+.rep-chip button:hover{color:var(--red);background:rgba(181,85,74,.12);}
+.rw-row{display:flex;align-items:center;gap:12px;padding:7px 12px;position:relative;}
+.rw-row+.rw-row::before{content:'';position:absolute;top:0;right:0;left:12px;height:1px;background:var(--b);}
+.rw-lbl{width:40px;font-size:13px;font-weight:800;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.rw-row .reward-inp{margin-top:0;background:transparent;border-color:transparent;font-size:13px;padding:8px 10px;}
+.rw-row .reward-inp:focus{background:var(--input);border-color:var(--b-act);}
 .rot-act-btn{background:var(--surface2);border:1px solid var(--b);border-radius:6px;color:var(--t2);font-size:13px;cursor:pointer;padding:3px 7px;transition:all .15s;}
 .rot-act-btn:hover{background:rgba(201,151,75,.1);color:var(--ac);}
 .rot-act-btn:disabled{opacity:.3;cursor:not-allowed;}
@@ -766,7 +811,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v31'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v32'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1771,18 +1816,13 @@ function renderRotApp(app){
   if(window._rotTimer) clearInterval(window._rotTimer);
   window._rotTimer = setInterval(function(){
     if(MODULE!=='rotation'){ clearInterval(window._rotTimer); return; }
-    // Only update the countdown element - don't re-render whole page
-    var el=document.getElementById('rotCountdown');
-    if(el){
+    // Only update the countdown text; re-render once if the window opened or closed.
+    var el=document.getElementById('rotCountdown'), hero=document.getElementById('rotHero');
+    if(el&&hero){
       var ws=getSelectionWindowStatus();
-      if(ws.open){
-        var urgentColor=ws.secsLeft<3600?'var(--red)':ws.secsLeft<21600?'var(--orange)':'var(--green)';
-        el.innerHTML='<span style="font-size:12px;color:var(--green);font-weight:700;">🟢 Selections Open</span>'+
-          '<span style="font-size:13px;font-weight:800;color:'+urgentColor+';">⏱ '+fmtCountdown(ws.secsLeft)+' left</span>';
-      } else {
-        el.innerHTML='<span style="font-size:12px;color:var(--red);font-weight:700;">🔴 Selections Closed</span>'+
-          '<span style="font-size:13px;font-weight:800;color:var(--t2);">Opens in '+fmtCountdown(ws.secsLeft)+'</span>';
-      }
+      if(String(ws.open?1:0)!==hero.dataset.open){ render(); return; }
+      el.textContent=fmtCountdown(ws.secsLeft);
+      el.style.color=!ws.open?'var(--t2)':ws.secsLeft<3600?'var(--red)':ws.secsLeft<21600?'var(--orange)':'var(--t)';
     }
   }, 1000);
 
@@ -1808,21 +1848,24 @@ function renderRotBoard(rc){
     if(s.fort) takenFT[s.fort]=s.alliance;
   });
 
-  // Turn banner
-  var bannerHtml='';
-  if(done){
-    bannerHtml='<div class="rot-turn-banner" style="background:linear-gradient(135deg,color-mix(in srgb,var(--green) 10%,transparent),rgba(30,200,100,.1));border-color:color-mix(in srgb,var(--green) 30%,transparent);">'+
-      '<div class="rot-turn-alliance" style="color:var(--green);">✅ All selections complete!</div>'+
-      '<div class="rot-turn-sub">See the final board below</div>'+
-    '</div>';
-  } else if(currentTurn){
-    var isMyTurn=MY_ALLIANCES.includes(currentTurn)||MY_ALLIANCE===currentTurn;
-    bannerHtml='<div class="rot-turn-banner">'+
-      '<div class="rot-turn-sub">Current turn:</div>'+
-      '<div class="rot-turn-alliance" style="color:'+(ALLIANCE_COLORS[currentTurn]||'var(--gold)')+'">'+currentTurn+'</div>'+
-      (isMyTurn?'<div class="rot-turn-sub" style="color:var(--green);margin-top:6px;">⭐ It&apos;s your turn! Go to My Selection tab.</div>':'<div class="rot-turn-sub">Waiting for their selection...</div>')+
-    '</div>';
-  }
+  // Summary card: window status + whose turn it is, in one place.
+  var winStatus = getSelectionWindowStatus();
+  var isMyTurn=!!currentTurn&&(MY_ALLIANCES.includes(currentTurn)||MY_ALLIANCE===currentTurn);
+  var weekOf=ROT_STATE?new Date(ROT_STATE.week_start).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+  var cdColor=!winStatus.open?'var(--t2)':winStatus.secsLeft<3600?'var(--red)':winStatus.secsLeft<21600?'var(--orange)':'var(--t)';
+  var bigTxt=done?'All picked':currentTurn?currentTurn:'—';
+  var bigCol=done?'#a6cf9c':currentTurn?(ALLIANCE_COLORS[currentTurn]||'var(--gold)'):'var(--t2)';
+  var metaL=done?'Every alliance has picked · final board below':
+    !winStatus.open?'Current turn when selections open':
+    isMyTurn?'<button class="hero-link" id="goMySel">Your turn · open My Selection ›</button>':'Waiting for their selection';
+  var bannerHtml='<div class="hero" id="rotHero" data-open="'+(winStatus.open?1:0)+'">'+
+    '<span class="hero-top"><span class="home-eyebrow">Week of '+weekOf+'</span>'+
+      '<span class="home-pill '+(winStatus.open?'open':'closed')+'"><span class="dot"></span>'+
+        (winStatus.forced?(winStatus.open?'Forced open':'Force closed'):(winStatus.open?'Selections open':'Selections closed'))+'</span></span>'+
+    '<span class="hero-mid"><span class="hero-big" style="color:'+bigCol+';">'+bigTxt+'</span>'+
+      (winStatus.forced?'':'<span class="hero-cd" id="rotCountdown" style="color:'+cdColor+';">'+fmtCountdown(winStatus.secsLeft)+'</span>')+'</span>'+
+    '<span class="hero-meta"><span>'+metaL+'</span><span>'+(winStatus.forced?'Set by admin':(winStatus.open?'left':'until open'))+'</span></span>'+
+  '</div>';
 
   var canAdminBoard=isSuperAdmin(SESSION.name);
   // Strongholds grid
@@ -1834,8 +1877,8 @@ function renderRotBoard(rc){
     var color=ally?(ALLIANCE_COLORS[ally]||'var(--ac)'):'var(--t2)';
     var adminBtn=canAdminBoard&&ally?'<button class="del-sel-btn" data-alliance="'+ally+'" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;margin-top:4px;">✕ Remove</button>':'';
     shHtml+='<div class="rot-loc '+cls+'">'+
-      '<div class="rot-loc-name">🏰 SH '+i+'</div>'+
-      (ally?'<div class="rot-loc-alliance" style="color:'+color+';">'+ally+'</div>':'<div class="rot-loc-alliance" style="color:#6b5a42;">Available</div>')+
+      '<div class="rot-loc-name">SH '+i+'</div>'+
+      (ally?'<div class="rot-loc-alliance" style="color:'+color+';">'+ally+'</div>':'<div class="rot-loc-alliance rot-loc-avail">Available</div>')+
       (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
       adminBtn+
     '</div>';
@@ -1850,8 +1893,8 @@ function renderRotBoard(rc){
     var fcolor=fally?(ALLIANCE_COLORS[fally]||'var(--ac)'):(done?'var(--green)':'var(--t2)');
     var fadminBtn=canAdminBoard&&fally?'<button class="del-sel-btn" data-alliance="'+fally+'" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;margin-top:4px;">✕ Remove</button>':'';
     ftHtml+='<div class="rot-loc '+fcls+'">'+
-      '<div class="rot-loc-name">🏯 F'+j+'</div>'+
-      (fally?'<div class="rot-loc-alliance" style="color:'+fcolor+';">'+fally+'</div>':(done?'<div class="rot-loc-alliance" style="color:var(--green);">FREE</div>':'<div class="rot-loc-alliance" style="color:#6b5a42;">Available</div>'))+
+      '<div class="rot-loc-name">F'+j+'</div>'+
+      (fally?'<div class="rot-loc-alliance" style="color:'+fcolor+';">'+fally+'</div>':(done?'<div class="rot-loc-alliance" style="color:var(--green);">FREE</div>':'<div class="rot-loc-alliance rot-loc-avail">Available</div>'))+
       (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
       fadminBtn+
     '</div>';
@@ -1863,11 +1906,12 @@ function renderRotBoard(rc){
     var sel=sels.find(function(s){ return s.alliance===ally; });
     var isCurrent=ally===currentTurn;
     var color=ALLIANCE_COLORS[ally]||'var(--ac)';
-    var status=sel?'<span class="rot-order-done">✅ Done</span>':(isCurrent?'<span class="rot-order-waiting">⏳ Selecting...</span>':'<span class="rot-order-pending">Waiting</span>');
+    var status=sel?'<span class="ord-st done">✓ Done</span>':(isCurrent?'<span class="ord-st">Selecting…</span>':'<span class="ord-st">Waiting</span>');
     var isTop=idx<4;
-    orderHtml+='<div class="rot-order-row '+(isCurrent?'rot-current':'')+'" style="'+(isCurrent?'background:color-mix(in srgb,var(--gold) 6%,transparent);border-radius:8px;padding:6px 8px;':'')+'">'+
-      '<div class="rot-order-num">'+(idx+1)+'</div>'+
-      '<div class="rot-order-name" style="color:'+color+';">'+ally+(isTop?' <span style="font-size:9px;color:var(--t2);">SH+F</span>':' <span style="font-size:9px;color:var(--t2);">F only</span>')+'</div>'+
+    orderHtml+='<div class="ord-row'+(isCurrent?' now':'')+'">'+
+      '<span class="ord-n">'+(idx+1)+'</span>'+
+      '<span class="ord-tag" style="color:'+color+';">'+ally+'</span>'+
+      '<span class="ord-kind">'+(isTop?'SH + Fort':'Fort only')+'</span>'+
       status+
     '</div>';
   });
@@ -1913,40 +1957,19 @@ function renderRotBoard(rc){
     window._rotCopyText=copyText;
   }
 
-  // Selection window status
-  var winStatus = getSelectionWindowStatus();
-  var winBanner = '';
-  if(winStatus.open){
-    var urgentColor = winStatus.secsLeft < 3600 ? 'var(--red)' : winStatus.secsLeft < 21600 ? 'var(--orange)' : 'var(--green)';
-    var leftLabel=winStatus.forced?'⚡ Forced Open':'⏱ '+fmtCountdown(winStatus.secsLeft)+' left';
-    winBanner = '<div id="rotCountdown" style="background:color-mix(in srgb,var(--green) 6%,transparent);border:1px solid color-mix(in srgb,var(--green) 20%,transparent);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">'+
-      '<span style="font-size:12px;color:var(--green);font-weight:700;">🟢 Selections Open</span>'+
-      '<span style="font-size:13px;font-weight:800;color:'+urgentColor+';">'+leftLabel+'</span>'+
-    '</div>';
-  } else {
-    var closedLabel=winStatus.forced?'⚡ Force Closed':'Opens in '+fmtCountdown(winStatus.secsLeft);
-    winBanner = '<div id="rotCountdown" style="background:color-mix(in srgb,var(--red) 6%,transparent);border:1px solid color-mix(in srgb,var(--red) 20%,transparent);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">'+
-      '<span style="font-size:12px;color:var(--red);font-weight:700;">🔴 Selections Closed</span>'+
-      '<span style="font-size:13px;font-weight:800;color:var(--t2);">'+closedLabel+'</span>'+
-    '</div>';
-  }
-
   // Reps list (visible to all)
   var repsByAl={};
   ALLIANCE_REPS.forEach(function(r){ if(!repsByAl[r.alliance]) repsByAl[r.alliance]=[]; repsByAl[r.alliance].push(r.player_name); });
-  var repsHtml='<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-top:12px;">'+
-    '<div class="rot-section-title">🏳️ Alliance Representatives</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
+  var repsHtml='<div class="glabel">Alliance representatives</div>'+
+    '<div class="group">'+
     getAllAlliances().map(function(al){
       var reps=repsByAl[al]||[];
       var color=ALLIANCE_COLORS[al]||'var(--ac)';
-      return '<div style="background:rgba(18,13,8,.42);border:1px solid rgba(196,155,92,.14);border-radius:10px;padding:10px;">'+
-        '<div style="font-size:11px;font-weight:800;color:'+color+';margin-bottom:6px;">'+al+'</div>'+
-        (reps.length?reps.map(function(n){ return '<div style="font-size:11px;color:#c9b48a;font-weight:600;">👤 '+n+'</div>'; }).join(''):'<div style="font-size:10px;color:#6b5a42;">No rep</div>')+
-      '</div>';
+      return '<div class="rep-row"><span class="rep-tag" style="color:'+color+';">'+al+'</span>'+
+        '<span class="rep-names'+(reps.length?'':' rep-none')+'">'+(reps.length?reps.map(escHtml).join(', '):'No rep')+'</span></div>';
     }).join('')+
-    '</div>'+
   '</div>';
+  var shTaken=Object.keys(takenSH).length, ftTaken=Object.keys(takenFT).length;
 
   // Order copy text
   var weekLabel=ROT_STATE?new Date(ROT_STATE.week_start).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'';
@@ -1954,19 +1977,19 @@ function renderRotBoard(rc){
     ro.order.map(function(al,i){ return (i+1)+'. '+al; }).join('\n');
 
   rc.innerHTML=
-    winBanner+
     bannerHtml+
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'+
-      '<div class="rot-section-title" style="margin-bottom:0;">📋 Selection Order</div>'+
-      (canCopy?'<button class="copy-btn" id="copyOrderBtn" style="width:auto;margin-top:0;padding:6px 12px;font-size:11px;">📋 Copy Order</button>':'')+
+    '<div class="glabel-row"><span class="glabel">Selection order</span>'+
+      (canCopy?'<button class="link-btn" id="copyOrderBtn">Copy</button>':'')+
     '</div>'+
-    '<div class="rot-order" style="margin-bottom:12px;">'+orderHtml+'</div>'+
-    '<div class="rot-section-title" style="color:var(--gold);">🏰 Strongholds</div>'+
-    '<div class="rot-grid-4" style="margin-bottom:12px;">'+shHtml+'</div>'+
-    '<div class="rot-section-title" style="color:var(--steel);">🏯 Forts</div>'+
+    '<div class="group">'+orderHtml+'</div>'+
+    '<div class="glabel" style="color:var(--gold);">Strongholds<span class="glabel-n">'+shTaken+' of 4 taken</span></div>'+
+    '<div class="rot-grid-4">'+shHtml+'</div>'+
+    '<div class="glabel" style="color:var(--steel);">Forts<span class="glabel-n">'+ftTaken+' of 12 taken</span></div>'+
     '<div class="rot-grid-12">'+ftHtml+'</div>'+
     finalHtml+
     repsHtml;
+  var gms=document.getElementById('goMySel');
+  if(gms) gms.addEventListener('click',function(){ ROT_TAB='register'; render(); });
 
   var cpBtn=document.getElementById('copyResultBtn');
   if(cpBtn) cpBtn.addEventListener('click',function(){ navigator.clipboard.writeText(window._rotCopyText||'').then(function(){ toast('📋 Copied to clipboard!'); }); });
@@ -2112,8 +2135,8 @@ function renderRotSelect(rc){
   // Stronghold picker (only for top4)
   var shPickerHtml='';
   if(isTop4){
-    shPickerHtml='<div class="rot-section-title" style="color:var(--gold);">🏰 Choose Stronghold</div>'+
-      '<div class="rot-grid-4" id="shPicker" style="margin-bottom:14px;">';
+    shPickerHtml='<div class="glabel" style="color:var(--gold);">Choose a stronghold</div>'+
+      '<div class="rot-grid-4" id="shPicker">';
     for(var i=1;i<=4;i++){
       var taken=takenSH[i];
       var reward=getReward('stronghold',i);
@@ -2127,7 +2150,7 @@ function renderRotSelect(rc){
         var shIsSelected = mySelSH===i;
         shPickerHtml+='<div class="rot-loc rot-loc-sh '+(shIsSelected?'rot-loc-mine':'rot-loc-free')+' pick-sh" data-sh="'+i+'">'+
           '<div class="rot-loc-name">SH '+i+'</div>'+
-          '<div class="rot-loc-alliance" style="color:'+(shIsSelected?'var(--gold)':'#6b5a42')+'">'+(shIsSelected?'Selected ✓':'Tap to select')+'</div>'+
+          '<div class="rot-loc-alliance'+(shIsSelected?'':' rot-loc-avail')+'" style="'+(shIsSelected?'color:var(--gold);':'')+'">'+(shIsSelected?'Selected ✓':'Tap to select')+'</div>'+
           (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
         '</div>';
       }
@@ -2136,8 +2159,8 @@ function renderRotSelect(rc){
   }
 
   // Fort picker
-  var ftPickerHtml='<div class="rot-section-title" style="color:var(--steel);">🏯 Choose Fort</div>'+
-    '<div class="rot-grid-12" id="ftPicker" style="margin-bottom:14px;">';
+  var ftPickerHtml='<div class="glabel" style="color:var(--steel);">Choose a fort</div>'+
+    '<div class="rot-grid-12" id="ftPicker" style="margin-bottom:16px;">';
   for(var j=1;j<=12;j++){
     var ftaken=takenFT[j];
     var freward=getReward('fort',j);
@@ -2151,7 +2174,7 @@ function renderRotSelect(rc){
       var ftIsSelected = mySelFT===j;
       ftPickerHtml+='<div class="rot-loc rot-loc-ft '+(ftIsSelected?'rot-loc-mine':'rot-loc-free')+' pick-ft" data-ft="'+j+'">'+
         '<div class="rot-loc-name">F'+j+'</div>'+
-        '<div class="rot-loc-alliance" style="color:'+(ftIsSelected?'var(--gold)':'#6b5a42')+'">'+(ftIsSelected?'Selected ✓':'Tap')+'</div>'+
+        '<div class="rot-loc-alliance'+(ftIsSelected?'':' rot-loc-avail')+'" style="'+(ftIsSelected?'color:var(--gold);':'')+'">'+(ftIsSelected?'Selected ✓':'Tap')+'</div>'+
         (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
       '</div>';
     }
@@ -2160,12 +2183,10 @@ function renderRotSelect(rc){
 
   rc.innerHTML=
     (isSuperAdmin(SESSION.name)?'<button class="btn btn-g" style="margin-bottom:10px;padding:8px;font-size:12px;" id="backAlliancePick">← Change Alliance</button>':'')+
-    '<div class="rot-turn-banner" style="margin-bottom:14px;">'+
-      '<div class="rot-turn-sub">Making selection for:</div>'+
-      '<div class="rot-turn-alliance" style="color:'+(ALLIANCE_COLORS[myAlliance]||'var(--gold)')+';">'+myAlliance+'</div>'+
-    '</div>'+
-    '<div id="selPreview" style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--t2);text-align:center;">'+
-      (isTop4?'Select a Stronghold and a Fort':'Select a Fort')+
+    '<div class="hero">'+
+      '<span class="hero-top"><span class="home-eyebrow">Selecting for</span><span class="home-pill open"><span class="dot"></span>'+(isTop4?'SH + Fort':'Fort only')+'</span></span>'+
+      '<span class="hero-mid"><span class="hero-big" style="color:'+(ALLIANCE_COLORS[myAlliance]||'var(--gold)')+';">'+myAlliance+'</span></span>'+
+      '<span class="hero-meta"><span id="selPreview">'+(isTop4?'Select a Stronghold and a Fort':'Select a Fort')+'</span></span>'+
     '</div>'+
     shPickerHtml+ftPickerHtml+
     '<button class="btn btn-p" id="confirmSelBtn" disabled>Confirm Selection</button>';
@@ -2246,26 +2267,24 @@ function renderRotAdmin(rc){
   var repRows=getAllAlliances().map(function(al){
     var reps=repByAlliance[al]||[];
     var color=ALLIANCE_COLORS[al]||'var(--ac)';
-    return '<div style="margin-bottom:10px;">'+
-      '<div style="font-size:11px;font-weight:800;color:'+color+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">'+al+' ('+reps.length+')</div>'+
+    return '<div class="rep-row" style="align-items:center;"><span class="rep-tag" style="color:'+color+';">'+al+'</span>'+
+      '<span class="rep-names'+(reps.length?'':' rep-none')+'" style="display:flex;flex-wrap:wrap;gap:6px;">'+
       (reps.length?reps.map(function(r){
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:rgba(18,13,8,.42);border-radius:8px;margin-bottom:4px;">'+
-          '<span style="font-size:12px;font-weight:700;color:#f2e6d0;">'+r.player_name+'</span>'+
-          '<button class="btn btn-d btn-sm revoke-rep" data-player="'+r.player_name+'" data-alliance="'+r.alliance+'" style="padding:4px 8px;font-size:10px;">Remove</button>'+
-        '</div>';
-      }).join(''):'<div style="font-size:11px;color:#6b5a42;padding:4px 8px;">No rep assigned</div>')+
-    '</div>';
+        return '<span class="rep-chip">'+escHtml(r.player_name)+
+          '<button class="revoke-rep" data-player="'+r.player_name+'" data-alliance="'+r.alliance+'" aria-label="Remove '+escHtml(r.player_name)+' as '+al+' rep" title="Remove">✕</button></span>';
+      }).join(''):'No rep')+
+    '</span></div>';
   }).join('');
 
   // Reward editor
   var rewardRows='';
   for(var i=1;i<=4;i++){
-    rewardRows+='<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--ac);font-weight:700;">🏰 Stronghold '+i+'</div>'+
-      '<input class="reward-inp" data-type="stronghold" data-num="'+i+'" value="'+getReward('stronghold',i)+'"></div>';
+    rewardRows+='<label class="rw-row"><span class="rw-lbl" style="color:var(--gold);">SH '+i+'</span>'+
+      '<input class="reward-inp" data-type="stronghold" data-num="'+i+'" value="'+getReward('stronghold',i)+'" placeholder="Reward"></label>';
   }
   for(var j=1;j<=12;j++){
-    rewardRows+='<div style="margin-bottom:8px;"><div style="font-size:11px;color:#c9b48a;font-weight:700;">🏯 Fort '+j+'</div>'+
-      '<input class="reward-inp" data-type="fort" data-num="'+j+'" value="'+getReward('fort',j)+'"></div>';
+    rewardRows+='<label class="rw-row"><span class="rw-lbl" style="color:var(--steel);">F'+j+'</span>'+
+      '<input class="reward-inp" data-type="fort" data-num="'+j+'" value="'+getReward('fort',j)+'" placeholder="Reward"></label>';
   }
 
   // Build alliance management UI
@@ -2295,8 +2314,8 @@ function renderRotAdmin(rc){
 
   // Add new alliance row
   var addAllianceHtml=
-    '<div style="margin-top:10px;">'+
-      '<div style="font-size:11px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">➕ Add Alliance</div>'+
+    '<div>'+
+      '<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px;">Add alliance</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
         '<input class="inp" id="newAllianceName" placeholder="Name (e.g. NEW)" style="flex:1;min-width:80px;text-transform:uppercase;">'+
         '<select class="sel" id="newAllianceGroup" style="flex:2;min-width:120px;">'+
@@ -2308,9 +2327,8 @@ function renderRotAdmin(rc){
     '</div>';
 
   var currentWeekHtml=!isFullAdmin?'':
-    '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div class="rot-section-title">📅 Current Week</div>'+
-      '<div style="font-size:13px;color:#f2e6d0;margin-bottom:12px;">Week of: <strong>'+weekStart+'</strong></div>'+
+    '<div class="glabel" style="margin-top:4px;">Current week · '+weekStart+'</div>'+
+    '<div class="panel">'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'+
         '<button class="btn btn-d" id="clearSelsOnlyBtn" style="font-size:12px;">🗑 Clear Selections Only</button>'+
         '<button class="btn btn-d" id="resetWeekBtn" style="font-size:12px;margin-bottom:8px;">🔄 Reset & Rotate Order</button>'+
@@ -2327,38 +2345,29 @@ function renderRotAdmin(rc){
       '</div>'+
     '</div>';
   var allianceOrderHtml=!isFullAdmin?'':
-    '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div class="rot-section-title">⚔️ Alliance Order & Groups</div>'+
-      '<div style="margin-bottom:8px;">'+
-        '<div style="font-size:11px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">🏰 Top 4 (SH+Fort)</div>'+
-        top4Rows+
-      '</div>'+
-      '<div style="margin-bottom:8px;">'+
-        '<div style="font-size:11px;font-weight:800;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">🏯 Bot 5 (Fort only)</div>'+
-        bot5Rows+
-      '</div>'+
-      addAllianceHtml+
-    '</div>';
+    '<div class="glabel" style="color:var(--gold);">Top 4<span class="glabel-n">Stronghold + Fort</span></div>'+
+    '<div class="group">'+top4Rows+'</div>'+
+    '<div class="glabel" style="color:var(--steel);">Bot 5<span class="glabel-n">Fort only</span></div>'+
+    '<div class="group">'+bot5Rows+'</div>'+
+    '<div class="panel" style="margin-top:10px;">'+addAllianceHtml+'</div>';
 
   rc.innerHTML=
     currentWeekHtml+
     allianceOrderHtml+
-    '<div style="background:color-mix(in srgb,var(--gold) 4%,transparent);border:1px solid color-mix(in srgb,var(--gold) 13%,transparent);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div class="rot-section-title">🏳️ Alliance Representatives</div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
+    '<div class="glabel">Alliance representatives</div>'+
+    '<div class="panel" style="margin-bottom:8px;">'+
+      '<div style="display:flex;gap:8px;">'+
         '<select class="sel" id="repPlayer" style="flex:1;">'+groupedPlayerOpts(ALL_PLAYERS)+'</select>'+
         '<select class="sel" id="repAlliance" style="flex:1;"><option value="">— Alliance —</option>'+
           getAllAlliances().map(function(a){ return '<option value="'+a+'">'+a+'</option>'; }).join('')+
         '</select>'+
         '<button class="btn btn-g btn-sm" id="addRepBtn" style="flex-shrink:0;">Add</button>'+
       '</div>'+
-      repRows+
     '</div>'+
-    '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:14px;margin-bottom:12px;">'+
-      '<div class="rot-section-title">🎁 Rewards (this week)</div>'+
-      rewardRows+
-      '<button class="btn btn-p" id="saveRewardsBtn" style="margin-top:8px;">💾 Save All Rewards</button>'+
-    '</div>';
+    '<div class="group">'+repRows+'</div>'+
+    '<div class="glabel">Rewards this week</div>'+
+    '<div class="group">'+rewardRows+'</div>'+
+    '<button class="btn btn-p" id="saveRewardsBtn" style="margin-top:12px;">Save all rewards</button>';
 
   if(isFullAdmin){
   // Reset week
@@ -7209,32 +7218,30 @@ function renderPresBoard(el){
   // types decides who holds it: a win stays current until the next SFC or
   // Supreme event is recorded, a loss means the winning state holds it.
   var last=recs[0];
-  var typeTag=last?'<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:6px;color:var(--t2);border:1px solid var(--b2);">'+escHtml(PRES_TYPE_LABEL[last.type]||last.type)+'</span>':'';
+  var lastType=last?escHtml(PRES_TYPE_LABEL[last.type]||last.type):'';
   var currentHtml=!last?'':
-    '<div class="card brk pres-current" style="margin-bottom:12px;">'+
+    '<div class="hero">'+
+      '<span class="hero-top"><span class="home-eyebrow">Current president</span>'+
+        '<span class="home-pill '+(last.outcome==='won'?'open':'closed')+'"><span class="dot"></span>'+lastType+'</span></span>'+
       (last.outcome==='won'?
-        lbl('Current president'+typeTag)+
-        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+presChip(last.alliance,true)+
-          (last.president_name?'<span style="font-size:14px;font-weight:700;color:var(--t);">'+escHtml(last.president_name)+'</span>':'')+
-          (last.has_tm?'<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;color:#d9c27a;border:1px solid #d9c27a;">TM</span>':'')+
-        '</div>'+
-        '<div style="font-size:11px;color:var(--t3);margin-top:6px;">since '+presFmtDate(last.event_date)+'</div>':
-        lbl('Current president'+typeTag)+
-        '<div style="font-size:14px;font-weight:700;color:var(--red);opacity:.85;">No presidency</div>'+
-        '<div style="font-size:11px;color:var(--t3);margin-top:4px;">Lost '+escHtml(PRES_TYPE_LABEL[last.type]||last.type)+' on '+presFmtDate(last.event_date)+', the winning state holds it</div>')+
+        '<span class="hero-mid"><span class="hero-big" style="color:'+presAlColor(last.alliance)+';">'+escHtml(last.alliance)+'</span>'+
+          '<span style="display:flex;align-items:center;gap:6px;font-size:16px;font-weight:700;color:var(--t);">'+(last.president_name?escHtml(last.president_name):'')+
+          (last.has_tm?'<span class="pres-tm">TM</span>':'')+'</span></span>'+
+        '<span class="hero-meta"><span>Since '+presFmtDate(last.event_date)+'</span></span>':
+        '<span class="hero-mid"><span class="hero-big" style="color:#dd948a;font-size:22px;">No presidency</span></span>'+
+        '<span class="hero-meta"><span>Lost '+lastType+' on '+presFmtDate(last.event_date)+', the winning state holds it</span></span>')+
     '</div>';
-  function queueCard(type){
+  function queueTile(type){
     var q=PRES_QUEUES[type]||[];
-    var body=q.length?
-      lbl('Next up')+
-      '<div>'+presChip(q[0])+'</div>'+
-      (q.length>1?'<div style="font-size:12px;color:var(--t2);margin-top:10px;">Then: '+q.slice(1).map(function(a,i){ return '<span style="margin-right:6px;">'+(i+2)+'. '+presChip(a)+'</span>'; }).join('')+'</div>':''):
-      '<div style="font-size:12px;color:var(--t3);">No rotation order set yet.</div>';
-    return '<div class="card brk" style="margin-bottom:12px;">'+
-      '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:12px;">'+PRES_TYPE_LABEL[type]+'</div>'+
-      body+
+    return '<div class="home-tile" style="cursor:default;">'+
+      '<span class="home-eyebrow">'+PRES_TYPE_LABEL[type]+' next up</span>'+
+      (q.length?
+        '<span class="home-tile-v" style="color:'+presAlColor(q[0])+';">'+escHtml(q[0])+'</span>'+
+        (q.length>1?'<span class="pres-then">Then '+q.slice(1).map(function(a){ return '<b style="color:'+presAlColor(a)+';">'+escHtml(a)+'</b>'; }).join(' · ')+'</span>':''):
+        '<span class="pres-then">No rotation order set yet.</span>')+
     '</div>';
   }
+  var queuesHtml='<div class="home-tiles">'+queueTile('sfc')+queueTile('supreme')+'</div>';
   var names=Object.keys(st.byAlliance);
   var th='style="text-align:center;padding:6px 4px;font-size:10px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;"';
   var td='style="text-align:center;padding:8px 4px;font-size:13px;font-weight:700;color:var(--t);border-top:1px solid var(--b);"';
@@ -7254,11 +7261,9 @@ function renderPresBoard(el){
       })()+
     '</table>':
     '<div style="font-size:12px;color:var(--t3);">No records yet.</div>';
-  el.innerHTML=currentHtml+queueCard('sfc')+queueCard('supreme')+
-    '<div class="card brk">'+
-      '<div style="font-family:var(--serif);font-size:15px;color:#d9c27a;margin-bottom:12px;">Presidency Tally</div>'+
-      table+
-    '</div>';
+  el.innerHTML=currentHtml+queuesHtml+
+    '<div class="glabel">Presidency tally</div>'+
+    '<div class="group" style="padding:4px 12px 6px;overflow-x:auto;">'+table+'</div>';
 }
 
 function renderPresHistory(el){
@@ -7267,27 +7272,24 @@ function renderPresHistory(el){
   var filters=[['all','All'],['sfc','SFC'],['supreme','Supreme']];
   var badge=function(txt,col){ return '<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:4px;color:'+col+';border:1px solid '+col+';opacity:.85;">'+txt+'</span>'; };
   el.innerHTML=
-    '<div style="display:flex;gap:8px;margin-bottom:14px;">'+filters.map(function(f){
-      var on=PRES_FILTER===f[0];
-      return '<button class="tog pres-filter'+(on?' on':'')+'" data-f="'+f[0]+'" style="flex:1;padding:9px;border-color:'+(on?'rgba(217,194,122,.6)':'var(--b2)')+';background:'+(on?'rgba(217,194,122,.12)':'transparent')+';color:var(--t);">'+f[1]+'</button>';
+    '<div class="seg">'+filters.map(function(f){
+      return '<button class="nav-btn pres-filter'+(PRES_FILTER===f[0]?' on':'')+'" data-f="'+f[0]+'">'+f[1]+'</button>';
     }).join('')+'</div>'+
-    (recs.length?recs.map(function(r){
+    (recs.length?'<div class="group">'+recs.map(function(r){
       var lost=r.outcome!=='won';
-      return '<div class="card" style="padding:12px 14px;margin-bottom:8px;'+(lost?'opacity:.6;':'')+'">'+
-        '<div style="display:flex;align-items:center;gap:8px;">'+
-          '<div style="flex:1;min-width:0;">'+
-            '<div style="font-size:11px;color:var(--t2);font-weight:700;">'+presFmtDate(r.event_date)+' · '+PRES_TYPE_LABEL[r.type]+
-              (r.has_tm?badge('TM','#d9c27a'):'')+(r.is_backfill?badge('PAST ENTRY','#a3b3c2'):'')+'</div>'+
-            '<div style="margin-top:6px;font-size:13px;color:var(--t);">'+
-              (lost?'<span style="color:var(--red);font-weight:700;">Lost, no presidency</span>':presChip(r.alliance)+(r.president_name?' <span style="font-weight:600;">'+escHtml(r.president_name)+'</span>':''))+
-            '</div>'+
-            (r.notes?'<div style="font-size:11px;color:var(--t3);margin-top:6px;white-space:pre-wrap;">'+escHtml(r.notes)+'</div>':'')+
+      return '<div class="hist-row'+(lost?' lost':'')+'">'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div class="hist-meta">'+presFmtDate(r.event_date)+' · '+PRES_TYPE_LABEL[r.type]+
+            (r.has_tm?badge('TM','#d9c27a'):'')+(r.is_backfill?badge('PAST ENTRY','#a3b3c2'):'')+'</div>'+
+          '<div class="hist-main">'+
+            (lost?'<span style="color:#dd948a;">Lost, no presidency</span>':'<span style="color:'+presAlColor(r.alliance)+';">'+escHtml(r.alliance)+'</span>'+(r.president_name?' <span class="hist-name">'+escHtml(r.president_name)+'</span>':''))+
           '</div>'+
-          (isAdm?'<button class="btn btn-g btn-sm pres-edit" data-id="'+r.id+'" title="Edit">✏️</button>':'')+
-          (isSup?'<button class="btn btn-d btn-sm pres-del" data-id="'+r.id+'" title="Delete">🗑</button>':'')+
+          (r.notes?'<div class="hist-notes">'+escHtml(r.notes)+'</div>':'')+
         '</div>'+
+        (isAdm?'<button class="icon-btn pres-edit" data-id="'+r.id+'" title="Edit" aria-label="Edit record">✏️</button>':'')+
+        (isSup?'<button class="icon-btn danger pres-del" data-id="'+r.id+'" title="Delete" aria-label="Delete record">🗑</button>':'')+
       '</div>';
-    }).join(''):'<div class="empty"><div class="empty-icon">📖</div><p>No records yet.</p></div>');
+    }).join('')+'</div>':'<div class="empty"><div class="empty-icon">📖</div><p>No records yet.</p></div>');
 
   el.querySelectorAll('.pres-filter').forEach(function(b){
     b.addEventListener('click',function(){ PRES_FILTER=b.dataset.f; renderPresHistory(el); });
