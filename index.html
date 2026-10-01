@@ -374,6 +374,28 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
   body.has-rail #adminContent.adm-root{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:0 24px;align-items:start;}
   body.has-rail #adminContent.adm-root .glabel{margin-top:4px;}
 }
+/* DESKTOP — dense screens use the width */
+@media (min-width:1024px){
+  /* Summary card + stat tiles side by side (Transfer, Presidency) */
+  body.has-rail .top-split{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:stretch;}
+  body.has-rail .top-split > .hero{margin-bottom:0;display:flex;flex-direction:column;justify-content:space-between;padding:20px 22px;}
+  body.has-rail .top-split > .home-tiles{grid-template-columns:1fr;margin-top:0;}
+  body.has-rail .top-split .home-tile{justify-content:center;}
+  body.has-rail #trOpenAdd{width:auto;min-width:220px;margin-top:16px;padding-left:28px;padding-right:28px;}
+  /* War Team / Crazy Joe: every team is a card in a grid */
+  body.has-rail .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:6px 20px;align-items:start;}
+  body.has-rail .team-card .team-hdr{margin-top:8px;}
+  /* Rotation board: order + reps | strongholds + forts */
+  body.has-rail .rot-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:0 28px;align-items:start;}
+  /* Presidency: tally gets room, history reads as one ledger column */
+  body.has-rail #presContent table td,body.has-rail #presContent table th{padding-top:11px!important;padding-bottom:11px!important;}
+  body.has-rail .hist-list{max-width:860px;}
+  /* Admin > Players: approval queues beside the roster */
+  body.has-rail #adminContent.ap-split{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:24px;align-items:start;}
+  body.has-rail .ap-queues{position:sticky;top:64px;}
+  body.has-rail #playerGroupsWrap{columns:2 340px;column-gap:16px;}
+  body.has-rail #playerGroupsWrap .card{break-inside:avoid;}
+}
 @keyframes deskIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 /* Pointer devices get hover feedback the touch layout never needed */
 @media (hover:hover) and (min-width:1024px){
@@ -2145,18 +2167,20 @@ function renderRotBoard(rc){
   var orderCopyText='📋 Week '+weekLabel+' — Selection Order\n'+
     ro.order.map(function(al,i){ return (i+1)+'. '+al; }).join('\n');
 
-  rc.innerHTML=
-    bannerHtml+
+  var orderSec=
     '<div class="glabel-row"><span class="glabel">Selection order</span>'+
       (canCopy?'<button class="link-btn" id="copyOrderBtn">Copy</button>':'')+
     '</div>'+
-    '<div class="group">'+orderHtml+'</div>'+
+    '<div class="group">'+orderHtml+'</div>';
+  var locSec=
     '<div class="glabel" style="color:var(--gold);">Strongholds<span class="glabel-n">'+shTaken+' of 4 taken</span></div>'+
     '<div class="rot-grid-4">'+shHtml+'</div>'+
     '<div class="glabel" style="color:var(--steel);">Forts<span class="glabel-n">'+ftTaken+' of 12 taken</span></div>'+
-    '<div class="rot-grid-12">'+ftHtml+'</div>'+
-    finalHtml+
-    repsHtml;
+    '<div class="rot-grid-12">'+ftHtml+'</div>';
+  // Desktop: order and reps on the left, the map of locations on the right.
+  rc.innerHTML=bannerHtml+(DESKTOP_MQ.matches?
+    '<div class="rot-cols"><div>'+orderSec+repsHtml+'</div><div>'+locSec+finalHtml+'</div></div>':
+    orderSec+locSec+finalHtml+repsHtml);
   var gms=document.getElementById('goMySel');
   if(gms) gms.addEventListener('click',function(){ ROT_TAB='register'; render(); });
 
@@ -2989,7 +3013,7 @@ function renderTransferList(tc){
   }
 
   tc.innerHTML=
-    '<div class="hero">'+
+    '<div class="top-split"><div class="hero">'+
       '<span class="hero-top"><span class="home-eyebrow">Transfer period</span><span class="home-pill open"><span class="dot"></span>Active</span></span>'+
       '<span class="hero-mid"><span class="hero-big" style="font-size:22px;color:var(--t);">'+escHtml(p.name||'')+'</span></span>'+
       '<span class="hero-meta"><span>Power cap for normal invites</span><b style="color:var(--gold);">'+formatPower(p.power_cap)+'</b></span>'+
@@ -2997,7 +3021,7 @@ function renderTransferList(tc){
     '<div class="home-tiles">'+
       statTile('Normal invites',normal.length,p.normal_limit,normalAcc,'#5fa8d8')+
       statTile('Special invites',special.length,p.special_limit,specialAcc,'#b98ae0')+
-    '</div>'+
+    '</div></div>'+
     '<button class="btn btn-p" id="trOpenAdd" style="margin-top:12px;">+ Add invite</button>'+
     (inQuota.length?section('In quota<span class="glabel-n">'+inQuota.length+' of '+p.normal_limit+'</span>','#a6cf9c',
       inQuota.map(function(inv,i){ return inviteRow(inv,i,'#a6cf9c'); }).join('')):'')+
@@ -3508,7 +3532,10 @@ function renderAdminPlayers(ac){
     '</div>';
   }).join('');
 
-  ac.innerHTML=idReqHtml+pendingHtml+
+  // Desktop: the approval queues sit in their own column beside the roster.
+  var queues=idReqHtml+pendingHtml;
+  ac.classList.toggle('ap-split',!!queues);
+  ac.innerHTML=(queues?'<div class="ap-queues">'+queues+'</div>':'')+'<div class="ap-main">'+
     '<div style="font-size:12px;font-weight:700;color:rgba(230,213,180,.65);margin-bottom:8px;">✅ Approved Players ('+approved.length+')</div>'+
     '<div style="position:relative;margin-bottom:12px;">'+
       '<input class="inp" id="playerSearch" placeholder="🔍  Search by name, ID or alliance..." style="padding-left:14px;" autocomplete="off">'+
@@ -3520,7 +3547,7 @@ function renderAdminPlayers(ac){
         '<button class="btn btn-sm" id="bulkClearBtn" style="padding:5px 10px;font-size:11px;">Clear Selection</button>'+
       '</div>'+
     '</div>'+
-    '<div id="playerGroupsWrap">'+approvedHtml+'</div>';
+    '<div id="playerGroupsWrap">'+approvedHtml+'</div></div>';
 
   function updateBulkBar(){
     var bar=document.getElementById('bulkActionBar');
@@ -6122,6 +6149,7 @@ function renderCjBoard(el, viewAlliance, isSuper, isCjAdm, myAlliance){
         (canCopy?'<button class="link-btn" id="cjCopyAll_'+al+'">Copy all</button>':'')+'</div>';
     }
 
+    html += '<div class="team-grid">';
     alTeams.forEach(function(team){
       var members = CJ_MEMBERS.filter(function(m){ return m.team_id===team.id; })
         .sort(function(a,b){ return a.position-b.position; });
@@ -6129,7 +6157,7 @@ function renderCjBoard(el, viewAlliance, isSuper, isCjAdm, myAlliance){
       var countColor = memberCount>=6?'#a6cf9c':memberCount===0?'var(--t3)':'var(--orange)';
 
       html +=
-        '<div class="team-hdr"><span class="team-name">'+escHtml(team.team_name)+'</span>'+
+        '<div class="team-card"><div class="team-hdr"><span class="team-name">'+escHtml(team.team_name)+'</span>'+
           '<span class="team-count" style="color:'+countColor+';">'+memberCount+' / 6</span>'+
           (canCopy?'<button class="link-btn" id="cjCopyTeam_'+team.id+'">Copy</button>':'')+
         '</div>'+
@@ -6139,8 +6167,9 @@ function renderCjBoard(el, viewAlliance, isSuper, isCjAdm, myAlliance){
             : members.map(function(m,i){
                 return '<div class="ord-row"><span class="ord-n">'+(i+1)+'</span><span class="ord-kind" style="color:var(--t);font-size:15px;font-weight:600;">'+escHtml(m.player_name)+'</span></div>';
               }).join(''))+
-        '</div>';
+        '</div></div>';
     });
+    html += '</div>';
   });
 
   el.innerHTML=html;
@@ -6724,11 +6753,12 @@ function renderWarBoard(el, isAdm){
     if(alKeys.length>1){
       html+='<div class="glabel" style="margin-top:4px;color:'+(ALLIANCE_COLORS[al]||'var(--t3)')+';">'+escHtml(al)+'</div>';
     }
+    html+='<div class="team-grid">';
     grouped[al].forEach(function(team){
       var members=WAR_MEMBERS.filter(function(m){ return m.team_id===team.id; }).sort(function(a,b){ return a.position-b.position; });
       var heroes=[team.hero1,team.hero2,team.hero3].map(warHeroName).map(escHtml).join(' · ');
       html+=
-        '<div class="team-hdr" style="align-items:center;"><span class="team-name" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+escHtml(team.team_name)+warTypeBadgeHtml(team)+'</span>'+
+        '<div class="team-card"><div class="team-hdr" style="align-items:center;"><span class="team-name" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+escHtml(team.team_name)+warTypeBadgeHtml(team)+'</span>'+
           (isAdm?'<button class="link-btn warCopyTeam" data-id="'+team.id+'">Copy</button>':'')+
           (isAdm?'<button class="link-btn warDupBoard" data-id="'+team.id+'" title="Duplicate team" aria-label="Duplicate team">Duplicate</button>':'')+
         '</div>'+
@@ -6745,8 +6775,9 @@ function renderWarBoard(el, isAdm){
                 '<span class="ord-st">'+escHtml(warHeroName(m.hero1))+'</span></div>';
             }).join('')
             :'<div class="ord-row"><span class="ord-kind" style="color:var(--t3);">No squad members yet</span></div>')+
-        '</div>';
+        '</div></div>';
     });
+    html+='</div>';
   });
   el.innerHTML=html;
 
@@ -7407,7 +7438,7 @@ function renderPresBoard(el){
       })()+
     '</table>':
     '<div style="font-size:12px;color:var(--t3);">No records yet.</div>';
-  el.innerHTML=currentHtml+queuesHtml+
+  el.innerHTML='<div class="top-split">'+currentHtml+queuesHtml+'</div>'+
     '<div class="glabel">Presidency tally</div>'+
     '<div class="group" style="padding:4px 12px 6px;overflow-x:auto;">'+table+'</div>';
 }
@@ -7421,7 +7452,7 @@ function renderPresHistory(el){
     '<div class="seg">'+filters.map(function(f){
       return '<button class="nav-btn pres-filter'+(PRES_FILTER===f[0]?' on':'')+'" data-f="'+f[0]+'">'+f[1]+'</button>';
     }).join('')+'</div>'+
-    (recs.length?'<div class="group">'+recs.map(function(r){
+    (recs.length?'<div class="group hist-list">'+recs.map(function(r){
       var lost=r.outcome!=='won';
       return '<div class="hist-row'+(lost?' lost':'')+'">'+
         '<div style="flex:1;min-width:0;">'+
