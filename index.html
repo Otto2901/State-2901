@@ -4047,83 +4047,156 @@ function renderAdminMinisters(ac){
   else renderMinApps(body,rerender);
 }
 
+// Stage is derived: DB status stays pending|approved|rejected, and
+// "progress" = pending with at least one time assigned. An app becomes
+// approved only when every requested position has a time (or ✓ Finish).
+function minRequested(a){
+  return minPositions().filter(function(k){ return ((a.prefs&&a.prefs[k])||[]).length||minAssignFor(a.id,k); });
+}
+function minAllAssigned(a){ return minRequested(a).every(function(k){ return !!minAssignFor(a.id,k); }); }
+function minStage(a){
+  if(a.status==='rejected') return 'rejected';
+  if(a.status==='approved') return 'approved';
+  return MIN_ASSIGN.some(function(x){ return x.application_id===a.id; })?'progress':'pending';
+}
+var MIN_STAGE_LABEL={pending:'Pending',progress:'In progress',approved:'Approved',rejected:'Rejected'};
+var MIN_STAGE_COL={pending:'#d9c27a',progress:'#c9974b',approved:'#7a9c72',rejected:'#b5554a'};
+var MIN_SEARCH='', MIN_EXPANDED=new Set();
+
 function renderMinApps(el,rerender){
-  var counts={pending:0,approved:0,rejected:0};
-  MIN_APPS.forEach(function(a){ counts[a.status]=(counts[a.status]||0)+1; });
-  var filters=[['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['all','All']];
-  var list=MIN_APPS.filter(function(a){ return MIN_ADMIN_FILTER==='all'||a.status===MIN_ADMIN_FILTER; });
-  var badge=function(txt,col){ return '<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:4px;color:'+col+';border:1px solid '+col+';">'+txt+'</span>'; };
-  var statusCol={pending:'#d9c27a',approved:'#7a9c72',rejected:'#b5554a'};
+  var counts={pending:0,progress:0,approved:0,rejected:0};
+  MIN_APPS.forEach(function(a){ counts[minStage(a)]++; });
+  var filters=[['pending','Pending'],['progress','In progress'],['approved','Approved'],['rejected','Rejected'],['all','All']];
   el.innerHTML=
     (minIsOpen()?'':'<div class="card" style="padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold);">'+
       (MIN_CFG&&MIN_CFG.status==='hidden'?'Module is hidden: players can\'t see it.':MIN_CFG&&MIN_CFG.status==='open'?'Applications are closed until the start date is set.':'Applications are closed: players can see free times but can\'t apply.')+
       (isSuperAdmin(SESSION.name)?' Change it in Setup.':'')+'</div>')+
-    '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">'+filters.map(function(f){
+    '<div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;">'+filters.map(function(f){
       var on=MIN_ADMIN_FILTER===f[0];
       var c=f[0]==='all'?MIN_APPS.length:counts[f[0]];
-      return '<button class="tog min-filter" data-f="'+f[0]+'" style="flex:1;padding:8px 4px;font-size:12px;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+f[1]+' ('+c+')</button>';
+      return '<button class="tog min-filter" data-f="'+f[0]+'" style="flex:1 1 30%;padding:7px 4px;font-size:11px;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);white-space:nowrap;">'+f[1]+' ('+c+')</button>';
     }).join('')+'</div>'+
+    '<input class="inp" id="minSearch" type="search" autocomplete="off" placeholder="🔍 Search name or Player ID" value="'+escHtml(MIN_SEARCH)+'" style="margin-bottom:10px;padding:10px 12px;font-size:13px;">'+
     '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
       '<button class="btn btn-g btn-sm" id="minAdd" style="flex:1;">+ Add entry</button>'+
       '<button class="btn btn-g btn-sm" id="minReload" style="flex:1;">↻ Refresh</button>'+
     '</div>'+
-    (list.length?list.map(function(a){
-      var posRows=minPositions().map(function(k){
-        var as=minAssignFor(a.id,k);
-        var prefs=(a.prefs&&a.prefs[k])||[];
-        var head='<div style="font-size:11px;font-weight:800;color:#c9974b;">'+escHtml(minPosLabel(k))+'</div>';
-        if(as){
-          return '<div style="padding:8px 0;border-top:1px solid var(--b);">'+head+
-            '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'+
-              '<span style="flex:1;font-size:13px;font-weight:700;color:#7a9c72;">✓ Assigned '+minSlotLabel(as.slot)+'</span>'+
-              '<button class="btn btn-g btn-sm min-unassign" data-pos="'+k+'" data-slot="'+as.slot+'">Unassign</button>'+
-            '</div></div>';
-        }
-        var chips=prefs.length?prefs.map(function(s,i){
-          var holder=minAssignAt(k,s);
-          var label=['1st','2nd','3rd'][i]+' '+minSlotStart(s);
-          if(holder){
-            var h=minAppById(holder.application_id);
-            return '<span title="Taken by '+escHtml(h?h.player_name:'another player')+'" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--b2);color:var(--t3);text-decoration:line-through;">'+label+'</span>';
-          }
-          return '<button class="tog min-assign" data-id="'+a.id+'" data-pos="'+k+'" data-slot="'+s+'" title="Assign '+minSlotLabel(s)+'" style="padding:5px 8px;font-size:11px;border-color:rgba(122,156,114,.45);color:#9cc093;">'+label+'</button>';
-        }).join(''):'<span style="font-size:11px;color:var(--t3);">Not requested</span>';
-        var freeOpts='<option value="">Other time…</option>';
-        for(var s=0;s<48;s++) if(!MIN_TAKEN.has(k+':'+s)) freeOpts+='<option value="'+s+'">'+minSlotLabel(s)+'</option>';
-        return '<div style="padding:8px 0;border-top:1px solid var(--b);">'+head+
-          '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;">'+chips+
-            '<select class="sel min-other" data-id="'+a.id+'" data-pos="'+k+'" aria-label="Assign another time" style="width:auto;flex:1;min-width:110px;padding:5px 26px 5px 8px;font-size:11px;background-position:right 8px center;">'+freeOpts+'</select>'+
-          '</div></div>';
-      }).join('');
-      return '<div class="card" style="padding:12px 14px;margin-bottom:10px;">'+
-        '<div style="display:flex;align-items:flex-start;gap:8px;">'+
-          '<div style="flex:1;min-width:0;">'+
-            '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(a.player_name)+
-              badge(a.status.toUpperCase(),statusCol[a.status]||'#a3b3c2')+(a.source==='admin'?badge('ADMIN ENTRY','#a3b3c2'):'')+'</div>'+
-            '<div style="font-size:11px;color:var(--t2);margin-top:2px;">ID '+escHtml(a.player_id)+' · '+new Date(a.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC'+(a.entered_by?' · by '+escHtml(a.entered_by):'')+'</div>'+
-          '</div>'+
-        '</div>'+
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;font-size:11px;color:var(--t2);">'+
-          [['Constr.',minNum(a.speed_construction)+'d'],['Research',minNum(a.speed_research)+'d'],['General',minNum(a.speed_general)+'d'],
-           ['FC',minNum(a.fire_crystal)],['Refined FC',minNum(a.refined_fc)],['FC Shards',minNum(a.fc_shards)]].map(function(x){
-            return '<div style="background:var(--surface2);border-radius:8px;padding:6px 8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--t3);">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;">'+x[1]+'</div></div>';
-          }).join('')+
-        '</div>'+
-        (a.status==='rejected'?'':posRows)+
-        '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'+
-          '<button class="btn btn-g btn-sm min-copy" data-id="'+a.id+'">📋 Copy</button>'+
-          '<button class="btn btn-g btn-sm min-edit" data-id="'+a.id+'">✏️ Edit</button>'+
-          (a.status==='rejected'?
-            '<button class="btn btn-g btn-sm min-restore" data-id="'+a.id+'">↩ Restore</button>':
-            '<button class="btn btn-g btn-sm min-reject" data-id="'+a.id+'">✕ Reject</button>')+
-          (isSuperAdmin(SESSION.name)?'<button class="btn btn-d btn-sm min-del" data-id="'+a.id+'" style="margin-left:auto;">🗑</button>':'')+
-        '</div>'+
-      '</div>';
-    }).join(''):'<div class="empty"><div class="empty-icon">📥</div><p>No applications here.</p></div>');
+    '<div id="minAppList"></div>';
 
   el.querySelectorAll('.min-filter').forEach(function(b){ b.addEventListener('click',function(){ MIN_ADMIN_FILTER=b.dataset.f; rerender(); }); });
   el.querySelector('#minAdd').addEventListener('click',function(){ openMinAdminForm(null,rerender); });
   el.querySelector('#minReload').addEventListener('click',function(){ MIN_ADMIN_LOADED=false; rerender(); });
+  var listEl=el.querySelector('#minAppList');
+  // Only the list re-renders while typing, so the search box keeps focus
+  el.querySelector('#minSearch').addEventListener('input',function(e){ MIN_SEARCH=e.target.value; renderMinAppList(listEl,rerender); });
+  renderMinAppList(listEl,rerender);
+}
+
+function minAppCompactHtml(a){
+  var st=minStage(a);
+  var short=minPositions().map(function(k){
+    var as=minAssignFor(a.id,k);
+    var asked=((a.prefs&&a.prefs[k])||[]).length;
+    if(!as&&!asked) return '';
+    return '<span style="white-space:nowrap;'+(as?'color:var(--t);':'color:var(--t3);')+'">'+(k==='edu'?'Edu':'VP')+' D'+minDay(k)+' '+(as?minSlotStart(as.slot):'—')+'</span>';
+  }).filter(Boolean).join(' · ');
+  return '<button class="card min-compact" data-id="'+a.id+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;cursor:pointer;font-family:inherit;">'+
+    '<span aria-hidden="true" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+MIN_STAGE_COL[st]+';"></span>'+
+    '<span style="flex:1;min-width:0;">'+
+      '<span style="display:block;font-size:13px;font-weight:800;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(a.player_name)+' <span style="font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums;">· '+escHtml(a.player_id)+'</span></span>'+
+      '<span style="display:block;font-size:11px;margin-top:2px;line-height:1.5;">'+(st==='rejected'?'<span style="color:var(--red);">Rejected</span>':(short||'<span style="color:var(--t3);">No times</span>'))+'</span>'+
+    '</span>'+
+    '<span aria-hidden="true" style="color:var(--t3);font-size:16px;">›</span>'+
+  '</button>';
+}
+
+function minAppCardHtml(a){
+  var st=minStage(a);
+  var badge=function(txt,col){ return '<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:4px;color:'+col+';border:1px solid '+col+';">'+txt+'</span>'; };
+  var posRows=minPositions().map(function(k){
+    var as=minAssignFor(a.id,k);
+    var prefs=(a.prefs&&a.prefs[k])||[];
+    var head='<div style="font-size:11px;font-weight:800;color:#c9974b;">'+escHtml(minPosLabel(k))+'</div>';
+    if(as){
+      return '<div style="padding:8px 0;border-top:1px solid var(--b);">'+head+
+        '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'+
+          '<span style="flex:1;font-size:13px;font-weight:700;color:#7a9c72;">✓ Assigned '+minSlotLabel(as.slot)+'</span>'+
+          '<button class="btn btn-g btn-sm min-unassign" data-pos="'+k+'" data-slot="'+as.slot+'">Unassign</button>'+
+        '</div></div>';
+    }
+    var chips=prefs.length?prefs.map(function(s,i){
+      var holder=minAssignAt(k,s);
+      var label=['1st','2nd','3rd'][i]+' '+minSlotStart(s);
+      if(holder){
+        var h=minAppById(holder.application_id);
+        return '<span title="Taken by '+escHtml(h?h.player_name:'another player')+'" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--b2);color:var(--t3);text-decoration:line-through;">'+label+'</span>';
+      }
+      return '<button class="tog min-assign" data-id="'+a.id+'" data-pos="'+k+'" data-slot="'+s+'" title="Assign '+minSlotLabel(s)+'" style="padding:5px 8px;font-size:11px;border-color:rgba(122,156,114,.45);color:#9cc093;">'+label+'</button>';
+    }).join(''):'<span style="font-size:11px;color:var(--t3);">Not requested</span>';
+    var freeOpts='<option value="">Other time…</option>';
+    for(var s=0;s<48;s++) if(!MIN_TAKEN.has(k+':'+s)) freeOpts+='<option value="'+s+'">'+minSlotLabel(s)+'</option>';
+    return '<div style="padding:8px 0;border-top:1px solid var(--b);">'+head+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;">'+chips+
+        '<select class="sel min-other" data-id="'+a.id+'" data-pos="'+k+'" aria-label="Assign another time" style="width:auto;flex:1;min-width:110px;padding:5px 26px 5px 8px;font-size:11px;background-position:right 8px center;">'+freeOpts+'</select>'+
+      '</div></div>';
+  }).join('');
+  var left=minRequested(a).filter(function(k){ return !minAssignFor(a.id,k); }).length;
+  return '<div class="card" style="padding:12px 14px;margin-bottom:10px;">'+
+    '<div style="display:flex;align-items:flex-start;gap:8px;">'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:14px;font-weight:800;color:var(--t);">'+escHtml(a.player_name)+
+          badge(MIN_STAGE_LABEL[st].toUpperCase(),MIN_STAGE_COL[st])+(a.source==='admin'?badge('ADMIN ENTRY','#a3b3c2'):'')+'</div>'+
+        '<div style="font-size:11px;color:var(--t2);margin-top:2px;">ID '+escHtml(a.player_id)+' · '+new Date(a.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC'+(a.entered_by?' · by '+escHtml(a.entered_by):'')+'</div>'+
+      '</div>'+
+      (MIN_EXPANDED.has(a.id)?'<button class="btn btn-g btn-sm min-collapse" data-id="'+a.id+'" aria-label="Collapse">▲</button>':'')+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;font-size:11px;color:var(--t2);">'+
+      [['Constr.',minNum(a.speed_construction)+'d'],['Research',minNum(a.speed_research)+'d'],['General',minNum(a.speed_general)+'d'],
+       ['FC',minNum(a.fire_crystal)],['Refined FC',minNum(a.refined_fc)],['FC Shards',minNum(a.fc_shards)]].map(function(x){
+        return '<div style="background:var(--surface2);border-radius:8px;padding:6px 8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--t3);">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;">'+x[1]+'</div></div>';
+      }).join('')+
+    '</div>'+
+    (st==='rejected'?'':posRows)+
+    (st==='progress'&&left?'<div style="font-size:11px;color:#c9974b;margin-top:8px;">'+left+' position'+(left===1?'':'s')+' still without a time.</div>':'')+
+    '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'+
+      (st==='progress'?'<button class="btn btn-g btn-sm min-finish" data-id="'+a.id+'" style="border-color:rgba(122,156,114,.45);color:#9cc093;">✓ Finish</button>':'')+
+      '<button class="btn btn-g btn-sm min-copy" data-id="'+a.id+'">📋 Copy</button>'+
+      '<button class="btn btn-g btn-sm min-edit" data-id="'+a.id+'">✏️ Edit</button>'+
+      (st==='rejected'?
+        '<button class="btn btn-g btn-sm min-restore" data-id="'+a.id+'">↩ Restore</button>':
+        '<button class="btn btn-g btn-sm min-reject" data-id="'+a.id+'">✕ Reject</button>')+
+      (isSuperAdmin(SESSION.name)?'<button class="btn btn-d btn-sm min-del" data-id="'+a.id+'" style="margin-left:auto;">🗑</button>':'')+
+    '</div>'+
+  '</div>';
+}
+
+function renderMinAppList(el,rerender){
+  var q=MIN_SEARCH.trim().toLowerCase();
+  var list=MIN_APPS.filter(function(a){
+    if(q) return String(a.player_name||'').toLowerCase().indexOf(q)>=0||String(a.player_id||'').indexOf(q)>=0;
+    return MIN_ADMIN_FILTER==='all'||minStage(a)===MIN_ADMIN_FILTER;
+  });
+  el.innerHTML=
+    (q?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">Searching all applications · '+list.length+' found</div>':'')+
+    (list.length?list.map(function(a){
+      var st=minStage(a);
+      var compact=(st==='approved'||st==='rejected')&&!MIN_EXPANDED.has(a.id);
+      return compact?minAppCompactHtml(a):minAppCardHtml(a);
+    }).join(''):'<div class="empty"><div class="empty-icon">📥</div><p>'+(q?'No match.':'No applications here.')+'</p></div>');
+
+  el.querySelectorAll('.min-compact').forEach(function(b){
+    b.addEventListener('click',function(){ MIN_EXPANDED.add(b.dataset.id); renderMinAppList(el,rerender); });
+  });
+  el.querySelectorAll('.min-collapse').forEach(function(b){
+    b.addEventListener('click',function(){ MIN_EXPANDED.delete(b.dataset.id); renderMinAppList(el,rerender); });
+  });
+  el.querySelectorAll('.min-finish').forEach(function(b){
+    b.addEventListener('click',async function(){
+      var a=minAppById(b.dataset.id); if(!a) return;
+      if(!await confirmDanger('Mark '+a.player_name+'\'s application as approved without the remaining positions?',{title:'Finish application',confirmLabel:'Finish',danger:false})) return;
+      if(await minSetStatus(a,'approved')){ toast('✅ '+a.player_name+' approved'); rerender(); }
+    });
+  });
   el.querySelectorAll('.min-assign').forEach(function(b){
     b.addEventListener('click',function(){ minAssign(b.dataset.id,b.dataset.pos,parseInt(b.dataset.slot,10),rerender); });
   });
@@ -4164,6 +4237,7 @@ function renderMinApps(el,rerender){
       if(r.error){ toast('Error: '+r.error.message); return; }
       if(!r.data||!r.data.length){ toast('Not deleted: permission denied'); return; }
       MIN_APPS=MIN_APPS.filter(function(x){ return x.id!==a.id; });
+      MIN_EXPANDED.delete(a.id);
       toast('🗑 Application deleted');
       rerender();
     });
@@ -4206,8 +4280,9 @@ async function minAssign(appId,pos,slot,rerender){
   }
   MIN_ASSIGN.push(r.data);
   MIN_TAKEN.add(pos+':'+slot);
-  if(a.status!=='approved') await minSetStatus(a,'approved');
-  toast('✅ '+a.player_name+' → '+MIN_POS_TITLE[pos]+' '+minSlotLabel(slot));
+  var left=minRequested(a).filter(function(k){ return !minAssignFor(a.id,k); }).length;
+  if(a.status!=='approved'&&!left) await minSetStatus(a,'approved');
+  toast('✅ '+a.player_name+' → '+MIN_POS_TITLE[pos]+' '+minSlotStart(slot)+(left?' · '+left+' more to go':' · approved'));
   rerender();
 }
 async function minUnassign(pos,slot,rerender){
@@ -4219,7 +4294,7 @@ async function minUnassign(pos,slot,rerender){
   if(!r.data||!r.data.length){ toast('Not removed: permission denied'); return; }
   MIN_ASSIGN=MIN_ASSIGN.filter(function(x){ return !(x.position===pos&&x.slot===slot); });
   MIN_TAKEN.delete(pos+':'+slot);
-  if(a&&a.status==='approved'&&!MIN_ASSIGN.some(function(x){ return x.application_id===a.id; })) await minSetStatus(a,'pending');
+  if(a&&a.status==='approved'&&!minAllAssigned(a)) await minSetStatus(a,'pending');
   toast('Time freed');
   rerender();
 }
@@ -4418,9 +4493,11 @@ function renderMinisterGuideContent(rc){
       guideSection('For admins','#e3bc6a')+
       guideStep(1,'Manage everything in <strong>Admin Panel › Ministers</strong>. Only super admin and Minister Apps Admins see names and resources.')+
       guideStep(2,'<strong>Applications</strong>: tap a green preference to assign it, or pick any free time from <strong>Other time…</strong>. A time can only be given to one player per position.')+
-      guideStep(3,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
-      guideStep(4,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.')+
-      guideStep(5,'<strong>IDs</strong>: pick the day, tap 📋 to copy a player\'s ID for in-game assignment. Copied rows get a ✓, <strong>Clear marks</strong> resets that day.');
+      guideStep(3,'After the first time, the player moves to <strong>In progress</strong>. Once every position they asked for has a time, they move to <strong>Approved</strong> automatically. Not giving one? Tap <strong>✓ Finish</strong>.')+
+      guideStep(4,'Approved and Rejected show as short rows: tap one to open it. Use <strong>Search</strong> to find any player by name or ID.')+
+      guideStep(5,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
+      guideStep(6,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.')+
+      guideStep(7,'<strong>IDs</strong>: pick the day, tap 📋 to copy a player\'s ID for in-game assignment. Copied rows get a ✓, <strong>Clear marks</strong> resets that day.');
   }
   if(SESSION&&isSuperAdmin(SESSION.name)){
     html+=
