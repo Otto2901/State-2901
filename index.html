@@ -500,7 +500,8 @@ var ROLE_INFO = {
   war_admin:        { label:'War Team Admin',  guideKey:null,       desc:'You can manage War Team Builder rally teams, formations, and the hero list.' },
   rally_admin:      { label:'Rally Timer Admin',guideKey:'rallytimer', desc:'You can open the Rally Timer march-sync calculator.' },
   presidency_admin: { label:'Presidency Admin', guideKey:'presidency', desc:'You can record SFC and SvS Supreme results, add past records, edit records, and reorder the presidency queues in the Presidency Ledger.' },
-  moderator:        { label:'Moderator',       guideKey:null,       desc:'You have moderator status.' }
+  minister_admin:   { label:'Minister Apps Admin', guideKey:'ministers', desc:'You can view SvS minister applications, add and edit entries, and assign or free time slots in Admin Panel › Ministers.' },
+  moderator:       { label:'Moderator',       guideKey:null,       desc:'You have moderator status.' }
 };
 function createSb(token){
   return token
@@ -527,6 +528,7 @@ function isStrongholdAdmin(name){ return isSuperAdmin(name)||hasRole(name,'stron
 function isWarAdmin(name){ return isSuperAdmin(name)||hasRole(name,'war_admin'); }
 function isRallyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'rally_admin'); }
 function isPresidencyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'presidency_admin'); }
+function isMinisterAdmin(name){ return isSuperAdmin(name)||hasRole(name,'minister_admin'); }
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
@@ -994,7 +996,7 @@ function renderHome(app){
   }
   var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super">Super Admin</span>':
     getRoles(SESSION.name).map(function(r){
-      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'||r==='war_admin'||r==='rally_admin'||r==='presidency_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
+      var cls=r==='cj_admin'||r==='library_admin'||r==='stronghold_admin'||r==='war_admin'||r==='rally_admin'||r==='presidency_admin'||r==='minister_admin'?'role-svs':r==='moderator'?'role-mod':'role-mod';
       return '<span class="role-badge '+cls+'">'+r.replace(/_/g,' ')+'</span>';
     }).join(' ');
 
@@ -1098,12 +1100,13 @@ function renderHome(app){
           '<div class="home-card-sub">SFC & SvS Supreme rotation</div></div>'+
           '<div class="home-card-chev">›</div>'+
         '</div>'+
+        (minIsVisible()?
         '<div class="home-card brk" id="goMinisters" style="border-color:rgba(201,151,75,.25);">'+
           '<div class="home-card-icon-badge" style="'+iconBadgeStyle('201,151,75')+'"><div class="home-card-icon">🗓️</div></div>'+
           '<div class="home-card-text"><span class="home-card-title" style="color:#d4a95e;">SvS Minister Applications</span>'+
           '<div class="home-card-sub">Free times & apply for a minister slot</div></div>'+
           '<div class="home-card-chev">›</div>'+
-        '</div>'+
+        '</div>':'')+
         (isRallyAdmin(SESSION.name)?
         '<div class="home-card brk" id="goRally" style="border-color:rgba(216,196,138,.25);">'+
           '<div class="home-card-icon-badge" style="'+iconBadgeStyle('216,196,138')+'"><div class="home-card-icon">⏱️</div></div>'+
@@ -1161,7 +1164,8 @@ function renderHome(app){
   if(goRallyBtn) goRallyBtn.addEventListener('click', function(){ MODULE='rallytimer'; render(); });
   var goPresBtn=document.getElementById('goPresidency');
   if(goPresBtn) goPresBtn.addEventListener('click', function(){ MODULE='presidency'; PRES_TAB='board'; render(); });
-  document.getElementById('goMinisters').addEventListener('click', openMinisterModal);
+  var goMinBtn=document.getElementById('goMinisters');
+  if(goMinBtn) goMinBtn.addEventListener('click', openMinisterModal);
   document.getElementById('goRules').addEventListener('click', function(){ MODULE='rules'; RULES_TAB='board'; RULES_SELECTED=null; render(); });
   document.getElementById('goLibrary').addEventListener('click', function(){ MODULE='library'; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
   var goAdminBtn=document.getElementById('goAdmin');
@@ -1489,7 +1493,7 @@ function renderAuth(app){
   }
   var rulesLinkHtml='<div style="text-align:center;margin-top:14px;"><button id="stateRulesLink" style="background:none;border:none;color:rgba(196,155,92,.65);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:Manrope,sans-serif;">📜 View State Rules</button></div>';
   // Public, no-login module: big entry button under the auth card
-  var ministerBtnHtml='<div class="auth-card"><button class="btn btn-g" id="ministerAppsBtn" style="padding:16px;font-size:15px;border-color:rgba(201,151,75,.45);">👑 SvS Minister Applications<div style="font-size:11px;font-weight:600;color:var(--t2);margin-top:3px;letter-spacing:0;">No login needed · see free times & apply</div></button></div>';
+  var ministerBtnHtml=!minIsVisible()?'':'<div class="auth-card"><button class="btn btn-g" id="ministerAppsBtn" style="padding:16px;font-size:15px;border-color:rgba(201,151,75,.45);">👑 SvS Minister Applications<div style="font-size:11px;font-weight:600;color:var(--t2);margin-top:3px;letter-spacing:0;">No login needed · see free times & apply</div></button></div>';
   app.innerHTML='<div class="auth'+(stepChanged?' gate-in':'')+'">'+inner+ministerBtnHtml+rulesLinkHtml+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
   if(AUTH_STEP==='name'){
     var inp=document.getElementById('nameInp'); inp.value=NAME_INP;
@@ -1503,7 +1507,8 @@ function renderAuth(app){
     document.getElementById('backBtn').addEventListener('click',function(){ AUTH_STEP='name'; PIN_INP=''; AUTH_ERR=''; render(); });
   }
   document.getElementById('stateRulesLink').addEventListener('click',openStateRulesModal);
-  document.getElementById('ministerAppsBtn').addEventListener('click',openMinisterModal);
+  var mab=document.getElementById('ministerAppsBtn');
+  if(mab) mab.addEventListener('click',openMinisterModal);
 }
 
 
@@ -3061,7 +3066,7 @@ function renderAdminPanel(app){
   if(isSuper||isStrAdm)   tabs.push({id:'rotation',icon:'🏰',label:'Rotation'});
   if(isSuper||isTrMgr)    tabs.push({id:'transfer',icon:'✈️',label:'Transfer'});
   if(isSuper)              tabs.push({id:'stats',icon:'📊',label:'Stats'});
-  if(isSuper)              tabs.push({id:'ministers',icon:'👑',label:'Ministers'});
+  if(isMinisterAdmin(SESSION.name)) tabs.push({id:'ministers',icon:'👑',label:'Ministers'});
 
   // Ensure ADMIN_TAB is valid
   if(!tabs.find(function(t){ return t.id===ADMIN_TAB; })) ADMIN_TAB=tabs[0]?tabs[0].id:null;
@@ -3168,7 +3173,7 @@ function renderAdminPlayers(ac){
 
   function playerRowHtml(p){
     var role=getRole(p.name);
-    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin"||role==="rally_admin"||role==="presidency_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
+    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin"||role==="rally_admin"||role==="presidency_admin"||role==="minister_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
     var playerReps=ALLIANCE_REPS.filter(function(r){ return r.player_name===p.name; });
     var repTags=playerReps.map(function(r){
       if(r.alliance==='TRANSFER') return '<span style="font-size:9px;background:rgba(143,122,168,.12);color:#b494c4;border:1px solid rgba(143,122,168,.35);border-radius:5px;padding:1px 5px;">✈️ Transfer Rep</span>';
@@ -3426,7 +3431,7 @@ function renderAdminRoles(ac){
   var rolesHtml=Object.keys(byPlayer).sort().map(function(pname){
     var roles=byPlayer[pname];
     var badgesHtml=roles.map(function(r){
-      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'||r.role==='rally_admin'||r.role==='presidency_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
+      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'||r.role==='rally_admin'||r.role==='presidency_admin'||r.role==='minister_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
       return '<span class="role-badge '+badgeCls+'" style="margin-right:4px;">'+r.role.replace(/_/g," ")+'</span>'+
         '<button class="btn btn-d btn-sm revoke-role" data-player="'+pname+'" data-role="'+r.role+'" style="padding:3px 8px;font-size:10px;margin-right:4px;">✕</button>';
     }).join('');
@@ -3456,6 +3461,7 @@ function renderAdminRoles(ac){
           '<option value="war_admin">⚔️ War Team Admin</option>'+
           '<option value="rally_admin">⏱️ Rally Timer Admin</option>'+
           '<option value="presidency_admin">👑 Presidency Admin</option>'+
+          '<option value="minister_admin">🗓️ Minister Apps Admin</option>'+
         '</select>'+
         '<button class="btn btn-g btn-sm" id="grantRoleBtn">Grant</button>'+
       '</div>'+
@@ -3755,7 +3761,21 @@ function minPosLabel(key){
 function minSlotStart(s){ var h=Math.floor(s/2); return (h<10?'0':'')+h+':'+(s%2?'30':'00'); }
 function minSlotLabel(s){ return minSlotStart(s)+'–'+(s===47?'00:00':minSlotStart(s+1)); }
 function minNum(n){ var v=Number(n); return isFinite(v)?v.toLocaleString('en-US'):'0'; }
-function minIsOpen(){ return !!(MIN_CFG&&MIN_CFG.prep_start_date); }
+// status: open = apply allowed, closed = visible but no applying,
+// hidden = entry button + home card hidden (Admin Panel tab stays).
+function minIsOpen(){ return !!(MIN_CFG&&MIN_CFG.status==='open'&&MIN_CFG.prep_start_date); }
+function minIsVisible(){ return !!(MIN_CFG&&(MIN_CFG.status==='open'||MIN_CFG.status==='closed')); }
+// Fetched once in init() before the first render so the auth button / home
+// card know whether to show. Failure = treated as hidden.
+async function minLoadCfg(){
+  try{
+    var r=await Promise.race([
+      sb.from('minister_config').select('*').eq('id',1).maybeSingle(),
+      new Promise(function(res){ setTimeout(function(){ res({error:'timeout'}); },3000); })
+    ]);
+    if(!r.error&&r.data) MIN_CFG=r.data;
+  }catch(e){}
+}
 
 async function minLoadPublic(){
   var res=await Promise.all([
@@ -3804,7 +3824,7 @@ function renderMinPublicBody(values){
   });
   if(MIN_PUB_TAB==='avail'){ el.innerHTML=minAvailabilityHtml(); return; }
   if(!minIsOpen()){
-    el.innerHTML='<div class="empty" style="padding:30px 10px;"><div class="empty-icon">⏳</div><p>Applications are not open yet.</p></div>';
+    el.innerHTML='<div class="empty" style="padding:30px 10px;"><div class="empty-icon">🔒</div><p>Applications are closed.</p></div>';
     return;
   }
   el.innerHTML=
@@ -3832,7 +3852,7 @@ function minAvailabilityHtml(){
           (taken?'color:var(--red);background:rgba(181,85,74,.12);opacity:.8;':'color:var(--green);background:rgba(122,156,114,.1);')+'">'+(taken?'Taken':'Free')+'</div></td>';
       }).join('')+'</tr>';
   }
-  return (minIsOpen()?'':'<div style="font-size:11px;color:var(--gold);margin-bottom:10px;">Applications are not open yet.</div>')+
+  return (minIsOpen()?'':'<div style="font-size:11px;color:var(--gold);margin-bottom:10px;">Applications are closed.</div>')+
     '<table style="width:100%;border-collapse:collapse;">'+head+rows+'</table>';
 }
 
@@ -3997,7 +4017,7 @@ function minAssignAt(pos,slot){ return MIN_ASSIGN.find(function(a){ return a.pos
 function minAppById(id){ return MIN_APPS.find(function(a){ return a.id===id; }); }
 
 function renderAdminMinisters(ac){
-  if(!isSuperAdmin(SESSION.name)){ ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
+  if(!isMinisterAdmin(SESSION.name)){ ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
   if(!MIN_ADMIN_LOADED){
     ac.innerHTML='<div style="text-align:center;color:var(--t2);font-size:12px;padding:30px 0;">Loading...</div>';
     minLoadAdmin().then(function(){ renderAdminMinisters(ac); },function(e){
@@ -4005,7 +4025,10 @@ function renderAdminMinisters(ac){
     });
     return;
   }
-  var views=[['apps','Applications'],['schedule','Schedule'],['setup','Setup']];
+  var isSup=isSuperAdmin(SESSION.name);
+  var views=[['apps','Applications'],['schedule','Schedule']];
+  if(isSup) views.push(['setup','Setup']);
+  if(MIN_ADMIN_VIEW==='setup'&&!isSup) MIN_ADMIN_VIEW='apps';
   ac.innerHTML=
     '<div style="display:flex;gap:8px;margin-bottom:14px;">'+views.map(function(v){
       var on=MIN_ADMIN_VIEW===v[0];
@@ -4018,7 +4041,7 @@ function renderAdminMinisters(ac){
   var body=ac.querySelector('#minAdmBody');
   var rerender=function(){ renderAdminMinisters(ac); };
   if(MIN_ADMIN_VIEW==='schedule') renderMinSchedule(body,rerender);
-  else if(MIN_ADMIN_VIEW==='setup') renderMinSetup(body,rerender);
+  else if(MIN_ADMIN_VIEW==='setup'&&isSup) renderMinSetup(body,rerender);
   else renderMinApps(body,rerender);
 }
 
@@ -4030,7 +4053,9 @@ function renderMinApps(el,rerender){
   var badge=function(txt,col){ return '<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;margin-left:4px;color:'+col+';border:1px solid '+col+';">'+txt+'</span>'; };
   var statusCol={pending:'#d9c27a',approved:'#7a9c72',rejected:'#b5554a'};
   el.innerHTML=
-    (minIsOpen()?'':'<div class="card" style="padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold);">Applications are closed. Set the SvS Prep start date in Setup to open them.</div>')+
+    (minIsOpen()?'':'<div class="card" style="padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--gold);">'+
+      (MIN_CFG&&MIN_CFG.status==='hidden'?'Module is hidden: players can\'t see it.':MIN_CFG&&MIN_CFG.status==='open'?'Applications are closed until the start date is set.':'Applications are closed: players can see free times but can\'t apply.')+
+      (isSuperAdmin(SESSION.name)?' Change it in Setup.':'')+'</div>')+
     '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">'+filters.map(function(f){
       var on=MIN_ADMIN_FILTER===f[0];
       var c=f[0]==='all'?MIN_APPS.length:counts[f[0]];
@@ -4089,7 +4114,7 @@ function renderMinApps(el,rerender){
           (a.status==='rejected'?
             '<button class="btn btn-g btn-sm min-restore" data-id="'+a.id+'">↩ Restore</button>':
             '<button class="btn btn-g btn-sm min-reject" data-id="'+a.id+'">✕ Reject</button>')+
-          '<button class="btn btn-d btn-sm min-del" data-id="'+a.id+'" style="margin-left:auto;">🗑</button>'+
+          (isSuperAdmin(SESSION.name)?'<button class="btn btn-d btn-sm min-del" data-id="'+a.id+'" style="margin-left:auto;">🗑</button>':'')+
         '</div>'+
       '</div>';
     }).join(''):'<div class="empty"><div class="empty-icon">📥</div><p>No applications here.</p></div>');
@@ -4130,7 +4155,7 @@ function renderMinApps(el,rerender){
   });
   el.querySelectorAll('.min-del').forEach(function(b){
     b.addEventListener('click',async function(){
-      var a=minAppById(b.dataset.id); if(!a) return;
+      var a=minAppById(b.dataset.id); if(!a||!isSuperAdmin(SESSION.name)) return;
       if(!await confirmDanger('Permanently delete '+a.player_name+'\'s application? Any assigned times will be freed.',{title:'Delete application',confirmLabel:'Delete'})) return;
       if(!await minClearAssignments(a.id)) return;
       var r=await sb.from('minister_applications').delete().eq('id',a.id).select();
@@ -4197,7 +4222,7 @@ async function minUnassign(pos,slot,rerender){
   rerender();
 }
 function openMinAdminForm(app,rerender){
-  if(!isSuperAdmin(SESSION.name)) return;
+  if(!isMinisterAdmin(SESSION.name)) return;
   var formBody=null;
   openModal({
     title:app?'Edit application':'Add entry',
@@ -4279,7 +4304,12 @@ function renderMinSetup(el,rerender){
   el.innerHTML=
     '<div class="card brk" style="margin-bottom:12px;">'+
       '<div style="font-family:var(--serif);font-size:15px;color:#c9974b;margin-bottom:6px;">SvS Prep schedule</div>'+
-      '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">Day 1 is always Vice President, Day 4 is always Minister of Education. Leave the start date empty to close applications.</div>'+
+      '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">Day 1 is always Vice President, Day 4 is always Minister of Education.</div>'+
+      '<div class="field"><label class="lbl" for="minStatus">Module status</label><select class="sel" id="minStatus">'+
+        [['open','🟢 Open: visible, players can apply'],['closed','🟡 Closed: visible, no new applications'],['hidden','⚫ Hidden: not shown to players']].map(function(o){
+          return '<option value="'+o[0]+'"'+((c.status||'hidden')===o[0]?' selected':'')+'>'+o[1]+'</option>';
+        }).join('')+
+      '</select></div>'+
       '<div class="field"><label class="lbl" for="minStart">Prep Day 1 date</label><input class="inp" type="date" id="minStart" value="'+escHtml(c.prep_start_date||'')+'"></div>'+
       '<div class="field"><label class="lbl" for="minVp2">Second Vice President day</label><select class="sel" id="minVp2">'+
         '<option value="2"'+(c.second_vp_day!==5?' selected':'')+'>Day 2</option>'+
@@ -4289,11 +4319,13 @@ function renderMinSetup(el,rerender){
     '</div>'+
     '<div class="card" style="border-color:rgba(181,85,74,.3);">'+
       '<div style="font-family:var(--serif);font-size:15px;color:var(--red);margin-bottom:6px;">New SvS</div>'+
-      '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">Deletes every application and every assigned time, and closes applications until you set the new start date. Copy the schedule first if you need it.</div>'+
+      '<div style="font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6;">Deletes every application and every assigned time, clears the start date and sets the module to Hidden. Copy the schedule first if you need it.</div>'+
       '<button class="btn btn-d" id="minReset">Start new SvS</button>'+
     '</div>';
   el.querySelector('#minSaveCfg').addEventListener('click',async function(){
-    var row={prep_start_date:el.querySelector('#minStart').value||null,second_vp_day:parseInt(el.querySelector('#minVp2').value,10),updated_by:SESSION.name,updated_at:new Date().toISOString()};
+    var status=el.querySelector('#minStatus').value;
+    if(status==='open'&&!el.querySelector('#minStart').value){ toast('Set the Prep Day 1 date before opening'); return; }
+    var row={status:status,prep_start_date:el.querySelector('#minStart').value||null,second_vp_day:parseInt(el.querySelector('#minVp2').value,10),updated_by:SESSION.name,updated_at:new Date().toISOString()};
     var r=await sb.from('minister_config').update(row).eq('id',1).select().single();
     if(r.error){ toast('Error: '+r.error.message); return; }
     MIN_CFG=r.data;
@@ -4301,15 +4333,15 @@ function renderMinSetup(el,rerender){
     rerender();
   });
   el.querySelector('#minReset').addEventListener('click',async function(){
-    if(!await confirmDanger('Delete all '+MIN_APPS.length+' applications and '+MIN_ASSIGN.length+' assigned times, and close applications?',{title:'Start new SvS',confirmLabel:'Delete everything',requireTyped:'RESET'})) return;
+    if(!await confirmDanger('Delete all '+MIN_APPS.length+' applications and '+MIN_ASSIGN.length+' assigned times, and hide the module?',{title:'Start new SvS',confirmLabel:'Delete everything',requireTyped:'RESET'})) return;
     var r1=await sb.from('minister_assignments').delete().gte('slot',0);
     if(r1.error){ toast('Error: '+r1.error.message); return; }
     var r2=await sb.from('minister_applications').delete().not('id','is',null);
     if(r2.error){ toast('Error: '+r2.error.message); MIN_ADMIN_LOADED=false; rerender(); return; }
-    var r3=await sb.from('minister_config').update({prep_start_date:null,updated_by:SESSION.name,updated_at:new Date().toISOString()}).eq('id',1);
+    var r3=await sb.from('minister_config').update({status:'hidden',prep_start_date:null,updated_by:SESSION.name,updated_at:new Date().toISOString()}).eq('id',1);
     if(r3.error) toast('Error: '+r3.error.message);
     MIN_ADMIN_LOADED=false;
-    toast('🧹 Cleared. Set the new start date to open applications.');
+    toast('🧹 Cleared and hidden. Set the new date and status when the next SvS comes.');
     rerender();
   });
 }
@@ -4324,14 +4356,21 @@ function renderMinisterGuideContent(rc){
     guideStep(2,'<strong>Availability</strong> shows which times are free or taken. Names are never shown.')+
     guideStep(3,'In <strong>Apply</strong>, enter your name, Player ID, speedups (in days) and Fire Crystal amounts, then pick up to 3 times per position in order of preference. Tick <strong>Use the same times for all 3 positions</strong> to copy your Day 1 choices.')+
     guideStep(4,'One application per Player ID. To change it, contact the state admin.');
-  if(SESSION&&isSuperAdmin(SESSION.name)){
+  if(SESSION&&isMinisterAdmin(SESSION.name)){
     html+=
-      guideSection('For super admin','#e3bc6a')+
-      guideStep(1,'<strong>Setup</strong>: set the Prep Day 1 date and the second VP day. Applications are open only while a start date is set.')+
+      guideSection('For admins','#e3bc6a')+
+      guideStep(1,'Manage everything in <strong>Admin Panel › Ministers</strong>. Only super admin and Minister Apps Admins see names and resources.')+
       guideStep(2,'<strong>Applications</strong>: tap a green preference to assign it, or pick any free time from <strong>Other time…</strong>. A time can only be given to one player per position.')+
       guideStep(3,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
-      guideStep(4,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.')+
-      guideStep(5,'<strong>New SvS</strong> in Setup clears everything for the next event.');
+      guideStep(4,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.');
+  }
+  if(SESSION&&isSuperAdmin(SESSION.name)){
+    html+=
+      guideSection('Super admin only','#e3bc6a')+
+      guideStep(1,'<strong>Setup › Module status</strong>: <strong>Open</strong> = players can apply. <strong>Closed</strong> = players still see free/taken times but can\'t apply. <strong>Hidden</strong> = the button and home card disappear for everyone.')+
+      guideStep(2,'Set the <strong>Prep Day 1 date</strong> and the <strong>second VP day</strong> (Day 2 or Day 5). Open needs a date.')+
+      guideStep(3,'Deleting applications and <strong>New SvS</strong> (clears everything and hides the module) are super admin only.')+
+      guideStep(4,'Give the <strong>Minister Apps Admin</strong> role in Admin Panel › Roles to let someone assign times for you.');
   }
   rc.innerHTML=html;
 }
@@ -6577,10 +6616,10 @@ async function init(){
       '<div style="width:28px;height:28px;border:2px solid rgba(201,151,75,.22);border-top-color:#c9974b;border-radius:50%;animation:spin .7s linear infinite;"></div>'+
       '<div style="font-size:12px;color:rgba(230,213,180,.45);letter-spacing:2px;text-transform:uppercase;">Loading...</div>'+
       '</div>';
-    await loadAll();
+    await Promise.all([loadAll(),minLoadCfg()]);
     // Deep-link from push notification
     if(location.hash==='#rotation') MODULE='rotation';
-  }
+  } else await minLoadCfg();
   render();
   if(location.hash) history.replaceState(null,'',location.pathname);
   if(SESSION) showPendingRoleNotifs();

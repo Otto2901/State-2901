@@ -107,8 +107,8 @@ Deno.serve(async (req) => {
   }
   if (Object.keys(prefs).length === 0) return json({ error: 'Pick at least one position and time.' }, 400);
 
-  const { data: cfg } = await db.from('minister_config').select('prep_start_date').eq('id', 1).maybeSingle();
-  if (!cfg?.prep_start_date) return json({ error: 'Applications are not open yet.' }, 403);
+  const { data: cfg } = await db.from('minister_config').select('prep_start_date, status').eq('id', 1).maybeSingle();
+  if (cfg?.status !== 'open' || !cfg?.prep_start_date) return json({ error: 'Applications are closed.' }, 403);
 
   const fwd = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
   const ipHash = await sha256Hex(fwd.split(',')[0].trim());
