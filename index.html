@@ -53,22 +53,39 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .player-chip:active{background:rgba(201,151,75,.16);}
 .player-chip.adm{background:rgba(227,188,106,.09);border-color:rgba(227,188,106,.28);color:var(--gold);}
 
-/* NAV */
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(11,9,6,.9);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);border-top:1px solid var(--b);display:flex;align-items:flex-end;z-index:100;padding-bottom:var(--safe-b);}
-.nav-btn{flex:1;padding:10px 4px 13px;background:none;border:none;color:var(--t2);font-family:'Manrope',sans-serif;font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .22s var(--ease);position:relative;letter-spacing:.2px;}
-.nav-btn .ic{font-size:19px;line-height:1;transition:transform .22s var(--ease);}
-.nav-btn.on{
-  color:#fff9ec;background:var(--grad);
-  clip-path:polygon(50% 0%,94% 16%,100% 100%,0% 100%,6% 16%);
-  padding-top:15px;margin-top:-7px;
-  box-shadow:0 -6px 16px rgba(201,151,75,.4),inset 0 1px 0 rgba(255,240,210,.3);
-  transform:translateY(-3px);
-}
-.nav-btn.on .ic{transform:scale(1.08) translateY(-1px);}
-.nav-btn.adm-btn.on{color:#3a2a0f;background:linear-gradient(135deg,#e3bc6a,#f6e2ab);box-shadow:0 -6px 16px rgba(227,188,106,.4),inset 0 1px 0 rgba(255,250,235,.4);}
+/* SCREEN TRANSITIONS — set by render() on a real screen change. The fixed tab
+   bar is excluded: a transformed ancestor would un-fix it mid-animation. */
+#app.push-in > :not(.tabbar){animation:pushIn .32s cubic-bezier(.2,.9,.25,1);}
+#app.pop-in > :not(.tabbar){animation:popIn .28s cubic-bezier(.2,.9,.25,1);}
+@keyframes pushIn{from{transform:translateX(26px);opacity:0;}to{transform:none;opacity:1;}}
+@keyframes popIn{from{transform:translateX(-22px);opacity:0;}to{transform:none;opacity:1;}}
+
+/* MODULE TABS — segmented control under the large title (render() moves .nav there) */
+.nav{display:flex;gap:2px;margin:0 16px 14px;padding:3px;background:var(--surface2);border:1px solid var(--b);border-radius:12px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:2;}
+.nav::-webkit-scrollbar{display:none;}
+.nav-btn{flex:1 0 auto;padding:8px 12px;background:none;border:none;border-radius:9px;color:var(--t2);font-family:'Manrope',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s var(--ease),color .2s var(--ease);}
+.nav-btn .ic{display:none;}
+.nav-btn.on{color:var(--t);background:#2b2116;box-shadow:0 1px 4px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,240,210,.07);}
+
+/* ICONS — inline SVG line icons from icon(name) */
+.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;display:block;}
+
+/* GROUPED LIST — iOS inset list, used by Home and Admin */
+.glabel{font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin:22px 4px 8px;}
+.group{background:var(--surface);border:1px solid var(--b);border-radius:14px;overflow:hidden;}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;min-height:54px;position:relative;width:100%;background:none;border:none;color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:background .15s;}
+.row+.row::before{content:'';position:absolute;top:0;right:0;left:58px;height:1px;background:var(--b);}
+.row:active{background:rgba(232,210,168,.06);}
+.row-ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;font-size:18px;}
+.row-text{flex:1;min-width:0;}
+.row-title{display:block;font-size:15px;font-weight:600;color:var(--t);line-height:1.25;}
+.row-sub{display:block;font-size:12px;color:var(--t2);margin-top:2px;line-height:1.35;}
+.row-val{font-size:14px;color:var(--t2);font-variant-numeric:tabular-nums;}
+.row-badge{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--red);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;}
+.row-chev{color:var(--t3);font-size:16px;}
 
 /* CONTENT */
-.content{padding:14px 14px calc(90px + var(--safe-b));position:relative;z-index:1;}
+.content{padding:2px 16px calc(36px + var(--safe-b));position:relative;z-index:1;}
 
 /* FIELDS */
 .field{margin-bottom:14px;}
@@ -101,11 +118,11 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 /* CARD */
 .card{background:var(--surface);border:1px solid var(--b);border-radius:var(--r2);padding:18px;position:relative;overflow:hidden;}
 .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(232,210,168,.04) 0%,transparent 55%);pointer-events:none;}
-.card::after,.home-card::after,.mod-hdr::after{content:'';position:absolute;top:0;left:14px;right:14px;height:1px;pointer-events:none;
+.card::after,.home-card::after{content:'';position:absolute;top:0;left:14px;right:14px;height:1px;pointer-events:none;
   background:linear-gradient(90deg,transparent,rgba(227,188,106,.7) 15%,rgba(246,226,171,.9) 50%,rgba(227,188,106,.7) 85%,transparent);
   opacity:0;transition:opacity .3s var(--ease);
 }
-.card.brk::after,.home-card.brk::after,.mod-hdr.brk::after{opacity:.85;}
+.card.brk::after,.home-card.brk::after{opacity:.85;}
 
 /* PIECE GRID */
 .piece-cb.disabled .piece-lbl{opacity:.3;cursor:not-allowed;}
@@ -179,6 +196,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .modal-body{font-size:13px;color:#e6d5b4;line-height:1.65;}
 .modal-actions{display:flex;gap:8px;margin-top:16px;}
 .modal-actions .btn{flex:1;}
+/* Phones: every dialog is a bottom sheet within thumb reach */
+@media (max-width:640px){
+  .modal-overlay{align-items:flex-end;padding:var(--safe-t) 0 0;}
+  .modal-panel,.modal-panel.sm,.modal-panel.lg{max-width:none;border-radius:22px 22px 0 0;border-width:1px 0 0;padding:28px 18px calc(22px + var(--safe-b));max-height:88vh;animation:sheetUp .34s cubic-bezier(.2,.9,.25,1);}
+  .modal-panel::before{content:'';position:absolute;top:9px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:rgba(230,213,180,.22);}
+  .modal-close{top:16px;right:12px;}
+}
+@keyframes sheetUp{from{transform:translateY(100%);}to{transform:none;}}
 
 /* EMPTY/LOADING */
 .empty{text-align:center;padding:52px 20px;color:var(--t3);}
@@ -217,6 +242,50 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .home-card-sub{font-size:11px;color:var(--t2);text-align:left;line-height:1.4;margin-top:2px;text-wrap:pretty;}
 .home-card-chev{flex-shrink:0;font-size:16px;color:var(--t3);transition:transform .2s var(--ease);}
 .home-card:hover .home-card-chev{transform:translateX(3px);color:var(--ac);}
+
+/* HOME — large title, this-week summary, grouped module list */
+.home{padding:calc(16px + var(--safe-t)) 16px calc(28px + var(--safe-b));}
+.home.has-tabs{padding-bottom:calc(92px + var(--safe-b));}
+.home-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px;}
+.home-date{font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1px;}
+.home-title{font-family:var(--serif);font-size:32px;font-weight:900;letter-spacing:1px;line-height:1.1;margin-top:3px;
+  background:linear-gradient(135deg,#f0d9ad 0%,#c9974b 40%,#f6e7c8 70%,#f0d9ad 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;background-size:200% auto;animation:shimmer 8s linear infinite;}
+.home-avatar{width:38px;height:38px;border-radius:50%;border:none;flex-shrink:0;cursor:pointer;background:var(--grad);color:#1a1209;font-family:'Manrope',sans-serif;font-size:15px;font-weight:800;box-shadow:0 0 0 2px rgba(227,188,106,.22);}
+.home-avatar:active{transform:scale(.94);}
+.home-week{display:block;width:100%;text-align:left;font-family:inherit;color:inherit;cursor:pointer;background:linear-gradient(160deg,#2a1f12,#16110b 70%);border:1px solid rgba(201,151,75,.22);border-radius:18px;padding:16px;transition:transform .15s var(--ease);}
+.home-week:active{transform:scale(.985);}
+.home-week-top,.home-week-mid,.home-week-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.home-week-mid{align-items:baseline;margin-top:10px;}
+.home-eyebrow{font-size:11px;font-weight:800;color:var(--ac);letter-spacing:1px;text-transform:uppercase;}
+.home-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.home-pill.open{background:color-mix(in srgb,var(--green) 18%,transparent);color:#a6cf9c;}
+.home-pill.closed{background:color-mix(in srgb,var(--red) 18%,transparent);color:#dd948a;}
+.home-pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.home-week-al{font-size:28px;font-weight:800;letter-spacing:.5px;}
+.home-week-cd{font-size:22px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.home-week-meta{font-size:12px;color:var(--t2);margin-top:4px;}
+.home-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+.home-tile{display:flex;flex-direction:column;gap:6px;text-align:left;font-family:inherit;color:inherit;cursor:pointer;background:var(--surface);border:1px solid var(--b);border-radius:14px;padding:12px 14px;}
+.home-tile:active{background:var(--surface2);}
+.home-tile .home-eyebrow{color:var(--t3);font-size:10px;}
+.home-tile-v{font-size:17px;font-weight:800;letter-spacing:.3px;}
+.home-note{display:flex;align-items:center;gap:12px;background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.22);border-radius:14px;padding:12px 12px 12px 14px;margin-bottom:12px;}
+.home-note-ic{color:var(--gold);font-size:20px;}
+.home-note-t{font-size:13px;font-weight:700;color:var(--gold);}
+.home-note-s{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.45;}
+.home-note-s strong{color:var(--gold);}
+.home-note-x{background:none;border:none;color:var(--t3);font-size:15px;cursor:pointer;padding:4px;flex-shrink:0;}
+.row-chev .i{width:17px;height:17px;}
+.home .footer{margin-top:18px;}
+
+/* TAB BAR — Home only */
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;display:flex;justify-content:space-around;padding:6px 8px calc(6px + var(--safe-b));background:rgba(11,9,6,.86);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);border-top:1px solid var(--b);}
+.tab{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;background:none;border:none;color:var(--t3);font-family:'Manrope',sans-serif;font-size:10px;font-weight:700;cursor:pointer;}
+.tab .i{font-size:24px;stroke-width:1.7;}
+.tab.on{color:var(--gold);}
+.tab:active{opacity:.6;}
+.tab-ic{position:relative;display:block;}
+.tab-dot{position:absolute;top:0;right:-2px;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--bg);}
 
 /* FOOTER */
 .footer{text-align:center;padding:16px;font-size:10px;color:rgba(230,213,180,.18);letter-spacing:.5px;position:relative;z-index:1;}
@@ -378,40 +447,23 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .home-hdr-signout:active{background:rgba(181,85,74,.18);}
 
 /* MODULE HEADER */
-.mod-hdr{
-  position:sticky;top:0;z-index:100;
-  background:rgba(11,9,6,.9);
-  backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
-  border-bottom:1px solid var(--b);
-  padding:var(--safe-t) 0 0;
-  overflow:hidden;
-}
-.mod-hdr-accent{height:3px;width:100%;}
-.mod-hdr-inner{padding:12px 14px 10px;}
-.mod-hdr-top{display:flex;align-items:center;gap:10px;}
-.mod-hdr-back{
-  background:rgba(196,155,92,.09);border:1px solid rgba(196,155,92,.16);
-  color:rgba(230,213,180,.7);font-size:16px;font-weight:600;
-  cursor:pointer;padding:7px 11px;border-radius:10px;
-  font-family:Manrope,sans-serif;flex-shrink:0;transition:all .15s;line-height:1;
-}
-.mod-hdr-back:active{background:rgba(196,155,92,.15);}
-.mod-hdr-icon{
-  width:38px;height:38px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:17px;
-  clip-path:polygon(50% 0%,95% 25%,95% 75%,50% 100%,5% 75%,5% 25%);
-  box-shadow:inset 0 1px 0 rgba(255,240,210,.2),inset 0 -3px 6px rgba(0,0,0,.3);
-}
-.mod-hdr-text{flex:1;min-width:0;}
-.mod-hdr-title{font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:.5px;line-height:1.2;text-wrap:balance;}
-.mod-hdr-sub{font-size:10px;color:var(--t2);margin-top:1px;letter-spacing:.3px;text-wrap:pretty;}
-.mod-hdr-chip{
-  display:inline-flex;align-items:center;gap:5px;
-  background:rgba(196,155,92,.09);border:1px solid rgba(196,155,92,.16);
-  border-radius:16px;padding:4px 10px;
-  font-size:11px;font-weight:600;color:rgba(230,213,180,.65);
-  flex-shrink:0;
-}
+/* Compact nav bar (sticky) + large title that scrolls away. The small centered
+   title fades in once the large one has scrolled under the bar (.scrolled). */
+.mod-hdr{position:sticky;top:0;z-index:100;padding-top:var(--safe-t);border-bottom:1px solid transparent;transition:background .2s var(--ease),border-color .2s var(--ease);}
+.mod-hdr.scrolled{background:rgba(11,9,6,.86);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);border-bottom-color:var(--b);}
+.mod-nav{height:46px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 10px 0 4px;}
+.mod-back{justify-self:start;display:flex;align-items:center;gap:1px;background:none;border:none;color:var(--gold);font-family:'Manrope',sans-serif;font-size:16px;font-weight:600;padding:8px 8px 8px 4px;cursor:pointer;border-radius:10px;}
+.mod-back .i{font-size:24px;stroke-width:2.2;}
+.mod-back:active{opacity:.6;}
+.mod-nav-title{max-width:52vw;font-size:15px;font-weight:700;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(4px);transition:opacity .2s var(--ease),transform .2s var(--ease);}
+.mod-hdr.scrolled .mod-nav-title{opacity:1;transform:none;}
+.mod-nav-end{justify-self:end;display:flex;gap:8px;}
+.mod-help{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1px solid var(--b2);color:var(--gold);font-family:'Manrope',sans-serif;font-size:15px;font-weight:800;cursor:pointer;line-height:1;}
+.mod-help:active{opacity:.6;}
+.mod-large{display:flex;align-items:center;gap:13px;padding:2px 16px 16px;}
+.mod-large-ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;flex-shrink:0;font-size:24px;}
+.mod-large-title{font-family:var(--serif);font-size:25px;font-weight:700;line-height:1.12;letter-spacing:.3px;color:var(--t);text-wrap:balance;}
+.mod-large-sub{font-size:13px;color:var(--t2);margin-top:3px;line-height:1.4;text-wrap:pretty;}
 
 /* SCROLLBAR */
 ::-webkit-scrollbar{width:3px;}
@@ -558,7 +610,7 @@ var ROT_SELS    = [];    // rotation_selections for current week
 var ROT_REWARDS = [];    // location_rewards
 var ALLIANCE_REPS = [];  // alliance_reps
 var ROT_TAB     = 'board'; // board | admin | history
-var ADMIN_TAB   = 'players'; // players | roles | albums | rotation | transfer | stats
+var ADMIN_TAB   = null; // null = section list | players | roles | rotation | transfer | stats | ministers | troops | logs
 var ROT_HIST_IDX = 0; // which past week to view (0=most recent)
 var MY_ALLIANCE = null;  // primary alliance
 var MY_ALLIANCES = []; // all alliances (can be multiple)
@@ -626,27 +678,59 @@ var MOD_COLORS = {
   presidency:{grad:'linear-gradient(90deg,#8a6d3b,#d9c27a)', icon:'linear-gradient(135deg,rgba(138,109,59,.3),rgba(217,194,122,.2))', text:'#d9c27a'}
 };
 
-function buildModuleHeader(moduleKey, icon, title, sub, guideKey){
-  var c = MOD_COLORS[moduleKey] || MOD_COLORS.rotation;
-  var roleLabel = isSuperAdmin(SESSION.name)?'<span class="role-badge role-super" style="font-size:9px;">Super Admin</span>':
-    getRole(SESSION.name)?'<span class="role-badge role-svs" style="font-size:9px;">'+getRole(SESSION.name).replace(/_/g,' ')+'</span>':'';
-  var guideBtnHtml = guideKey?'<button class="mod-hdr-back" id="guideBtn" title="How to use" style="margin-left:6px;">❓</button>':'';
-  return '<div class="mod-hdr brk">'+
-    '<div class="mod-hdr-accent" style="background:'+c.grad+';"></div>'+
-    '<div class="mod-hdr-inner">'+
-      '<div class="mod-hdr-top">'+
-        '<button class="mod-hdr-back" id="backHome">←</button>'+
-        guideBtnHtml+
-        '<div class="mod-hdr-icon" style="background:'+c.icon+';">'+icon+'</div>'+
-        '<div class="mod-hdr-text">'+
-          '<div class="mod-hdr-title" style="color:'+c.text+';">'+title+'</div>'+
-          '<div class="mod-hdr-sub">'+sub+'</div>'+
-        '</div>'+
-        '<div class="mod-hdr-chip">'+(isSuperAdmin(SESSION.name)?'👑':'👤')+' '+SESSION.name+' '+roleLabel+'</div>'+
+// Line icons, 24px grid, stroked with currentColor. Module keys match MOD_COLORS.
+var ICONS = {
+  rotation:'<path d="M3 21h18"/><path d="M5 21V8l3 2V6l4-3 4 3v4l3-2v13"/><path d="M10 21v-4a2 2 0 014 0v4"/>',
+  transfer:'<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>',
+  crazyjoe:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  warteam:'<path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6M16 16l4 4M19 21l2-2"/><path d="M9.5 17.5L21 6V3h-3L6.5 14.5"/><path d="M11 19l-6-6M8 16l-4 4M5 21l-2-2"/>',
+  rallytimer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4M12 2v3"/>',
+  presidency:'<path d="M3 7l4.5 5L12 5l4.5 7L21 7l-2 11H5z"/><path d="M5 21h14"/>',
+  ministers:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M14 14h2M8 17h2"/>',
+  rules:'<path d="M8 21h11a2 2 0 002-2v-1H10v1a2 2 0 01-4 0V5a2 2 0 00-2-2h12a2 2 0 012 2v13"/><path d="M10 8h5M10 12h5"/>',
+  library:'<path d="M2 4h6a4 4 0 014 4v13a3 3 0 00-3-3H2z"/><path d="M22 4h-6a4 4 0 00-4 4v13a3 3 0 013-3h7z"/>',
+  adminpanel:'<path d="M2 10l10-7 10 7z"/><path d="M3 21h18M5 21V10M9.5 21V10M14.5 21V10M19 21V10"/>',
+  troops:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  logs:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  players:'<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/>',
+  roles:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+  stats:'<path d="M3 3v18h18"/><path d="M8 17v-6M13 17V7M18 17v-4"/>',
+  home:'<path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',
+  bell:'<path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 003.4 0"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+  profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+  logout:'<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
+  chevL:'<path d="M15 18l-6-6 6-6"/>',
+  chevR:'<path d="M9 18l6-6-6-6"/>'
+};
+function icon(name){ return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[name]||ICONS.home)+'</svg>'; }
+// Tinted square behind a line icon, in the module's own accent.
+function iconTile(name,color,cls){
+  return '<span class="'+(cls||'row-ic')+'" style="color:'+color+';background:color-mix(in srgb,'+color+' 15%,transparent);">'+icon(name)+'</span>';
+}
+
+// emoji param is kept for call-site compatibility; the line icon comes from moduleKey.
+// iconKey/accent override the module's own icon and colour (Admin sub-pages).
+function buildModuleHeader(moduleKey, emoji, title, sub, guideKey, backLabel, iconKey, accent){
+  var c = MOD_COLORS[moduleKey] || MOD_COLORS.adminpanel;
+  var helpBtn = guideKey?'<button class="mod-help" id="guideBtn" title="How to use" aria-label="How to use">?</button>':'';
+  return '<div class="mod-hdr">'+
+      '<div class="mod-nav">'+
+        '<button class="mod-back" id="backHome" aria-label="Back to '+(backLabel||'Home')+'">'+icon('chevL')+'<span>'+(backLabel||'Home')+'</span></button>'+
+        '<div class="mod-nav-title" aria-hidden="true">'+title+'</div>'+
+        '<div class="mod-nav-end">'+helpBtn+'</div>'+
       '</div>'+
     '</div>'+
-  '</div>';
+    '<div class="mod-large">'+
+      iconTile(iconKey||moduleKey,accent||c.text,'mod-large-ic')+
+      '<div style="min-width:0;"><h1 class="mod-large-title">'+title+'</h1><div class="mod-large-sub">'+sub+'</div></div>'+
+    '</div>';
 }
+// Nav bar shows its compact title once the large title has scrolled away.
+window.addEventListener('scroll',function(){
+  var h=document.querySelector('.mod-hdr'); if(!h) return;
+  h.classList.toggle('scrolled',window.scrollY>40);
+},{passive:true});
 
 // PIN HASHING (SHA-256, pure JS — works on file:// and https://)
 function hashPin(pin){
@@ -682,7 +766,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v30'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v31'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -966,7 +1050,24 @@ function logout(){
 
 
 // RENDER
+// Push/pop slide only when the screen itself changes (Home → module → Admin
+// section), never on the re-renders that happen inside one screen.
+var _lastView=null;
+function viewDepth(){ return !MODULE?(PROFILE_OPEN?1:0):(MODULE==='adminpanel'&&ADMIN_TAB?2:1); }
 function render(){
+  var prev=_lastView;
+  renderView();
+  var key=!SESSION?'auth':PROFILE_OPEN?'profile':!MODULE?'home':MODULE==='adminpanel'?'admin|'+(ADMIN_TAB||''):MODULE;
+  _lastView={key:key,depth:viewDepth()};
+  if(!prev||prev.key===key||key==='auth'||prev.key==='auth') return;
+  window.scrollTo(0,0);
+  var mh=document.querySelector('.mod-hdr'); if(mh) mh.classList.remove('scrolled');
+  var app=document.getElementById('app');
+  var cls=_lastView.depth>=prev.depth?'push-in':'pop-in';
+  app.classList.remove('push-in','pop-in'); void app.offsetWidth; app.classList.add(cls);
+  clearTimeout(window._navAnimT); window._navAnimT=setTimeout(function(){ app.classList.remove(cls); },420);
+}
+function renderView(){
   var app=document.getElementById('app');
   if(AUTH_STEP==='pin-profile'){ renderProfileSetup(app); return; }
   if(!SESSION){ renderAuth(app); return; }
@@ -989,6 +1090,11 @@ function render(){
   if(MODULE==='rules')     renderRulesApp(app);
   if(MODULE==='library')   renderLibraryApp(app);
   if(MODULE==='adminpanel') renderAdminPanel(app);
+  // Modules still emit their tab bar last; show it as a segmented control
+  // under the large title. Moving the node keeps its click handlers.
+  var nv=app.querySelector(':scope > .nav'), lg=app.querySelector(':scope > .mod-large');
+  if(nv&&lg) lg.after(nv);
+  var mh=app.querySelector('.mod-hdr'); if(mh) mh.classList.toggle('scrolled',window.scrollY>40);
 }
 
 // Shows unread "notifications" rows (e.g. "you were granted a role") as a
@@ -1001,11 +1107,11 @@ function showPendingRoleNotifs(){
   var guideBtnHtml=(info&&info.guideKey)?'<button id="roleNotifGuide" style="background:rgba(201,151,75,.15);border:1px solid rgba(201,151,75,.4);color:#c9974b;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-right:8px;">📖 View Guide</button>':'';
   var overlay=document.createElement('div');
   overlay.id='roleNotifOverlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.className='modal-overlay';
   overlay.innerHTML=
-    '<div style="background:#1a120a;border:1px solid color-mix(in srgb,var(--green) 35%,transparent);border-radius:16px;max-width:380px;width:100%;padding:24px;text-align:center;">'+
+    '<div class="modal-panel sm" style="text-align:center;">'+
       '<div style="font-size:36px;margin-bottom:12px;">🔔</div>'+
-      '<div style="font-family:var(--serif);font-size:15px;color:#c9974b;margin-bottom:12px;">Notification</div>'+
+      '<div class="modal-title">Notification</div>'+
       '<div style="font-size:13px;color:#e6d5b4;line-height:1.6;margin-bottom:20px;">'+n.message+'</div>'+
       '<div>'+guideBtnHtml+'<button id="roleNotifOk" style="background:color-mix(in srgb,var(--green) 18%,transparent);border:1px solid color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);padding:10px 28px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">OK</button></div>'+
     '</div>';
@@ -1046,42 +1152,67 @@ function renderHome(app){
       return '<span class="role-badge '+cls+'">'+r.replace(/_/g,' ')+'</span>';
     }).join(' ');
 
+  var isAdm=isSuperAdmin(SESSION.name)||!!getRole(SESSION.name);
+  var today=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
+  var myP=ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
+  var hasAlliance=isSuperAdmin(SESSION.name)||(myP&&myP.alliance);
+
+  // "This week" summary: whose rotation turn it is and how long the window has.
+  var weekHtml='';
+  if(ROT_STATE){
+    var ws=getSelectionWindowStatus(), turn=getCurrentTurnAlliance();
+    var mine=!!turn&&(MY_ALLIANCES.indexOf(turn)>=0||MY_ALLIANCE===turn);
+    var bigTxt=ws.open?(turn?escHtml(turn):'All picked'):'Closed';
+    var bigCol=ws.open&&turn?(ALLIANCE_COLORS[turn]||'var(--t)'):'var(--t2)';
+    weekHtml='<button class="home-week" id="homeWeek">'+
+      '<span class="home-week-top"><span class="home-eyebrow">This week · Rotation</span>'+
+        '<span class="home-pill '+(ws.open?'open':'closed')+'"><span class="dot"></span>'+(ws.open?'Selections open':'Selections closed')+'</span></span>'+
+      '<span class="home-week-mid"><span class="home-week-al" style="color:'+bigCol+';">'+bigTxt+'</span>'+
+        (ws.forced?'':'<span class="home-week-cd" id="homeCountdown">'+fmtCountdown(ws.secsLeft)+'</span>')+'</span>'+
+      '<span class="home-week-meta"><span>'+(ws.open?(turn?(mine?'Your turn to pick':'Current turn'):'Every alliance has picked'):'Next window opens Wednesday')+'</span>'+
+        '<span>'+(ws.forced?'Set by admin':(ws.open?'left':'until open'))+'</span></span>'+
+    '</button>';
+  }
+  var presHtml='';
+  if((PRES_QUEUES.sfc&&PRES_QUEUES.sfc.length)||(PRES_QUEUES.supreme&&PRES_QUEUES.supreme.length)){
+    presHtml='<div class="home-tiles">'+['sfc','supreme'].map(function(t){
+      var nx=PRES_QUEUES[t]&&PRES_QUEUES[t][0];
+      return '<button class="home-tile" data-go="presidency"><span class="home-eyebrow">'+(t==='sfc'?'SFC':'Supreme')+' next up</span>'+
+        '<span class="home-tile-v" style="color:'+(nx?(ALLIANCE_COLORS[nx]||'var(--t)'):'var(--t3)')+';">'+(nx?escHtml(nx):'Empty')+'</span></button>';
+    }).join('')+'</div>';
+  }
+
+  function row(id,key,color,title,sub){
+    return '<button class="row" id="'+id+'">'+iconTile(key,color)+
+      '<span class="row-text"><span class="row-title">'+title+'</span><span class="row-sub">'+sub+'</span></span>'+
+      '<span class="row-chev">'+icon('chevR')+'</span></button>';
+  }
+  var events=
+    row('goRot','rotation',MOD_COLORS.rotation.text,'Stronghold Rotation','Weekly fort & stronghold selection')+
+    (hasAlliance?row('goCj','crazyjoe',MOD_COLORS.crazyjoe.text,'Crazy Joe','Team assignments for the event'):'')+
+    row('goWar','warteam',MOD_COLORS.warteam.text,'War Team Builder','Rally leader & squad formations')+
+    (isRallyAdmin(SESSION.name)?row('goRally','rallytimer',MOD_COLORS.rallytimer.text,'Rally Timer','March sync calculator'):'')+
+    (minIsVisible()?row('goMinisters','ministers','#d4a95e','SvS Minister Applications','Free times & apply for a minister slot'):'');
+  var state=
+    row('goPresidency','presidency',MOD_COLORS.presidency.text,'Presidency Ledger','SFC & SvS Supreme rotation')+
+    row('goTransfer','transfer',MOD_COLORS.transfer.text,'Transfer Management','Invite tracking & player management')+
+    row('goRules','rules',MOD_COLORS.rules.text,'State Rules','State rules & regulations')+
+    row('goLibrary','library',MOD_COLORS.library.text,'Library','Announcements & knowledge archive');
+
   var notifState = typeof Notification!=='undefined'?Notification.permission:'unsupported';
   var bellDotColor = notifState==='granted'?'var(--green)':notifState==='denied'?'#6b5a42':'var(--gold)';
-  var bellHtml = notifState==='unsupported'?'':
-    '<button id="notifBellBtn" class="home-hdr-signout" style="position:relative;padding:6px 9px;" title="Notifications">🔔'+
-      '<span style="position:absolute;top:3px;right:4px;width:7px;height:7px;border-radius:50%;background:'+bellDotColor+';border:1.5px solid #1a120a;"></span>'+
-    '</button>';
-
-  // Card accent colors
-  var cardRot   = 'border-color:rgba(107,122,143,.28);';
-  var cardTr    = 'border-color:rgba(125,90,140,.28);';
-  var cardCj    = 'border-color:rgba(156,107,79,.28);background:rgba(156,107,79,.04);';
-  var cardAdmin = 'border-color:rgba(201,151,75,.28);';
-  function iconBadgeStyle(rgb){
-    return 'background:radial-gradient(circle at 32% 28%,rgba('+rgb+',.28),rgba('+rgb+',.04) 72%);border-color:rgba('+rgb+',.4);';
-  }
-  var badgeRot='107,122,143', badgeTr='125,90,140', badgeCj='156,107,79', badgeWar='140,75,75',
-      badgeRules='92,138,122', badgeLib='160,133,86', badgeAdmin='227,188,106';
+  var tabs=
+    '<button class="tab on" aria-current="page">'+icon('home')+'<span>Home</span></button>'+
+    (notifState==='unsupported'?'':'<button class="tab" id="notifBellBtn"><span class="tab-ic">'+icon('bell')+'<span class="tab-dot" style="background:'+bellDotColor+';"></span></span><span>Alerts</span></button>')+
+    (isAdm?'<button class="tab" id="goAdmin">'+icon('adminpanel')+'<span>Admin</span></button>':'');
+  var tabCount=1+(notifState==='unsupported'?0:1)+(isAdm?1:0);
 
   app.innerHTML=
-    '<div class="home-hdr">'+
-      '<div class="home-hdr-glow"></div>'+
-      '<div class="home-hdr-content">'+
-        '<div class="home-hdr-seal"><div class="home-hdr-logo">🏰</div></div>'+
-        '<div class="home-hdr-title">State 2901</div>'+
-        '<div class="home-hdr-sub">State Management System</div>'+
-        '<div class="home-hdr-divider"></div>'+
-        '<div class="home-hdr-user">'+
-          '<div class="player-chip'+(isSuperAdmin(SESSION.name)?' adm':'')+'" id="logoutBtn">'+
-            (isSuperAdmin(SESSION.name)?'👑':'👤')+' '+SESSION.name+' '+roleLabel+
-          '</div>'+
-          bellHtml+
-          '<button id="logoutIconBtn" class="home-hdr-signout">Sign Out</button>'+
-        '</div>'+
+    '<div class="home'+(tabCount>1?' has-tabs':'')+'">'+
+      '<div class="home-top">'+
+        '<div style="min-width:0;"><div class="home-date">'+today+'</div><h1 class="home-title">State 2901</h1></div>'+
+        '<button class="home-avatar" id="logoutBtn" aria-label="My profile" title="My profile">'+escHtml((SESSION.name||'?').charAt(0).toUpperCase())+'</button>'+
       '</div>'+
-    '</div>'+
-    '<div style="padding:14px 14px 32px;display:flex;flex-direction:column;align-items:center;">'+
       missingBanner+
       (function(){
         if(typeof Notification==='undefined') return '';
@@ -1089,102 +1220,46 @@ function renderHome(app){
         if(stored) return '';
         if(Notification.permission==='granted') return '';
         if(isIOS()&&!isStandalone()) return '' +
-          '<div style="background:rgba(201,151,75,.09);border:1px solid rgba(201,151,75,.25);border-radius:14px;padding:11px 14px;margin-bottom:14px;width:100%;max-width:400px;display:flex;align-items:flex-start;gap:10px;">'+
-            '<span style="font-size:18px;flex-shrink:0;">📲</span>'+
-            '<div style="flex:1;">'+
-              '<div style="font-size:12px;font-weight:700;color:#d9ab5c;margin-bottom:2px;">Install as App for Notifications</div>'+
-              '<div style="font-size:11px;color:rgba(230,213,180,.55);line-height:1.5;">Tap <strong style="color:#d9ab5c;">Share → Add to Home Screen</strong> in Safari to receive Rotation alerts.</div>'+
+          '<div class="home-note">'+
+            '<span class="home-note-ic">'+icon('bell')+'</span>'+
+            '<div style="flex:1;min-width:0;">'+
+              '<div class="home-note-t">Install as App for Notifications</div>'+
+              '<div class="home-note-s">Tap <strong>Share → Add to Home Screen</strong> in Safari to receive Rotation alerts.</div>'+
             '</div>'+
-            '<button id="dismissPushBanner" style="background:none;border:none;color:rgba(230,213,180,.35);font-size:16px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>'+
+            '<button id="dismissPushBanner" class="home-note-x" aria-label="Dismiss">✕</button>'+
           '</div>';
-        return '<div style="background:rgba(201,151,75,.09);border:1px solid rgba(201,151,75,.25);border-radius:14px;padding:11px 14px;margin-bottom:14px;width:100%;max-width:400px;display:flex;align-items:center;gap:10px;">'+
-          '<span style="font-size:18px;flex-shrink:0;">🔔</span>'+
-          '<div style="flex:1;">'+
-            '<div style="font-size:12px;font-weight:700;color:#d9ab5c;">Enable Notifications</div>'+
-            '<div style="font-size:11px;color:rgba(230,213,180,.55);margin-top:1px;">Rotation reminders</div>'+
+        return '<div class="home-note">'+
+          '<span class="home-note-ic">'+icon('bell')+'</span>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div class="home-note-t">Enable Notifications</div>'+
+            '<div class="home-note-s">Get a reminder when it is your alliance\'s turn.</div>'+
           '</div>'+
-          '<button id="enablePushBtn" style="background:linear-gradient(135deg,#8a5a26,#d9ab5c);border:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:20px;white-space:nowrap;">Enable</button>'+
-          '<button id="dismissPushBanner" style="background:none;border:none;color:rgba(230,213,180,.35);font-size:16px;cursor:pointer;flex-shrink:0;padding:0 4px;">✕</button>'+
+          '<button id="enablePushBtn" class="btn btn-p btn-sm">Enable</button>'+
+          '<button id="dismissPushBanner" class="home-note-x" aria-label="Dismiss">✕</button>'+
         '</div>';
       })()+
-      '<div style="text-align:center;margin-bottom:18px;">'+
-        '<div class="home-sub">Choose a module to continue</div>'+
-      '</div>'+
-      '<div class="home-cards">'+
-        '<div class="home-card brk" id="goRot" style="'+cardRot+'">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeRot)+'"><div class="home-card-icon">🏯</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#a3b3c2;">Stronghold Rotation</span>'+
-          '<div class="home-card-sub">Weekly fort & stronghold selection</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>'+
-        '<div class="home-card brk" id="goTransfer" style="'+cardTr+'">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeTr)+'"><div class="home-card-icon">✈️</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#b494c4;">Transfer Management</span>'+
-          '<div class="home-card-sub">Invite tracking & player management</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>'+
-        (function(){
-          var myP=ALL_PLAYERS.find(function(p){ return p.name===SESSION.name; });
-          var hasAlliance=isSuperAdmin(SESSION.name)||(myP&&myP.alliance);
-          if(!hasAlliance) return '';
-          return '<div class="home-card brk" id="goCj" style="'+cardCj+'">'+
-            '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeCj)+'"><div class="home-card-icon">🤪</div></div>'+
-            '<div class="home-card-text"><span class="home-card-title" style="color:#c48f6a;">Crazy Joe</span>'+
-            '<div class="home-card-sub">Team assignments for the event</div></div>'+
-            '<div class="home-card-chev">›</div>'+
-          '</div>';
-        })()+
-        '<div class="home-card brk" id="goWar" style="border-color:rgba(140,75,75,.28);">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeWar)+'"><div class="home-card-icon">⚔️</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#c4756a;">War Team Builder</span>'+
-          '<div class="home-card-sub">Rally leader & squad formations</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>'+
-        '<div class="home-card brk" id="goPresidency" style="border-color:rgba(217,194,122,.25);">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle('217,194,122')+'"><div class="home-card-icon">👑</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#d9c27a;">Presidency Ledger</span>'+
-          '<div class="home-card-sub">SFC & SvS Supreme rotation</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>'+
-        (minIsVisible()?
-        '<div class="home-card brk" id="goMinisters" style="border-color:rgba(201,151,75,.25);">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle('201,151,75')+'"><div class="home-card-icon">🗓️</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#d4a95e;">SvS Minister Applications</span>'+
-          '<div class="home-card-sub">Free times & apply for a minister slot</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>':'')+
-        (isRallyAdmin(SESSION.name)?
-        '<div class="home-card brk" id="goRally" style="border-color:rgba(216,196,138,.25);">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle('216,196,138')+'"><div class="home-card-icon">⏱️</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#d8c48a;">Rally Timer</span>'+
-          '<div class="home-card-sub">March sync calculator</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>':'')+
-        '<div class="home-card brk" id="goRules" style="border-color:rgba(92,138,122,.25);">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeRules)+'"><div class="home-card-icon">📜</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#8fb8a8;">State Rules</span>'+
-          '<div class="home-card-sub">State rules & regulations</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>'+
-        '<div class="home-card brk" id="goLibrary" style="border-color:rgba(160,133,86,.25);">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeLib)+'"><div class="home-card-icon">📚</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#c4a876;">Library</span>'+
-          '<div class="home-card-sub">Announcements & knowledge archive</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>'+
-        (isSuperAdmin(SESSION.name)||getRole(SESSION.name)?
-        '<div class="home-card brk" id="goAdmin" style="'+cardAdmin+'">'+
-          '<div class="home-card-icon-badge" style="'+iconBadgeStyle(badgeAdmin)+'"><div class="home-card-icon">🏛️</div></div>'+
-          '<div class="home-card-text"><span class="home-card-title" style="color:#e3bc6a;">Admin Panel</span>'+
-          '<div class="home-card-sub">System management & settings</div></div>'+
-          '<div class="home-card-chev">›</div>'+
-        '</div>':'')+
-      '</div>'+
+      weekHtml+
+      presHtml+
+      '<div class="glabel">Events</div><div class="group">'+events+'</div>'+
+      '<div class="glabel">State</div><div class="group">'+state+'</div>'+
       '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
-    '</div>';
+    '</div>'+
+    (tabCount>1?'<nav class="tabbar" aria-label="Main">'+tabs+'</nav>':'');
+
+  var hw=document.getElementById('homeWeek');
+  if(hw) hw.addEventListener('click',function(){ MODULE='rotation'; ROT_TAB='board'; render(); });
+  app.querySelectorAll('.home-tile[data-go="presidency"]').forEach(function(t){
+    t.addEventListener('click',function(){ MODULE='presidency'; PRES_TAB='board'; render(); });
+  });
+  // Live countdown on the summary card while Home is showing.
+  if(window._homeTimer) clearInterval(window._homeTimer);
+  if(document.getElementById('homeCountdown')) window._homeTimer=setInterval(function(){
+    var el=document.getElementById('homeCountdown');
+    if(MODULE||PROFILE_OPEN||!el){ clearInterval(window._homeTimer); return; }
+    el.textContent=fmtCountdown(getSelectionWindowStatus().secsLeft);
+  },1000);
 
   document.getElementById('logoutBtn').addEventListener('click', function(){ PROFILE_OPEN=true; render(); });
-  document.getElementById('logoutIconBtn').addEventListener('click', function(){ confirmDanger('Sign out? You can sign back in with your PIN.',{title:'Sign out',confirmLabel:'Sign out',danger:false}).then(function(ok){ if(ok) logout(); }); });
   var nbb=document.getElementById('notifBellBtn');
   if(nbb) nbb.addEventListener('click', openNotifModal);
   var mbb=document.getElementById('missingBannerBtn');
@@ -1215,12 +1290,7 @@ function renderHome(app){
   document.getElementById('goRules').addEventListener('click', function(){ MODULE='rules'; RULES_TAB='board'; RULES_SELECTED=null; render(); });
   document.getElementById('goLibrary').addEventListener('click', function(){ MODULE='library'; LIBRARY_SELECTED=null; LIBRARY_EDIT=undefined; render(); });
   var goAdminBtn=document.getElementById('goAdmin');
-  if(goAdminBtn) goAdminBtn.addEventListener('click', function(){ MODULE='adminpanel'; ADMIN_TAB='players'; render(); });
-  // Make the module cards keyboard-operable (they're string-built divs)
-  document.querySelectorAll('.home-cards .home-card').forEach(function(c){
-    c.setAttribute('tabindex','0'); c.setAttribute('role','button');
-    c.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); c.click(); } });
-  });
+  if(goAdminBtn) goAdminBtn.addEventListener('click', function(){ MODULE='adminpanel'; ADMIN_TAB=null; render(); window.scrollTo(0,0); });
 }
 
 
@@ -1377,13 +1447,7 @@ function renderProfile(app){
   var pendingReq=ID_REQUESTS.find(function(r){ return r.player_name===SESSION.name; });
 
   app.innerHTML=
-    '<div class="hdr">'+
-      '<div class="hdr-brand">'+
-        '<button style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(230,213,180,.75);font-size:14px;font-weight:600;cursor:pointer;padding:6px 13px;border-radius:10px;margin-right:8px;font-family:Manrope,sans-serif;" id="backHome">← Back</button>'+
-        '<div class="hdr-logo">👤</div>'+
-        '<div><div class="hdr-title">My Profile</div><div class="hdr-sub">State 2901</div></div>'+
-      '</div>'+
-    '</div>'+
+    buildModuleHeader('profile','👤',escHtml(SESSION.name),(isSuperAdmin(SESSION.name)?'Super Admin':getRoles(SESSION.name).map(function(r){ return r.replace(/_/g,' '); }).join(' · ')||'Member')+' · State 2901')+
     '<div class="content">'+
       '<div style="background:rgba(26,18,10,.6);border:1px solid rgba(196,155,92,.14);border-radius:14px;padding:16px;margin-bottom:12px;">'+
         '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;">👤 Profile Information</div>'+
@@ -1435,10 +1499,16 @@ function renderProfile(app){
       '<div style="text-align:center;font-size:11px;color:#6b5a42;margin-top:8px;">'+
         'Member since: '+(myPlayer&&myPlayer.created_at?new Date(myPlayer.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—')+
       '</div>'+
+      '<div class="group" style="margin-top:22px;">'+
+        '<button class="row" id="profSignOut" style="color:var(--red);">'+iconTile('logout','#d98a7f')+'<span class="row-text"><span class="row-title" style="color:#d98a7f;">Sign Out</span></span></button>'+
+      '</div>'+
     '</div>'+
     '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
 
   document.getElementById('backHome').addEventListener('click',function(){ PROFILE_OPEN=false; render(); });
+  document.getElementById('profSignOut').addEventListener('click',function(){
+    confirmDanger('Sign out? You can sign back in with your PIN.',{title:'Sign out',confirmLabel:'Sign out',danger:false}).then(function(ok){ if(ok){ PROFILE_OPEN=false; logout(); } });
+  });
 
   // Alliance save
   var saveAlBtn=document.getElementById('saveAlliance');
@@ -3112,46 +3182,52 @@ function renderAdminPanel(app){
   var isTrMgr = ALLIANCE_REPS.some(function(r){ return r.player_name===SESSION.name&&r.alliance==='TRANSFER'; });
   var isStrAdm = isStrongholdAdmin(SESSION.name);
 
-  // Build tabs based on role
+  // Sections the user may open, grouped like an iOS settings list.
+  var pendingPlayers=ALL_PLAYERS.filter(function(p){ return p.status==='pending'; }).length+ID_REQUESTS.length;
   var tabs=[];
-  if(isSuper)              tabs.push({id:'players',icon:'👥',label:'Players'});
-  if(isSuper)              tabs.push({id:'roles',icon:'👑',label:'Roles'});
+  if(isSuper)              tabs.push({id:'players',group:'People',label:'Players',sub:'Approvals, IDs & accounts',color:'#e3bc6a',badge:pendingPlayers,val:ALL_PLAYERS.length});
+  if(isSuper)              tabs.push({id:'roles',group:'People',label:'Roles',sub:'Who can manage what',color:'#e3bc6a',val:ADMIN_ROLES.length});
+  if(isSuper||isStrAdm)    tabs.push({id:'rotation',group:'Modules',label:'Rotation',sub:'Order, reps & rewards',color:MOD_COLORS.rotation.text});
+  if(isSuper||isTrMgr)     tabs.push({id:'transfer',group:'Modules',label:'Transfer',sub:'Transfer periods',color:MOD_COLORS.transfer.text});
+  if(isMinisterAdmin(SESSION.name)) tabs.push({id:'ministers',group:'Modules',label:'Ministers',sub:'SvS minister applications',color:'#d4a95e'});
+  if(isTroopsAdmin(SESSION.name))   tabs.push({id:'troops',group:'Modules',label:'Troops',sub:'Troop reports',color:MOD_COLORS.rotation.text});
+  if(isSuper)              tabs.push({id:'stats',group:'System',label:'Stats',sub:'Players by alliance',color:'#a3b3c2'});
+  if(isSuper)              tabs.push({id:'logs',group:'System',label:'Logs',sub:'Every change & app error',color:'#a3b3c2'});
+  var ICON_FOR={players:'players',roles:'roles',rotation:'rotation',transfer:'transfer',ministers:'ministers',troops:'troops',stats:'stats',logs:'logs'};
 
-  if(isSuper||isStrAdm)   tabs.push({id:'rotation',icon:'🏰',label:'Rotation'});
-  if(isSuper||isTrMgr)    tabs.push({id:'transfer',icon:'✈️',label:'Transfer'});
-  if(isSuper)              tabs.push({id:'stats',icon:'📊',label:'Stats'});
-  if(isMinisterAdmin(SESSION.name)) tabs.push({id:'ministers',icon:'👑',label:'Ministers'});
-  if(isTroopsAdmin(SESSION.name)) tabs.push({id:'troops',icon:'🪖',label:'Troops'});
-  if(isSuper)              tabs.push({id:'logs',icon:'🔍',label:'Logs'});
-
-  // Ensure ADMIN_TAB is valid
-  if(!tabs.find(function(t){ return t.id===ADMIN_TAB; })) ADMIN_TAB=tabs[0]?tabs[0].id:null;
-
-  var navHtml=tabs.map(function(t){
-    return '<button class="nav-btn '+(ADMIN_TAB===t.id?'on':'')+'" data-tab="'+t.id+'">'+
-      '<span class="ic">'+t.icon+'</span>'+t.label+'</button>';
-  }).join('');
-
-  var chipCls=isSuper?'player-chip adm':'player-chip';
-  var roleLabel=isSuper?'<span class="role-badge role-super">Super Admin</span>':
-    isAlbAdm?'<span class="role-badge role-album">Album Admin</span>':
-    isMod?'<span class="role-badge role-mod">Moderator</span>':
-    isTrMgr?'<span class="role-badge" style="background:rgba(191,90,242,.15);color:#bf5af2;border:1px solid rgba(191,90,242,.3);">Transfer Mgr</span>':
-    isStrAdm?'<span class="role-badge role-svs">Stronghold Admin</span>':'';
+  // No section chosen (or one this user can't open) shows the list itself.
+  var cur=tabs.find(function(t){ return t.id===ADMIN_TAB; });
+  if(!cur) ADMIN_TAB=null;
 
   app.innerHTML=
-    buildModuleHeader('adminpanel','🏛️','Admin Panel','System Management & Settings')+
+    (cur?buildModuleHeader('adminpanel','🏛️',cur.label,cur.sub,null,'Admin',ICON_FOR[cur.id],cur.color):buildModuleHeader('adminpanel','🏛️','Admin Panel','System management & settings'))+
     '<div class="content" id="adminContent"></div>'+
-    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
-    '<div class="nav">'+navHtml+'</div>';
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
 
-  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
-  app.querySelectorAll('.nav-btn').forEach(function(btn){
-    btn.addEventListener('click',function(){ ADMIN_TAB=btn.dataset.tab; render(); });
+  document.getElementById('backHome').addEventListener('click',function(){
+    if(ADMIN_TAB){ ADMIN_TAB=null; render(); window.scrollTo(0,0); }
+    else { MODULE=null; render(); }
   });
 
   var ac=document.getElementById('adminContent');
-  if(!ADMIN_TAB){ ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
+  if(!tabs.length){ ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>'; return; }
+  if(!ADMIN_TAB){
+    var groups=[];
+    tabs.forEach(function(t){ var g=groups.find(function(x){ return x.name===t.group; }); if(!g){ g={name:t.group,items:[]}; groups.push(g); } g.items.push(t); });
+    ac.innerHTML=groups.map(function(g,gi){
+      return '<div class="glabel"'+(gi===0?' style="margin-top:4px;"':'')+'>'+g.name+'</div><div class="group">'+g.items.map(function(t){
+        return '<button class="row" data-tab="'+t.id+'">'+iconTile(ICON_FOR[t.id],t.color)+
+          '<span class="row-text"><span class="row-title">'+t.label+'</span><span class="row-sub">'+t.sub+'</span></span>'+
+          (t.badge?'<span class="row-badge">'+t.badge+'</span>':'')+
+          (t.val!=null?'<span class="row-val">'+t.val+'</span>':'')+
+          '<span class="row-chev">'+icon('chevR')+'</span></button>';
+      }).join('')+'</div>';
+    }).join('');
+    ac.querySelectorAll('.row[data-tab]').forEach(function(b){
+      b.addEventListener('click',function(){ ADMIN_TAB=b.dataset.tab; render(); window.scrollTo(0,0); });
+    });
+    return;
+  }
   if(ADMIN_TAB==='players')  renderAdminPlayers(ac);
   if(ADMIN_TAB==='roles')    renderAdminRoles(ac);
 
@@ -3808,11 +3884,11 @@ function openGuideModal(key){
   var g=GUIDE_CONTENT[key]; if(!g) return;
   var overlay=document.createElement('div');
   overlay.id='guideModalOverlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.className='modal-overlay';
   overlay.innerHTML=
-    '<div style="background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;padding:18px;position:relative;">'+
-      '<button id="guideModalClose" style="position:absolute;top:10px;right:10px;background:none;border:none;color:rgba(230,213,180,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px;">✕</button>'+
-      '<div style="font-family:var(--serif);font-size:15px;color:#c9974b;margin-bottom:14px;padding-right:24px;">'+g.title+'</div>'+
+    '<div class="modal-panel">'+
+      '<button id="guideModalClose" class="modal-close" aria-label="Close">✕</button>'+
+      '<div class="modal-title">'+g.title+'</div>'+
       '<div id="guideModalBody"></div>'+
     '</div>';
   document.body.appendChild(overlay);
@@ -3907,11 +3983,11 @@ function renderPresidencyGuideContent(rc){
 function openNotifModal(){
   var overlay=document.createElement('div');
   overlay.id='notifModalOverlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.className='modal-overlay';
   overlay.innerHTML=
-    '<div style="background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;padding:18px;position:relative;">'+
-      '<button id="notifModalClose" style="position:absolute;top:10px;right:10px;background:none;border:none;color:rgba(230,213,180,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px;">✕</button>'+
-      '<div style="font-family:var(--serif);font-size:15px;color:#c9974b;margin-bottom:14px;padding-right:24px;">🔔 Rotation Notifications</div>'+
+    '<div class="modal-panel">'+
+      '<button id="notifModalClose" class="modal-close" aria-label="Close">✕</button>'+
+      '<div class="modal-title">🔔 Rotation Notifications</div>'+
       '<div id="notifModalBody"></div>'+
     '</div>';
   document.body.appendChild(overlay);
@@ -3930,11 +4006,11 @@ var AUTH_RULES_SELECTED=null;
 async function openStateRulesModal(){
   var overlay=document.createElement('div');
   overlay.id='stateRulesModalOverlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.className='modal-overlay';
   overlay.innerHTML=
-    '<div style="background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;padding:18px;position:relative;">'+
-      '<button id="stateRulesModalClose" style="position:absolute;top:10px;right:10px;background:none;border:none;color:rgba(230,213,180,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px;">✕</button>'+
-      '<div style="font-family:var(--serif);font-size:15px;color:#c9974b;margin-bottom:14px;padding-right:24px;">📜 State Rules</div>'+
+    '<div class="modal-panel lg">'+
+      '<button id="stateRulesModalClose" class="modal-close" aria-label="Close">✕</button>'+
+      '<div class="modal-title">📜 State Rules</div>'+
       '<div id="stateRulesModalBody"></div>'+
     '</div>';
   document.body.appendChild(overlay);
@@ -6397,10 +6473,10 @@ function renderRtRows(focusLast){
 function rtPromptName(cb){
   var overlay=document.createElement('div');
   overlay.id='rtPromptOverlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(10,7,4,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.className='modal-overlay';
   overlay.innerHTML=
-    '<div style="background:#1a120a;border:1px solid rgba(196,155,92,.22);border-radius:16px;max-width:340px;width:100%;padding:18px;">'+
-      '<div style="font-family:var(--serif);font-size:14px;color:#c9974b;margin-bottom:12px;">Save preset</div>'+
+    '<div class="modal-panel sm">'+
+      '<div class="modal-title">Save preset</div>'+
       '<input class="inp" id="rtPromptInp" placeholder="Preset name" maxlength="40" style="margin-bottom:12px;">'+
       '<div style="display:flex;gap:8px;">'+
         '<button class="btn btn-g" id="rtPromptCancel">Cancel</button>'+
