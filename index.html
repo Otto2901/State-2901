@@ -96,6 +96,12 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .row-val{font-size:14px;color:var(--t2);font-variant-numeric:tabular-nums;}
 .row-badge{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--red);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;}
 .row-chev{color:var(--t3);font-size:16px;}
+/* iOS-style switch on a checkbox */
+.sw{appearance:none;-webkit-appearance:none;flex-shrink:0;width:46px;height:28px;border-radius:14px;background:rgba(230,213,180,.14);position:relative;cursor:pointer;transition:background .2s var(--ease);margin:0;}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#f2e6d0;box-shadow:0 2px 5px rgba(0,0,0,.4);transition:transform .2s var(--ease);}
+.sw:checked{background:linear-gradient(135deg,#9c6f30,#d9ab5c);}
+.sw:checked::after{transform:translateX(18px);}
+.role-chg{font-size:11px;font-weight:700;color:var(--gold);margin-left:8px;}
 
 /* CONTENT */
 .content{padding:2px 16px calc(36px + var(--safe-b));position:relative;z-index:1;}
@@ -185,6 +191,24 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .filter-bar .sel{flex:1;}
 .rfsh.spin{animation:spin .7s linear;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* LOADING SCREEN */
+.ld{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:24px;animation:ldIn .5s var(--ease);}
+.ld-seal{position:relative;width:168px;height:168px;display:grid;place-items:center;}
+.ld-seal::before{content:'';position:absolute;inset:10px;border-radius:50%;background:radial-gradient(circle,rgba(217,171,92,.3),transparent 66%);animation:ldGlow 2.8s ease-in-out infinite;}
+/* The icon has a margin around the seal: crop it so the seal fills the circle */
+.ld-img{position:relative;width:128px;height:128px;border-radius:50%;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.6);}
+.ld-img img{position:absolute;left:50%;top:50%;width:150px;height:150px;max-width:none;transform:translate(-50%,-50%);}
+.ld-ring{position:absolute;inset:0;width:100%;height:100%;animation:spin 2.2s linear infinite;}
+.ld-name{margin-top:24px;font-family:var(--serif);font-size:24px;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(135deg,#f0d9ad 0%,#c9974b 50%,#f6e7c8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ld-bar{width:168px;height:3px;margin-top:18px;border-radius:2px;background:rgba(230,213,180,.1);overflow:hidden;}
+.ld-bar i{display:block;width:4%;height:100%;border-radius:2px;background:linear-gradient(90deg,#9c6f30,#f0d9ad);box-shadow:0 0 10px rgba(217,171,92,.6);transition:width .35s var(--ease);}
+.ld-cap{margin-top:12px;font-size:12px;color:var(--t3);letter-spacing:.3px;}
+@keyframes ldGlow{0%,100%{opacity:.5;transform:scale(.95);}50%{opacity:1;transform:scale(1.05);}}
+@keyframes ldIn{from{opacity:0;}to{opacity:1;}}
+.auth-seal{position:relative;width:104px;height:104px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 10px 34px rgba(0,0,0,.55),0 0 46px rgba(201,151,75,.2);}
+.auth-seal img{position:absolute;left:50%;top:50%;width:122px;height:122px;max-width:none;transform:translate(-50%,-50%);}
 .tpill.on,.tpill:hover{border-color:rgba(201,151,75,.45);color:var(--ac);background:rgba(201,151,75,.09);}
 
 /* SUB FILTER */
@@ -373,6 +397,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
   /* Admin section list: groups side by side */
   body.has-rail #adminContent.adm-root{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:0 24px;align-items:start;}
   body.has-rail #adminContent.adm-root .glabel{margin-top:4px;}
+  body.has-rail .roles-holders > .glabel:first-child{margin-top:4px;}
+  body.has-rail .roles-wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0 28px;align-items:start;}
 }
 /* DESKTOP — dense screens use the width */
 @media (min-width:1024px){
@@ -552,7 +578,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 /* NOTIFICATIONS */
 
 /* TOAST */
-.toast{position:fixed;bottom:calc(86px + var(--safe-b));left:50%;transform:translateX(-50%);background:rgba(18,13,8,.97);border:1px solid var(--b2);backdrop-filter:blur(12px);color:var(--t);padding:10px 20px;border-radius:24px;font-weight:700;font-size:13px;z-index:500;max-width:calc(100vw - 32px);white-space:normal;text-align:center;line-height:1.4;animation:tin 3.2s forwards;pointer-events:none;box-shadow:0 8px 28px rgba(0,0,0,.45);}
+.toast{position:fixed;bottom:calc(86px + var(--safe-b));left:50%;transform:translateX(-50%);background:rgba(18,13,8,.97);border:1px solid var(--b2);backdrop-filter:blur(12px);color:var(--t);padding:10px 20px;border-radius:24px;font-weight:700;font-size:13px;z-index:10000;max-width:calc(100vw - 32px);white-space:normal;text-align:center;line-height:1.4;animation:tin 3.2s forwards;pointer-events:none;box-shadow:0 8px 28px rgba(0,0,0,.45);}
 @keyframes tin{0%{opacity:0;transform:translateX(-50%) translateY(8px);}12%{opacity:1;transform:translateX(-50%) translateY(0);}75%{opacity:1;}100%{opacity:0;}}
 
 /* HOME HEADER */
@@ -724,6 +750,13 @@ var ROLE_INFO = {
   troops_admin:     { label:'Troops Viewer',   guideKey:'troops',   desc:'You can view the troop level reports of players and export them as CSV in Admin Panel › Troops. View only.' },
   moderator:       { label:'Moderator',       guideKey:null,       desc:'You have moderator status.' }
 };
+// One badge per role, coloured by kind: super admin gold, module admins
+// orange, moderator green.
+function roleBadgeHtml(role,style){
+  var cls=role==='super_admin'?'role-super':role==='moderator'?'role-mod':'role-svs';
+  var lbl=ROLE_INFO[role]?ROLE_INFO[role].label:role.replace(/_/g,' ');
+  return '<span class="role-badge '+cls+'"'+(style?' style="'+style+'"':'')+'>'+escHtml(lbl)+'</span>';
+}
 function createSb(token){
   return token
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {global:{headers:{'x-session-token':token}}})
@@ -934,7 +967,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v36'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v37'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1070,7 +1103,7 @@ function fmt(d){ return d?d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2
 function sameName(a,b){ return a&&b&&a.trim().toLowerCase()===b.trim().toLowerCase(); }
 async function loadAll(){
   // All requests fire in parallel — reduces 3-5s to ~0.5s
-  var results = await Promise.all([
+  var results = await Promise.all(trackLoad([
     sb.from('players').select('name,created_at,status,player_id,alliance').order('created_at',{ascending:false}),
     Promise.resolve({data:null,error:null}), // svs_rally_leaders removed
     Promise.resolve({data:null,error:null}),
@@ -1093,7 +1126,7 @@ async function loadAll(){
     sb.from('alliance_colors').select('*'),
     sb.from('presidency_queues').select('*'),
     sb.from('presidency_records').select('*')
-  ]);
+  ]));
   var r3=results[0],r5=results[2],r6=results[3];
   var r7=results[4],r8=results[5],r9=results[6],r10=results[7];
   var rTR=results[8],rTRi=results[9],rIDR=results[10];
@@ -1180,13 +1213,7 @@ async function doConfirmPin(){
     localStorage.setItem('wos-session',JSON.stringify(SESSION));
   }
   // Show loading screen while data fetches
-  document.getElementById('app').innerHTML=
-    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;gap:16px;">'+
-      '<div class="home-hdr-seal"><div class="home-hdr-logo" style="font-size:44px;">🏰</div></div>'+
-      '<div style="font-family:var(--serif);font-size:16px;color:#c9974b;letter-spacing:1px;">State 2901</div>'+
-      '<div style="width:28px;height:28px;border:2px solid rgba(201,151,75,.22);border-top-color:#c9974b;border-radius:50%;animation:spin .7s linear infinite;"></div>'+
-      '<div style="font-size:12px;color:rgba(230,213,180,.45);letter-spacing:2px;text-transform:uppercase;">Loading...</div>'+
-    '</div>';
+  document.getElementById('app').innerHTML=loadingScreenHtml();
   await loadAll();
   toast('Welcome'+(AUTH_STEP==='pin-login'?' back':'')+', '+name+'!');
   render();
@@ -1258,12 +1285,41 @@ function renderView(){
   if(MODULE==='presidency') renderPresidencyApp(app);
   if(MODULE==='rules')     renderRulesApp(app);
   if(MODULE==='library')   renderLibraryApp(app);
+  if(MODULE==='ministers') renderMinistersApp(app);
   if(MODULE==='adminpanel') renderAdminPanel(app);
   // Modules still emit their tab bar last; show it as a segmented control
   // under the large title. Moving the node keeps its click handlers.
   var nv=app.querySelector(':scope > .nav'), lg=app.querySelector(':scope > .mod-large');
   if(nv&&lg) lg.after(nv);
   var mh=app.querySelector('.mod-hdr'); if(mh) mh.classList.toggle('scrolled',window.scrollY>40);
+}
+
+// LOADING SCREEN — the brand seal in a turning brass ring, and a bar that
+// fills as each startup query actually finishes (see trackLoad).
+function loadingScreenHtml(){
+  return '<div class="ld" role="status" aria-label="Loading">'+
+    '<div class="ld-seal">'+
+      '<svg class="ld-ring" viewBox="0 0 168 168" aria-hidden="true">'+
+        '<defs><linearGradient id="ldGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e7c8"/><stop offset="1" stop-color="#c9974b" stop-opacity=".15"/></linearGradient></defs>'+
+        '<circle cx="84" cy="84" r="80" fill="none" stroke="rgba(201,151,75,.16)" stroke-width="1"/>'+
+        '<circle class="ld-arc" cx="84" cy="84" r="80" fill="none" stroke="url(#ldGrad)" stroke-width="3" stroke-linecap="round" stroke-dasharray="150 353"/>'+
+      '</svg>'+
+      '<span class="ld-img"><img src="icons/icon-512.png" alt="" width="150" height="150"></span>'+
+    '</div>'+
+    '<div class="ld-name">State 2901</div>'+
+    '<div class="ld-bar"><i id="ldFill"></i></div>'+
+    '<div class="ld-cap">Loading your state…</div>'+
+  '</div>';
+}
+function trackLoad(list){
+  var done=0;
+  return list.map(function(q){
+    return Promise.resolve(q).then(function(r){
+      done++;
+      var f=document.getElementById('ldFill'); if(f) f.style.width=Math.round(done/list.length*100)+'%';
+      return r;
+    });
+  });
 }
 
 // Shows unread "notifications" rows (e.g. "you were granted a role") as a
@@ -1456,8 +1512,8 @@ function homeModules(){
       go:open('warteam',function(){ WAR_TAB='board'; WAR_EDIT_TEAM=null; WAR_EDIT_MEMBERS=[]; WAR_EDIT_HERO=undefined; })},
     isRallyAdmin(SESSION.name)&&{id:'goRally',mod:'rallytimer',group:'Events',key:'rallytimer',color:MOD_COLORS.rallytimer.text,title:'Rally Timer',short:'Rally Timer',sub:'March sync calculator',
       go:open('rallytimer')},
-    minIsVisible()&&{id:'goMinisters',mod:null,group:'Events',key:'ministers',color:'#d4a95e',title:'SvS Minister Applications',short:'Ministers',sub:'Free times & apply for a minister slot',
-      go:openMinisterModal},
+    minIsVisible()&&{id:'goMinisters',mod:'ministers',group:'Events',key:'ministers',color:'#d4a95e',title:'SvS Minister Applications',short:'Ministers',sub:'Free times & apply for a minister slot',
+      go:open('ministers',function(){ MIN_PUB_TAB='avail'; })},
     {id:'goPresidency',mod:'presidency',group:'State',key:'presidency',color:MOD_COLORS.presidency.text,title:'Presidency Ledger',short:'Presidency',sub:'SFC & SvS Supreme rotation',
       go:open('presidency',function(){ PRES_TAB='board'; })},
     {id:'goTransfer',mod:'transfer',group:'State',key:'transfer',color:MOD_COLORS.transfer.text,title:'Transfer Management',short:'Transfers',sub:'Invite tracking & player management',
@@ -1829,7 +1885,7 @@ function renderAuth(app){
   if(AUTH_STEP==='name'){
     var minTopHtml=!minOn?'':'<div class="auth-card"><button class="btn btn-p" id="ministerAppsBtn" style="padding:16px;font-size:15px;">👑 SvS Minister Applications<div style="font-size:11px;font-weight:600;margin-top:3px;letter-spacing:0;opacity:.85;">No account or PIN needed · see free times & apply</div></button></div>'+
       '<div style="font-size:11px;color:var(--t3);text-align:center;letter-spacing:.3px;">State members with an account, log in below</div>';
-    inner='<div class="home-hdr-seal"><div class="home-hdr-logo" style="font-size:44px;">🏰</div></div><div class="auth-title">State 2901</div><div class="auth-state">State Management System</div>'+
+    inner='<span class="auth-seal"><img src="icons/icon-512.png" alt="" width="122" height="122"></span><div class="auth-title">State 2901</div><div class="auth-state">State Management System</div>'+
       (minOn?minTopHtml:'<div class="auth-sub">Enter your in-game name to continue.</div>')+
       '<div class="auth-card card">'+(minOn?'<div style="font-size:12px;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Member login</div>':'')+'<div class="field"><label class="lbl">Your In-Game Name</label><input class="inp" id="nameInp" placeholder="Name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>'+
       '<div class="err">'+AUTH_ERR+'</div><button class="btn btn-p" id="nameNext">Continue →</button></div>';
@@ -1873,8 +1929,15 @@ async function grantRole(playerName, role){
   if(!playerName||!role) return;
   // Check already has this role
   if(hasRole(playerName,role)){ toast('Already has this role.'); return; }
+  var err=await grantRoleCore(playerName,role);
+  if(err){ toast('Error: '+err); return; }
+  toast('✅ Role granted!'); render();
+}
+// Inserts the role and the player's "you were granted" notification.
+// Returns an error message or null; no toast/render, so batches can share one.
+async function grantRoleCore(playerName, role){
   var r = await sb.from('admin_roles').insert({player_name:playerName,role:role,granted_by:SESSION.name});
-  if(r.error){ toast('Error: '+r.error.message); return; }
+  if(r.error) return r.error.message;
   ADMIN_ROLES.push({player_name:playerName,role:role,granted_by:SESSION.name});
   var info = ROLE_INFO[role] || { label: role.replace(/_/g,' '), desc:'' };
   sb.from('notifications').insert({
@@ -1882,7 +1945,13 @@ async function grantRole(playerName, role){
     role: role,
     message: 'You were granted the "'+info.label+'" role by '+SESSION.name+'.'+(info.desc?' '+info.desc:'')
   }).then(function(nr){ if(nr.error){ console.warn('Notification insert failed:',nr.error.message); reportError('Notification insert failed: '+nr.error.message); } });
-  toast('✅ Role granted!'); render();
+  return null;
+}
+async function revokeRoleCore(playerName, role){
+  var r = await sb.from('admin_roles').delete().eq('player_name',playerName).eq('role',role).neq('player_name',ADMIN_NAME);
+  if(r.error) return r.error.message;
+  ADMIN_ROLES=ADMIN_ROLES.filter(function(x){ return !(x.player_name===playerName&&x.role===role); });
+  return null;
 }
 async function revokeRole(playerName, role){
   // If role specified, remove only that role. Otherwise remove all roles for player.
@@ -3490,8 +3559,7 @@ function renderAdminPlayers(ac){
   var SEL=window._playerBulkSel||(window._playerBulkSel=new Set());
 
   function playerRowHtml(p){
-    var role=getRole(p.name);
-    var roleTag=role?'<span class="role-badge '+(role==="super_admin"?"role-super":(role==="library_admin"||role==="stronghold_admin"||role==="war_admin"||role==="rally_admin"||role==="presidency_admin"||role==="minister_admin"||role==="troops_admin")?"role-svs":"role-mod")+'" style="font-size:9px;">'+role.replace(/_/g," ")+'</span>':'';
+    var roleTag=getRoles(p.name).map(function(r){ return roleBadgeHtml(r,'font-size:9px;'); }).join(' ');
     var playerReps=ALLIANCE_REPS.filter(function(r){ return r.player_name===p.name; });
     var repTags=playerReps.map(function(r){
       if(r.alliance==='TRANSFER') return '<span style="font-size:9px;background:rgba(143,122,168,.12);color:#b494c4;border:1px solid rgba(143,122,168,.35);border-radius:5px;padding:1px 5px;">✈️ Transfer Rep</span>';
@@ -3738,62 +3806,76 @@ function renderAdminPlayers(ac){
 }
 
 // ── ROLES TAB ────────────────────────────────────────────
+// Roles a super admin can hand out, in the order they are listed.
+var ROLE_LIST=[
+  {role:'moderator',        icon:'roles',      color:'#7a9c72', short:'General moderator status'},
+  {role:'stronghold_admin', icon:'rotation',   color:'#a3b3c2', short:'Rotation reps & weekly rewards'},
+  {role:'cj_admin',         icon:'crazyjoe',   color:'#c48f6a', short:'Crazy Joe team assignments'},
+  {role:'war_admin',        icon:'warteam',    color:'#c97b6b', short:'War Team boards & hero list'},
+  {role:'rally_admin',      icon:'rallytimer', color:'#c9974b', short:'Opens the Rally Timer'},
+  {role:'presidency_admin', icon:'presidency', color:'#d9c27a', short:'Records & queues in the Presidency Ledger'},
+  {role:'minister_admin',   icon:'ministers',  color:'#d4a95e', short:'Minister applications & time slots'},
+  {role:'troops_admin',     icon:'troops',     color:'#a3b3c2', short:'Views troop reports (read only)'},
+  {role:'library_admin',    icon:'library',    color:'#c4a876', short:'Views & edits the Library'}
+];
 function renderAdminRoles(ac){
   if(!isSuperAdmin(SESSION.name)){
     ac.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><p>Access denied.</p></div>';
     return;
   }
-  // Group by player name
+  var who=window._rolePlayer||'';
+  if(who&&!ALL_PLAYERS.some(function(p){ return p.name===who; })) who=window._rolePlayer='';
+  // Draft = the switches as currently set; starts as the player's real roles.
+  if(!window._roleDraft||window._roleDraft.player!==who) window._roleDraft={player:who,roles:new Set(getRoles(who))};
+  var draft=window._roleDraft.roles;
+  var have=getRoles(who);
+  var adds=ROLE_LIST.filter(function(x){ return draft.has(x.role)&&have.indexOf(x.role)<0; }).map(function(x){ return x.role; });
+  var dels=ROLE_LIST.filter(function(x){ return !draft.has(x.role)&&have.indexOf(x.role)>=0; }).map(function(x){ return x.role; });
+  var changes=adds.length+dels.length;
+
+  var pickerHtml=
+    '<div class="glabel" style="margin-top:4px;">Give or remove roles</div>'+
+    '<div class="panel" style="margin-bottom:10px;">'+
+      '<input class="inp" id="rolePlayerSearch" placeholder="Search name or ID" autocomplete="off" style="margin-bottom:8px;">'+
+      '<select class="sel" id="rolePlayer">'+groupedPlayerOpts(ALL_PLAYERS, ADMIN_NAME)+'</select>'+
+    '</div>';
+  var listHtml=!who?
+    '<div class="group"><div class="row" style="cursor:default;"><span class="row-text"><span class="row-sub">Pick a player to see their roles and switch them on or off.</span></span></div></div>':
+    '<div class="group">'+ROLE_LIST.map(function(x){
+      var on=draft.has(x.role), changed=on!==(have.indexOf(x.role)>=0);
+      return '<label class="row role-row" style="cursor:pointer;">'+iconTile(x.icon,x.color)+
+        '<span class="row-text"><span class="row-title">'+escHtml(ROLE_INFO[x.role].label)+(changed?'<span class="role-chg">'+(on?'will add':'will remove')+'</span>':'')+'</span>'+
+          '<span class="row-sub">'+x.short+'</span></span>'+
+        '<input type="checkbox" class="sw role-sw" data-role="'+x.role+'"'+(on?' checked':'')+' aria-label="'+escHtml(ROLE_INFO[x.role].label)+'">'+
+      '</label>';
+    }).join('')+'</div>'+
+    '<div style="display:flex;gap:8px;margin-top:12px;">'+
+      '<button class="btn btn-p" id="roleSave"'+(changes?'':' disabled')+' style="flex:1;">'+(changes?'Save '+changes+' change'+(changes>1?'s':''):'No changes')+'</button>'+
+      (changes?'<button class="btn btn-g" id="roleReset" style="width:auto;flex:0 0 auto;padding-left:20px;padding-right:20px;">Undo</button>':'')+
+    '</div>';
+
   var byPlayer={};
   ADMIN_ROLES.filter(function(r){ return r.player_name!==ADMIN_NAME; }).forEach(function(r){
-    if(!byPlayer[r.player_name]) byPlayer[r.player_name]=[];
-    byPlayer[r.player_name].push(r);
+    (byPlayer[r.player_name]=byPlayer[r.player_name]||[]).push(r.role);
   });
-  var rolesHtml=Object.keys(byPlayer).sort().map(function(pname){
-    var roles=byPlayer[pname];
-    var badgesHtml=roles.map(function(r){
-      var badgeCls=r.role==='cj_admin'||r.role==='library_admin'||r.role==='stronghold_admin'||r.role==='war_admin'||r.role==='rally_admin'||r.role==='presidency_admin'||r.role==='minister_admin'||r.role==='troops_admin'?'role-svs':r.role==='album_admin'?'role-album':'role-mod';
-      return '<span class="role-badge '+badgeCls+'" style="margin-right:4px;">'+r.role.replace(/_/g," ")+'</span>'+
-        '<button class="btn btn-d btn-sm revoke-role" data-player="'+pname+'" data-role="'+r.role+'" style="padding:3px 8px;font-size:10px;margin-right:4px;">✕</button>';
-    }).join('');
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(100,160,220,.07);">'+
-      '<div>'+
-        '<div style="font-size:13px;font-weight:700;color:#c9b48a;margin-bottom:4px;">'+pname+'</div>'+
-        '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;">'+badgesHtml+'</div>'+
-      '</div>'+
-    '</div>';
-  }).join('')||'<div style="color:#6b5a42;font-size:12px;padding:8px 0;">No roles assigned yet</div>';
+  var names=Object.keys(byPlayer).sort(function(a,b){ return a.localeCompare(b); });
+  var holdersHtml=
+    '<div class="glabel">Current role holders<span class="glabel-n">'+names.length+'</span></div>'+
+    (names.length?'<div class="group">'+names.map(function(n){
+      return '<button class="row role-holder" data-player="'+escHtml(n)+'">'+
+        '<span class="row-text"><span class="row-title">'+escHtml(n)+'</span>'+
+          '<span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;">'+byPlayer[n].map(function(r){ return roleBadgeHtml(r); }).join('')+'</span></span>'+
+        '<span class="row-chev">'+icon('chevR')+'</span></button>';
+    }).join('')+'</div>':'<div class="group"><div class="row" style="cursor:default;"><span class="row-sub">No roles assigned yet.</span></div></div>');
 
-  ac.innerHTML=
-    '<div style="background:color-mix(in srgb,var(--gold) 4%,transparent);border:1px solid color-mix(in srgb,var(--gold) 13%,transparent);border-radius:12px;padding:14px;margin-bottom:12px;">'+
-      '<div style="font-size:12px;font-weight:800;color:var(--gold);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">👑 Admin Roles</div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'+
-        '<div style="flex:1;min-width:120px;">'+
-          '<input class="inp" id="rolePlayerSearch" placeholder="🔍 Name or ID..." autocomplete="off" style="margin-bottom:4px;">'+
-          '<select class="sel" id="rolePlayer">'+
-            groupedPlayerOpts(ALL_PLAYERS, ADMIN_NAME)+
-          '</select>'+
-        '</div>'+
-        '<select class="sel" id="roleSelect" style="flex:1;min-width:120px;"><option value="">— Select role —</option>'+
-          '<option value="cj_admin">🤪 Crazy Joe Admin</option>'+
-          '<option value="moderator">🛡️ Moderator</option>'+
-          '<option value="library_admin">📚 Library Admin</option>'+
-          '<option value="stronghold_admin">🏯 Stronghold Admin</option>'+
-          '<option value="war_admin">⚔️ War Team Admin</option>'+
-          '<option value="rally_admin">⏱️ Rally Timer Admin</option>'+
-          '<option value="presidency_admin">👑 Presidency Admin</option>'+
-          '<option value="minister_admin">🗓️ Minister Apps Admin</option>'+
-          '<option value="troops_admin">🪖 Troops Viewer</option>'+
-        '</select>'+
-        '<button class="btn btn-g btn-sm" id="grantRoleBtn">Grant</button>'+
-      '</div>'+
-      rolesHtml+
-    '</div>';
+  ac.innerHTML='<div class="roles-wrap"><div>'+pickerHtml+listHtml+'</div><div class="roles-holders">'+holdersHtml+'</div></div>';
 
+  var sel=document.getElementById('rolePlayer');
+  sel.value=who;
+  sel.addEventListener('change',function(){ window._rolePlayer=sel.value; renderAdminRoles(ac); });
   var roleSearch=document.getElementById('rolePlayerSearch');
-  if(roleSearch) roleSearch.addEventListener('input',function(){
+  roleSearch.addEventListener('input',function(){
     var q=roleSearch.value.trim().toLowerCase();
-    var sel=document.getElementById('rolePlayer');
     Array.from(sel.options).forEach(function(opt){
       if(!opt.value){ opt.style.display=''; return; }
       var player=ALL_PLAYERS.find(function(p){ return p.name===opt.value; });
@@ -3801,17 +3883,30 @@ function renderAdminRoles(ac){
       opt.style.display=match||!q?'':'none';
     });
   });
-
-  document.getElementById('grantRoleBtn').addEventListener('click',function(){
-    var p=document.getElementById('rolePlayer').value;
-    var r=document.getElementById('roleSelect').value;
-    if(p&&r) grantRole(p,r);
-  });
-  ac.querySelectorAll('.revoke-role').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var p=btn.dataset.player, r=btn.dataset.role;
-      confirmDanger('Revoke the "'+r.replace(/_/g,' ')+'" role from '+p+'?',{title:'Revoke role',confirmLabel:'Revoke'}).then(function(ok){ if(ok) revokeRole(p,r); });
+  ac.querySelectorAll('.role-sw').forEach(function(cb){
+    cb.addEventListener('change',function(){
+      if(cb.checked) draft.add(cb.dataset.role); else draft.delete(cb.dataset.role);
+      renderAdminRoles(ac);
     });
+  });
+  ac.querySelectorAll('.role-holder').forEach(function(b){
+    b.addEventListener('click',function(){ window._rolePlayer=b.dataset.player; renderAdminRoles(ac); window.scrollTo({top:0,behavior:'smooth'}); });
+  });
+  var reset=document.getElementById('roleReset');
+  if(reset) reset.addEventListener('click',function(){ window._roleDraft=null; renderAdminRoles(ac); });
+  var save=document.getElementById('roleSave');
+  if(save) save.addEventListener('click',async function(){
+    if(dels.length){
+      var ok=await confirmDanger('Remove '+dels.map(function(r){ return ROLE_INFO[r].label; }).join(', ')+' from '+who+'?',{title:'Remove roles',confirmLabel:'Remove'});
+      if(!ok) return;
+    }
+    save.disabled=true; save.textContent='Saving…';
+    var fails=[];
+    for(var i=0;i<adds.length;i++){ var e=await grantRoleCore(who,adds[i]); if(e) fails.push(ROLE_INFO[adds[i]].label+': '+e); }
+    for(var j=0;j<dels.length;j++){ var e2=await revokeRoleCore(who,dels[j]); if(e2) fails.push(ROLE_INFO[dels[j]].label+': '+e2); }
+    window._roleDraft=null;
+    toast(fails.length?'Some changes failed. '+fails.join(' · '):'✅ Roles updated for '+who);
+    render();
   });
 }
 
@@ -4344,6 +4439,28 @@ async function minLoadPublic(){
 }
 
 // ── Public modal (auth screen button + home card) ──
+// Signed in: Ministers is a page like the other modules. The login screen
+// (no modules yet) still opens the same content in a sheet.
+function renderMinistersApp(app){
+  if(['avail','apply'].indexOf(MIN_PUB_TAB)<0) MIN_PUB_TAB='avail';
+  app.innerHTML=
+    buildModuleHeader('ministers','👑','SvS Minister Applications','Free times & apply for a minister slot','ministers',null,'ministers','#d4a95e')+
+    '<div class="content content-form" id="minPubBody"><div style="text-align:center;color:var(--t2);font-size:12px;padding:20px 0;">Loading...</div></div>'+
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>'+
+    '<div class="nav">'+[['avail','Availability'],['apply','Apply']].map(function(t){
+      return '<button class="nav-btn min-pub-tab'+(MIN_PUB_TAB===t[0]?' on':'')+'" data-t="'+t[0]+'">'+t[1]+'</button>';
+    }).join('')+'</div>';
+  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('ministers'); });
+  app.querySelectorAll('.min-pub-tab').forEach(function(t){
+    t.addEventListener('click',function(){ MIN_PUB_TAB=t.dataset.t; renderMinPublicBody(); });
+  });
+  if(MIN_TAKEN) renderMinPublicBody();
+  minLoadPublic().then(function(){ if(MODULE==='ministers') renderMinPublicBody(); },function(){
+    var el=document.getElementById('minPubBody');
+    if(el&&!MIN_TAKEN) el.innerHTML='<div style="text-align:center;color:var(--red);font-size:12px;padding:20px 0;">Could not load. Check your connection and try again.</div>';
+  });
+}
 function openMinisterModal(){
   MIN_PUB_TAB='avail';
   openModal({
@@ -4373,6 +4490,7 @@ function renderMinPublicBody(values){
   document.querySelectorAll('.min-pub-tab').forEach(function(t){
     var on=t.dataset.t===MIN_PUB_TAB;
     t.classList.toggle('on',on);
+    if(!t.classList.contains('tog')) return;
     t.style.borderColor=on?'rgba(201,151,75,.6)':'var(--b2)';
     t.style.background=on?'rgba(201,151,75,.12)':'transparent';
     t.style.color='var(--t)';
@@ -4594,6 +4712,10 @@ function minReadForm(root,px){
   // Troops are returned separately: they go to player_troop_reports, not the application row
   var troops=null;
   if(root.querySelector('#'+px+'Tr_inf_tier')){
+    // Admin edit (super admin only has troop fields there): all troop fields
+    // left empty means "no troop report", so older applications can be saved.
+    var anyTroop=MIN_TROOP_TYPES.some(function(tt){ return val('Tr_'+tt[0]+'_tier')||val('Tr_'+tt[0]+'_fc'); });
+    if(px==='ma'&&!anyTroop) return {data:d,troops:null};
     troops={};
     for(var t=0;t<MIN_TROOP_TYPES.length;t++){
       var ty=MIN_TROOP_TYPES[t][0];
@@ -7673,13 +7795,7 @@ function presLogDetail(e){
 
 async function init(){
   if(SESSION){
-    document.getElementById('app').innerHTML=
-      '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;gap:16px;">'+
-      '<div class="home-hdr-seal"><div class="home-hdr-logo" style="font-size:44px;">🏰</div></div>'+
-      '<div style="font-family:var(--serif);font-size:16px;color:#c9974b;letter-spacing:1px;">State 2901</div>'+
-      '<div style="width:28px;height:28px;border:2px solid rgba(201,151,75,.22);border-top-color:#c9974b;border-radius:50%;animation:spin .7s linear infinite;"></div>'+
-      '<div style="font-size:12px;color:rgba(230,213,180,.45);letter-spacing:2px;text-transform:uppercase;">Loading...</div>'+
-      '</div>';
+    document.getElementById('app').innerHTML=loadingScreenHtml();
     await Promise.all([loadAll(),minLoadCfg()]);
     // Deep-link from push notification
     if(location.hash==='#rotation') MODULE='rotation';
