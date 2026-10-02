@@ -24,7 +24,7 @@ select 4, 'tables without audit trigger',
   from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
   where ns.nspname = 'public' and c.relkind = 'r'
     and c.relname not in ('push_subscriptions','notifications','sessions','login_failures',
-                          'audit_log','client_errors','presidency_audit_log')
+                          'minister_submit_rate','audit_log','client_errors','presidency_audit_log')
     and not exists (
       select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
       where t.tgrelid = c.oid and p.proname = 'audit_row' and not t.tgisinternal)
