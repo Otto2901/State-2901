@@ -1146,6 +1146,9 @@ document.addEventListener('keydown',function(e){
   else if(e.key==='Escape'){ e.preventDefault(); AUTH_STEP='name'; PIN_INP=''; AUTH_ERR=''; render(); }
 });
 function logout(){
+  // Revoke the token server-side too (rls-step29), using the client that still
+  // carries it. Fire and forget: signing out on the device must never wait or fail.
+  if(SESSION){ try{ sb.rpc('end_session').then(function(r){ if(r&&r.error) console.warn('end_session:',r.error.message); },function(){}); }catch(e){} }
   SESSION=null; localStorage.removeItem('wos-session'); sb=createSb();
   try{ localStorage.removeItem(VIEW_KEY); }catch(e){}
   AUTH_STEP='name'; NAME_INP=''; PIN_INP=''; AUTH_ERR='';
