@@ -150,6 +150,16 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .auth-state{font-size:10px;color:var(--t2);letter-spacing:3.5px;text-transform:uppercase;text-align:center;margin-top:-12px;}
 .auth-sub{font-size:13px;color:var(--t2);text-align:center;line-height:1.65;max-width:300px;text-wrap:pretty;}
 .auth-card{width:100%;max-width:340px;}
+/* Public minister apps entry: a green tappable card, so it never reads as part of the brass title */
+.min-cta{display:flex;align-items:center;gap:12px;width:100%;padding:14px 14px 14px 12px;border-radius:var(--r);border:1px solid rgba(122,156,114,.65);background:linear-gradient(180deg,rgba(122,156,114,.30),rgba(122,156,114,.16));box-shadow:0 6px 22px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);color:var(--t);font-family:inherit;text-align:left;cursor:pointer;transition:transform .12s,background .15s;-webkit-tap-highlight-color:transparent;}
+.min-cta:hover{background:linear-gradient(180deg,rgba(122,156,114,.38),rgba(122,156,114,.2));}
+.min-cta:active{transform:scale(.98);}
+.min-cta:focus-visible{outline:2px solid #a9c79f;outline-offset:2px;}
+.min-cta-ic{flex:0 0 auto;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:21px;background:rgba(122,156,114,.3);}
+.min-cta-tx{flex:1;min-width:0;}
+.min-cta-t{display:block;font-size:15px;font-weight:800;line-height:1.25;color:#eef3ea;}
+.min-cta-s{display:block;font-size:11px;font-weight:600;line-height:1.4;margin-top:3px;color:#b9cdb2;}
+.min-cta-go{flex:0 0 auto;display:flex;align-items:center;gap:4px;padding:6px 9px;border-radius:999px;background:#7a9c72;color:#0f140d;font-size:11px;font-weight:800;letter-spacing:.6px;}
 .err{font-size:12px;color:var(--red);text-align:center;min-height:18px;margin:4px 0;font-weight:600;}
 .pin-dots{display:flex;gap:9px;justify-content:center;margin-bottom:18px;}
 .pin-dot{
@@ -865,7 +875,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v38'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v39'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1137,6 +1147,7 @@ document.addEventListener('keydown',function(e){
 });
 function logout(){
   SESSION=null; localStorage.removeItem('wos-session'); sb=createSb();
+  try{ localStorage.removeItem(VIEW_KEY); }catch(e){}
   AUTH_STEP='name'; NAME_INP=''; PIN_INP=''; AUTH_ERR='';
   render();
 }
@@ -1146,6 +1157,52 @@ function logout(){
 // Push/pop slide only when the screen itself changes (Home → module → Admin
 // section), never on the re-renders that happen inside one screen.
 var _lastView=null;
+// Phones discard a backgrounded PWA and reload it on return. Remember the
+// current screen so init() can put the user back where they were.
+var VIEW_KEY='s2901-view', VIEW_MAX_AGE=12*3600*1000;
+var VIEW_MODULES=['rotation','transfer','crazyjoe','warteam','rallytimer','presidency','rules','library','ministers','adminpanel'];
+function saveViewState(y){
+  if(!SESSION||SESSION.pending||SESSION.needsProfile) return;
+  try{
+    localStorage.setItem(VIEW_KEY,JSON.stringify({
+      name:SESSION.name, t:Date.now(), y:Math.round(y==null?window.scrollY:y),
+      MODULE:MODULE, ADMIN_TAB:ADMIN_TAB, PROFILE_OPEN:PROFILE_OPEN,
+      ROT_TAB:ROT_TAB, TR_TAB:TR_TAB, CJ_TAB:CJ_TAB, WAR_TAB:WAR_TAB, PRES_TAB:PRES_TAB, RULES_TAB:RULES_TAB,
+      MIN_PUB_TAB:MIN_PUB_TAB, MIN_ADMIN_VIEW:MIN_ADMIN_VIEW,
+      rules:RULES_SELECTED&&RULES_SELECTED.id, lib:LIBRARY_SELECTED&&LIBRARY_SELECTED.id
+    }));
+  }catch(e){}
+}
+// Returns the scroll offset to restore, or null when nothing was restored.
+function restoreViewState(){
+  var v=null;
+  try{ v=JSON.parse(localStorage.getItem(VIEW_KEY)||'null'); }catch(e){}
+  if(!v||!SESSION||v.name!==SESSION.name||!(Date.now()-v.t<VIEW_MAX_AGE)) return null;
+  if(v.MODULE&&VIEW_MODULES.indexOf(v.MODULE)<0) return null;
+  if(v.MODULE==='ministers'&&!minIsVisible()) return null;
+  MODULE=v.MODULE||null; PROFILE_OPEN=!MODULE&&!!v.PROFILE_OPEN;
+  ADMIN_TAB=MODULE==='adminpanel'?(v.ADMIN_TAB||null):null;
+  ['ROT_TAB','TR_TAB','CJ_TAB','WAR_TAB','PRES_TAB','RULES_TAB','MIN_PUB_TAB','MIN_ADMIN_VIEW'].forEach(function(k){
+    if(typeof v[k]==='string') window[k]=v[k];
+  });
+  if(MODULE==='rules'&&v.rules!=null) RULES_SELECTED=RULES_TOPICS.find(function(x){ return x.id===v.rules; })||null;
+  if(MODULE==='library'&&v.lib!=null) LIBRARY_SELECTED=LIBRARY_ENTRIES.find(function(x){ return x.id===v.lib; })||null;
+  return v.y||0;
+}
+// Some screens load their data after the first render, so the page may still
+// be too short. Retry for ~1.5s, and stop as soon as the user scrolls themselves.
+function restoreScroll(y){
+  var stop=false, tries=0, quit=function(){ stop=true; }, key=_lastView&&_lastView.key;
+  ['touchstart','pointerdown','wheel','keydown'].forEach(function(ev){ window.addEventListener(ev,quit,{once:true,passive:true}); });
+  (function go(){
+    if(stop||!_lastView||_lastView.key!==key) return;
+    window.scrollTo(0,y);
+    if(Math.abs(window.scrollY-y)>2&&++tries<10) setTimeout(go,150);
+  })();
+}
+function onAppHidden(){ if(_lastView&&_lastView.key!=='auth') saveViewState(); }
+window.addEventListener('pagehide',onAppHidden);
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') onAppHidden(); });
 function viewDepth(){ return !MODULE?(PROFILE_OPEN?1:0):(MODULE==='adminpanel'&&ADMIN_TAB?2:1); }
 function render(){
   var prev=_lastView;
@@ -1153,6 +1210,7 @@ function render(){
   renderRail();
   var key=!SESSION?'auth':PROFILE_OPEN?'profile':!MODULE?'home':MODULE==='adminpanel'?'admin|'+(ADMIN_TAB||''):MODULE;
   _lastView={key:key,depth:viewDepth()};
+  saveViewState(prev&&prev.key!==key?0:window.scrollY);
   if(!prev||prev.key===key||key==='auth'||prev.key==='auth') return;
   window.scrollTo(0,0);
   var mh=document.querySelector('.mod-hdr'); if(mh) mh.classList.remove('scrolled');
@@ -1766,6 +1824,13 @@ function groupedPlayerOpts(players, excludeName){
 }
 
 var _lastAuthStep=null;
+function minCtaHtml(title,sub){
+  return '<div class="auth-card"><button class="min-cta" id="ministerAppsBtn">'+
+    '<span class="min-cta-ic" aria-hidden="true">👑</span>'+
+    '<span class="min-cta-tx"><span class="min-cta-t">'+title+'</span><span class="min-cta-s">'+sub+'</span></span>'+
+    '<span class="min-cta-go">APPLY <span aria-hidden="true">→</span></span>'+
+  '</button></div>';
+}
 function renderAuth(app){
   var stepChanged=(_lastAuthStep!==AUTH_STEP);
   _lastAuthStep=AUTH_STEP;
@@ -1775,7 +1840,7 @@ function renderAuth(app){
   var minOn=minIsVisible();
   var ministerBtnHtml='';
   if(AUTH_STEP==='name'){
-    var minTopHtml=!minOn?'':'<div class="auth-card"><button class="btn btn-p" id="ministerAppsBtn" style="padding:16px;font-size:15px;">👑 SvS Minister Applications<div style="font-size:11px;font-weight:600;margin-top:3px;letter-spacing:0;opacity:.85;">No account or PIN needed · see free times & apply</div></button></div>'+
+    var minTopHtml=!minOn?'':minCtaHtml('SvS Minister Applications','No account or PIN needed · see free times & apply')+
       '<div style="font-size:11px;color:var(--t3);text-align:center;letter-spacing:.3px;">State members with an account, log in below</div>';
     inner='<span class="auth-seal"><img src="icons/icon-512.png" alt="" width="122" height="122"></span><div class="auth-title">State 2901</div><div class="auth-state">State Management System</div>'+
       (minOn?minTopHtml:'<div class="auth-sub">Enter your in-game name to continue.</div>')+
@@ -1791,12 +1856,12 @@ function renderAuth(app){
     var numpad=keys.map(function(k){ if(!k[0]) return '<div class="nk nk-empty"></div>'; return '<div class="nk '+(k[1]==='DEL'?'nk-del':'')+'" data-k="'+k[1]+'">'+k[0]+'</div>'; }).join('');
     inner='<div class="home-hdr-seal"><div class="home-hdr-logo" style="font-size:40px;">🔐</div></div><div class="auth-title">'+(isNew?'Set Your PIN':'Enter PIN')+'</div><div class="auth-state">· State 2901 ·</div>'+
       '<div class="auth-sub">'+(isNew?'Hi <strong style="color:var(--ac)">'+NAME_INP+'</strong>! Set a 6-digit PIN.':'Welcome back, <strong style="color:var(--ac)">'+NAME_INP+'</strong>!')+'</div>'+
-      (isNew&&minOn?'<div class="auth-card"><button class="btn btn-p" id="ministerAppsBtn" style="padding:14px;font-size:14px;line-height:1.4;">👑 Here to apply for a minister slot?<div style="font-size:11px;font-weight:600;margin-top:3px;letter-spacing:0;opacity:.85;">No account needed. Tap here to apply.</div></button></div>':'')+
+      (isNew&&minOn?minCtaHtml('Here to apply for a minister slot?','No account needed. Tap here to apply.'):'')+
       '<div class="auth-card card"><div class="pin-dots">'+dots+'</div><div class="numpad">'+numpad+'</div><div class="err">'+AUTH_ERR+'</div><button class="btn btn-g" id="backBtn">← Back</button></div>';
   }
   var rulesLinkHtml='<div style="text-align:center;margin-top:14px;"><button id="stateRulesLink" style="background:none;border:none;color:rgba(196,155,92,.65);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:Manrope,sans-serif;">📜 View State Rules</button></div>';
   // Public, no-login module: big entry button under the auth card
-  if(AUTH_STEP==='pin-login'&&minOn) ministerBtnHtml='<div class="auth-card"><button class="btn btn-g" id="ministerAppsBtn" style="padding:16px;font-size:15px;border-color:rgba(201,151,75,.45);">👑 SvS Minister Applications<div style="font-size:11px;font-weight:600;color:var(--t2);margin-top:3px;letter-spacing:0;">No login needed · see free times & apply</div></button></div>';
+  if(AUTH_STEP==='pin-login'&&minOn) ministerBtnHtml=minCtaHtml('SvS Minister Applications','No login needed · see free times & apply');
   app.innerHTML='<div class="auth'+(stepChanged?' gate-in':'')+'">'+inner+ministerBtnHtml+rulesLinkHtml+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
   if(AUTH_STEP==='name'){
     var inp=document.getElementById('nameInp'); inp.value=NAME_INP;
@@ -5388,6 +5453,10 @@ function renderMinSchedule(el,rerender){
     '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
       '<button class="btn btn-g btn-sm" id="minSchedCopy" style="flex:1;">📋 Copy schedule</button>'+
     '</div>'+
+    '<div style="font-size:11px;color:var(--t3);margin-bottom:6px;">Copy free times of one day:</div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:12px;">'+pos.map(function(k){
+      return '<button class="btn btn-g btn-sm min-free-copy" data-pos="'+k+'" style="flex:1;padding-left:4px;padding-right:4px;">📋 Day '+minDay(k)+' free</button>';
+    }).join('')+'</div>'+
     '<div class="card" style="padding:8px;">'+
       '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">'+
         '<tr><th '+th.replace('center','left').replace('style="','style="width:74px;')+'>UTC</th>'+pos.map(function(k,i){
@@ -5408,6 +5477,14 @@ function renderMinSchedule(el,rerender){
       list.forEach(function(x){ var a=minAppById(x.application_id); lines.push('  '+minSlotLabel(x.slot)+' UTC  '+(a?a.player_name+' ('+a.player_id+')':'?')); });
     });
     navigator.clipboard.writeText(lines.join('\n')).then(function(){ toast('📋 Schedule copied!'); },function(){ toast('Copy failed'); });
+  });
+  el.querySelectorAll('.min-free-copy').forEach(function(b){
+    b.addEventListener('click',function(){
+      var k=b.dataset.pos, free=[];
+      for(var s=0;s<48;s++) if(!minAssignAt(k,s)) free.push(minSlotLabel(s));
+      var text=minPosLabel(k)+'\nFree times (UTC):\n'+(free.length?free.join('\n'):'No free times');
+      navigator.clipboard.writeText(text).then(function(){ toast('📋 Day '+minDay(k)+': '+free.length+' free times copied'); },function(){ toast('Copy failed'); });
+    });
   });
 }
 
@@ -5477,7 +5554,7 @@ function renderMinisterGuideContent(rc){
       guideStep(4,'Approved and Rejected show as short rows: tap one to open it. Use <strong>Search</strong> to find any player by name or ID.')+
       guideStep(5,'<strong>⚡</strong> on each position is the player\'s speedups for that day: Construction + General for VP, Research + General for Education. <strong>Rank</strong> lists everyone for a day by it. Amber = waiting but stronger than someone assigned: <strong>Replace…</strong> gives them that player\'s time, even if they didn\'t ask for it, and the replaced player goes back to In progress.')+
       guideStep(6,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
-      guideStep(7,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign.')+
+      guideStep(7,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign. <strong>📋 Copy schedule</strong> copies every assigned time, <strong>📋 Day X free</strong> copies only that day\'s free times, one per line, to post in chat.')+
       guideStep(8,'<strong>IDs</strong>: pick the day, tap 📋 to copy a player\'s ID for in-game assignment. Copied rows get a ✓, <strong>Clear marks</strong> resets that day.');
   }
   if(SESSION&&isSuperAdmin(SESSION.name)){
@@ -7689,13 +7766,16 @@ function presLogDetail(e){
 // ── PRESIDENCY LEDGER END ─────────────────────────────────────
 
 async function init(){
+  var restoreY=null;
   if(SESSION){
     document.getElementById('app').innerHTML=loadingScreenHtml();
     await Promise.all([loadAll(),minLoadCfg()]);
-    // Deep-link from push notification
+    // Deep-link from push notification wins over the remembered screen
     if(location.hash==='#rotation') MODULE='rotation';
+    else restoreY=restoreViewState();
   } else await minLoadCfg();
   render();
+  if(restoreY) restoreScroll(restoreY);
   if(location.hash) history.replaceState(null,'',location.pathname);
   if(SESSION) showPendingRoleNotifs();
 }
