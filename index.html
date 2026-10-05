@@ -875,7 +875,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v41'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v42'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -5151,8 +5151,15 @@ function minGaps(slots){
   }
   return gaps;
 }
+var MIN_GAP_SPLIT=3; // gaps up to this many slots get one row per slot, longer ones collapse into one row
 function minGapRow(g){
   var n=g.to-g.from;
+  if(n<=MIN_GAP_SPLIT){
+    var rows='';
+    for(var s=g.from;s<g.to;s++) rows+='<div class="min-id-gap" style="display:flex;align-items:center;gap:8px;padding:4px 12px;margin-bottom:6px;border:1px dashed rgba(181,85,74,.6);border-radius:var(--r);background:rgba(181,85,74,.08);font-size:12px;font-weight:700;color:var(--red);">'+
+      '<span>⚠ Empty</span><span style="font-variant-numeric:tabular-nums;">'+minSlotStart(s)+'</span></div>';
+    return rows;
+  }
   return '<div class="min-id-gap" style="display:flex;align-items:center;gap:8px;padding:6px 12px;margin-bottom:8px;border:1px dashed rgba(181,85,74,.6);border-radius:var(--r);background:rgba(181,85,74,.08);font-size:12px;font-weight:700;color:var(--red);">'+
     '<span>⚠ Empty</span><span style="font-variant-numeric:tabular-nums;">'+minSlotStart(g.from)+'–'+(g.to===48?'00:00':minSlotStart(g.to))+'</span>'+
     '<span style="margin-left:auto;font-weight:600;color:var(--t3);">'+n+' slot'+(n===1?'':'s')+'</span></div>';
