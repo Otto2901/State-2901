@@ -875,7 +875,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v40'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v41'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -5141,28 +5141,55 @@ function openMinAdminForm(app,rerender){
 // keyed position:slot:application_id so a re-assigned slot starts unmarked.
 function minDoneGet(){ try{ return JSON.parse(localStorage.getItem('min-id-done')||'[]'); }catch(e){ return []; } }
 function minDoneSet(list){ try{ localStorage.setItem('min-id-done',JSON.stringify(list)); }catch(e){} }
+// Empty stretches of a day's 48 slots, as [{from,to}] with `to` exclusive
+function minGaps(slots){
+  var taken={}, gaps=[], from=-1;
+  slots.forEach(function(s){ taken[s]=true; });
+  for(var s=0;s<=48;s++){
+    if(s<48&&!taken[s]){ if(from<0) from=s; }
+    else if(from>=0){ gaps.push({from:from,to:s}); from=-1; }
+  }
+  return gaps;
+}
+function minGapRow(g){
+  var n=g.to-g.from;
+  return '<div class="min-id-gap" style="display:flex;align-items:center;gap:8px;padding:6px 12px;margin-bottom:8px;border:1px dashed rgba(181,85,74,.6);border-radius:var(--r);background:rgba(181,85,74,.08);font-size:12px;font-weight:700;color:var(--red);">'+
+    '<span>⚠ Empty</span><span style="font-variant-numeric:tabular-nums;">'+minSlotStart(g.from)+'–'+(g.to===48?'00:00':minSlotStart(g.to))+'</span>'+
+    '<span style="margin-left:auto;font-weight:600;color:var(--t3);">'+n+' slot'+(n===1?'':'s')+'</span></div>';
+}
 function renderMinIdList(el,rerender){
   var pos=minPositions();
   if(pos.indexOf(MIN_ID_POS)<0) MIN_ID_POS=pos[0];
   var done=minDoneGet();
   var list=MIN_ASSIGN.filter(function(x){ return x.position===MIN_ID_POS; }).sort(function(x,y){ return x.slot-y.slot; });
+  var slotsOf=function(k){ return MIN_ASSIGN.filter(function(x){ return x.position===k; }).map(function(x){ return x.slot; }); };
+  var gaps=minGaps(list.map(function(x){ return x.slot; }));
+  var empty=gaps.reduce(function(t,g){ return t+g.to-g.from; },0);
+  var gapAt={}; // gap row rendered before the card whose slot ends it; a gap reaching 00:00 goes last
+  gaps.forEach(function(g){ gapAt[g.to]=g; });
   el.innerHTML=
     '<div style="display:flex;gap:6px;margin-bottom:12px;">'+pos.map(function(k){
       var on=MIN_ID_POS===k, date=minDayDate(minDay(k));
-      var n=MIN_ASSIGN.filter(function(x){ return x.position===k; }).length;
+      var s=slotsOf(k), n=s.length, hasGap=n>0&&minGaps(s).length>0;
       return '<button class="tog min-id-pos" data-pos="'+k+'" style="flex:1;min-width:0;padding:8px 4px;font-size:11px;line-height:1.35;border-color:'+(on?'rgba(201,151,75,.6)':'var(--b2)')+';background:'+(on?'rgba(201,151,75,.12)':'transparent')+';color:var(--t);">'+
-        'Day '+minDay(k)+(date?' · '+date:'')+'<br><span style="color:#c9974b;">'+(k==='edu'?'Education':'VP')+'</span> <span style="color:var(--t3);">('+n+')</span></button>';
+        'Day '+minDay(k)+(date?' · '+date:'')+'<br><span style="color:#c9974b;">'+(k==='edu'?'Education':'VP')+'</span> <span style="color:var(--t3);">('+n+')</span>'+
+        (hasGap?' <span title="Has empty slots" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);vertical-align:middle;"></span>':'')+'</button>';
     }).join('')+'</div>'+
     (list.length?
       '<div style="display:flex;align-items:center;margin-bottom:8px;">'+
-        '<div style="flex:1;font-size:11px;color:var(--t3);">Times are UTC. Tap 📋 to copy the Player ID.</div>'+
+        '<div style="flex:1;font-size:11px;color:var(--t3);">'+
+          (gaps.length?
+            '<span style="color:var(--red);font-weight:700;">⚠ '+gaps.length+' gap'+(gaps.length===1?'':'s')+' · '+empty+' empty slot'+(empty===1?'':'s')+'</span>':
+            '<span style="color:var(--green);font-weight:700;">✓ All 48 slots filled</span>')+
+          ' · Times are UTC. Tap 📋 to copy the Player ID.</div>'+
         '<button class="btn btn-g btn-sm" id="minIdClear" style="padding:6px 10px;font-size:11px;">Clear marks</button>'+
       '</div>'+
       list.map(function(x){
+        var gap=gapAt[x.slot]?minGapRow(gapAt[x.slot]):'';
         var a=minAppById(x.application_id);
         var key=x.position+':'+x.slot+':'+x.application_id;
         var isDone=done.indexOf(key)>=0;
-        return '<div class="card min-id-row'+(isDone?' done':'')+'" style="display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:8px;'+(isDone?'opacity:.45;':'')+'">'+
+        return gap+'<div class="card min-id-row'+(isDone?' done':'')+'" style="display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:8px;'+(isDone?'opacity:.45;':'')+'">'+
           '<div style="font-size:18px;font-weight:800;color:#c9974b;font-variant-numeric:tabular-nums;width:54px;flex-shrink:0;">'+minSlotStart(x.slot)+'</div>'+
           '<div style="flex:1;min-width:0;">'+
             '<div style="font-size:17px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;letter-spacing:.5px;">'+(isDone?'✓ ':'')+escHtml(a?a.player_id:'?')+'</div>'+
@@ -5170,7 +5197,7 @@ function renderMinIdList(el,rerender){
           '</div>'+
           '<button class="btn btn-g min-id-copy" data-key="'+escHtml(key)+'" data-id="'+escHtml(a?a.player_id:'')+'" aria-label="Copy ID '+escHtml(a?a.player_id:'')+'" style="width:52px;height:46px;padding:0;font-size:20px;flex-shrink:0;"'+(a?'':' disabled')+'>📋</button>'+
         '</div>';
-      }).join(''):
+      }).join('')+(gapAt[48]?minGapRow(gapAt[48]):''):
       '<div class="empty"><div class="empty-icon">🗓️</div><p>No times assigned for this day yet.</p></div>');
   el.querySelectorAll('.min-id-pos').forEach(function(b){ b.addEventListener('click',function(){ MIN_ID_POS=b.dataset.pos; renderMinIdList(el,rerender); }); });
   var clr=el.querySelector('#minIdClear');
@@ -5558,7 +5585,7 @@ function renderMinisterGuideContent(rc){
       guideStep(5,'<strong>⚡</strong> on each position is the player\'s speedups for that day: Construction + General for VP, Research + General for Education. <strong>Rank</strong> lists everyone for a day by it. Amber = waiting but stronger than someone assigned: <strong>Replace…</strong> gives them that player\'s time, even if they didn\'t ask for it, and the replaced player goes back to In progress.')+
       guideStep(6,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
       guideStep(7,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign. <strong>📋 Copy schedule</strong> copies every assigned time, <strong>📋 Day X free</strong> copies only that day\'s free times, one per line, to post in chat.')+
-      guideStep(8,'<strong>IDs</strong>: pick the day, tap 📋 to copy a player\'s ID for in-game assignment. Copied rows get a ✓, <strong>Clear marks</strong> resets that day.');
+      guideStep(8,'<strong>IDs</strong>: pick the day, tap 📋 to copy a player\'s ID for in-game assignment. Copied rows get a ✓, <strong>Clear marks</strong> resets that day. Empty times show as red dashed <strong>⚠ Empty</strong> rows in their place, the top line counts them, and a red dot on a day button means that day still has empty times.');
   }
   if(SESSION&&isSuperAdmin(SESSION.name)){
     html+=
