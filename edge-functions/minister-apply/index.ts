@@ -82,6 +82,8 @@ Deno.serve(async (req) => {
   const resources = {
     speed_construction: num(body?.speed_construction, false),
     speed_research: num(body?.speed_research, false),
+    // Older cached clients don't send Training yet: missing means 0
+    speed_training: body?.speed_training === undefined ? 0 : num(body?.speed_training, false),
     speed_general: num(body?.speed_general, false),
     fire_crystal: num(body?.fire_crystal, true),
     refined_fc: num(body?.refined_fc, true),

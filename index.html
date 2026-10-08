@@ -875,7 +875,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v42'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v43'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -4592,9 +4592,10 @@ function minFormHtml(px,v,adminMode,troopOpt){
     inp('Id','Player ID',v.player_id,'inputmode="numeric" maxlength="20"')+
     '<div class="field" style="margin-bottom:10px;"><label class="lbl" for="'+px+'Ally">Alliance</label><select class="sel" id="'+px+'Ally">'+minAllyOptions(v.alliance,'Select…')+'</select></div>'+
     '<div class="lbl" style="margin-top:4px;">Speedups (days)</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+
+    '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0 8px;">'+
       numInp('SpC','Construction',v.speed_construction,'any')+
       numInp('SpR','Research',v.speed_research,'any')+
+      numInp('SpT','Training',v.speed_training,'any')+
       numInp('SpG','General',v.speed_general,'any')+
     '</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+
@@ -4646,7 +4647,7 @@ function minReadForm(root,px){
   if(!/^\d{1,20}$/.test(d.player_id)) return {err:'Player ID must be digits only.'};
   d.alliance=val('Ally');
   if(!d.alliance) return {err:'Select your alliance.'};
-  var nums=[['speed_construction','SpC','Construction speedups',false],['speed_research','SpR','Research speedups',false],['speed_general','SpG','General speedups',false],
+  var nums=[['speed_construction','SpC','Construction speedups',false],['speed_research','SpR','Research speedups',false],['speed_training','SpT','Training speedups',false],['speed_general','SpG','General speedups',false],
             ['fire_crystal','Fc','Fire Crystal',true],['refined_fc','Rfc','Refined Fire Crystal',true],['fc_shards','Sh','FC Shards',true]];
   for(var i=0;i<nums.length;i++){
     var raw=val(nums[i][1]);
@@ -4798,7 +4799,7 @@ function minHasAssign(a){ return MIN_ASSIGN.some(function(x){ return x.applicati
 // General counts toward every day a player applied for (accepted trade-off).
 function minSpeed(a,pos){
   var n=function(v){ v=Number(v); return isFinite(v)?v:0; };
-  return (pos==='edu'?n(a.speed_research):n(a.speed_construction))+n(a.speed_general);
+  return (pos==='edu'?n(a.speed_training):n(a.speed_construction))+n(a.speed_general);
 }
 var MIN_STAGE_LABEL={progress:'In progress',approved:'Approved',rejected:'Rejected'};
 var MIN_STAGE_COL={progress:'#c9974b',approved:'#7a9c72',rejected:'#b5554a'};
@@ -4864,7 +4865,7 @@ function minAppCardHtml(a){
     var as=minAssignFor(a.id,k);
     var prefs=(a.prefs&&a.prefs[k])||[];
     var head='<div style="display:flex;gap:8px;align-items:baseline;"><div style="flex:1;font-size:11px;font-weight:800;color:#c9974b;">'+escHtml(minPosLabel(k))+'</div>'+
-      '<div title="'+(k==='edu'?'Research':'Construction')+' + General speedups" style="font-size:11px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;">⚡ '+minNum(minSpeed(a,k))+'d</div></div>';
+      '<div title="'+(k==='edu'?'Training':'Construction')+' + General speedups" style="font-size:11px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;">⚡ '+minNum(minSpeed(a,k))+'d</div></div>';
     if(as){
       return '<div style="padding:8px 0;border-top:1px solid var(--b);">'+head+
         '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'+
@@ -4900,12 +4901,14 @@ function minAppCardHtml(a){
       '</div>'+
       (MIN_EXPANDED.has(a.id)?'<button class="btn btn-g btn-sm min-collapse" data-id="'+a.id+'" aria-label="Collapse">▲</button>':'')+
     '</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;font-size:11px;color:var(--t2);">'+
-      [['Constr.',minNum(a.speed_construction)+'d'],['Research',minNum(a.speed_research)+'d'],['General',minNum(a.speed_general)+'d'],
-       ['FC',minNum(a.fire_crystal)],['Refined FC',minNum(a.refined_fc)],['FC Shards',minNum(a.fc_shards)]].map(function(x){
-        return '<div style="background:var(--surface2);border-radius:8px;padding:6px 8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--t3);">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;">'+x[1]+'</div></div>';
-      }).join('')+
-    '</div>'+
+    [[['Constr.',minNum(a.speed_construction)+'d'],['Research',minNum(a.speed_research)+'d'],['Training',minNum(a.speed_training)+'d'],['General',minNum(a.speed_general)+'d']],
+     [['FC',minNum(a.fire_crystal)],['Refined FC',minNum(a.refined_fc)],['FC Shards',minNum(a.fc_shards)]]].map(function(row,ri){
+      return '<div style="display:grid;grid-template-columns:repeat('+row.length+',minmax(0,1fr));gap:6px;margin:'+(ri?'6px 0 10px':'10px 0 0')+';font-size:11px;color:var(--t2);">'+
+        row.map(function(x){
+          return '<div style="background:var(--surface2);border-radius:8px;padding:6px 8px;min-width:0;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;">'+x[1]+'</div></div>';
+        }).join('')+
+      '</div>';
+    }).join('')+
     (isSuperAdmin(SESSION.name)?(function(){
       var rep=minTroopFor(a.id);
       return '<div style="font-size:11px;color:'+(rep?'var(--t)':'var(--t3)')+';margin:-4px 0 8px;font-variant-numeric:tabular-nums;">🪖 '+(rep?minTroopLine(rep):'No troop levels')+'</div>';
@@ -5005,7 +5008,7 @@ function renderMinAppList(el,rerender){
 }
 function minCopyText(a){
   var lines=[a.player_name+' (ID '+a.player_id+')',
-    'Speedups: Construction '+minNum(a.speed_construction)+'d, Research '+minNum(a.speed_research)+'d, General '+minNum(a.speed_general)+'d',
+    'Speedups: Construction '+minNum(a.speed_construction)+'d, Research '+minNum(a.speed_research)+'d, Training '+minNum(a.speed_training)+'d, General '+minNum(a.speed_general)+'d',
     'FC '+minNum(a.fire_crystal)+', Refined FC '+minNum(a.refined_fc)+', FC Shards '+minNum(a.fc_shards)];
   minPositions().forEach(function(k){
     var as=minAssignFor(a.id,k), p=(a.prefs&&a.prefs[k])||[];
@@ -5363,7 +5366,7 @@ function renderMinRank(el,rerender){
   var weakest=assigned.length?Math.min.apply(null,assigned.map(function(r){ return r.v; })):null;
   var strongestWaiting=waiting.length?Math.max.apply(null,waiting.map(function(r){ return r.v; })):null;
   var strongerCount=weakest==null?0:waiting.filter(function(r){ return r.v>weakest; }).length;
-  var spType=k==='edu'?'Research':'Construction';
+  var spType=k==='edu'?'Training':'Construction';
   var fmt=function(r){ return MIN_RANK_SORT==='speed'?'⚡ '+minNum(r.v)+'d':minNum(r.v); };
   var freeCount=48-MIN_ASSIGN.filter(function(x){ return x.position===k; }).length;
   el.innerHTML=
@@ -5401,7 +5404,7 @@ function renderMinRank(el,rerender){
               (weak?' <span style="color:var(--red);opacity:.85;">· weak</span>':'')+
             '</div>'+
             '<div style="font-size:10px;color:var(--t3);margin-top:3px;font-variant-numeric:tabular-nums;">'+
-              (k==='edu'?'Res ':'Constr ')+minNum(k==='edu'?a.speed_research:a.speed_construction)+'d · Gen '+minNum(a.speed_general)+'d · FC '+minNum(a.fire_crystal)+' · RFC '+minNum(a.refined_fc)+' · Sh '+minNum(a.fc_shards)+
+              (k==='edu'?'Train ':'Constr ')+minNum(k==='edu'?a.speed_training:a.speed_construction)+'d · Gen '+minNum(a.speed_general)+'d · FC '+minNum(a.fire_crystal)+' · RFC '+minNum(a.refined_fc)+' · Sh '+minNum(a.fc_shards)+
             '</div>'+
           '</div>'+
           '<div style="flex-shrink:0;text-align:right;font-size:14px;font-weight:800;color:var(--t);font-variant-numeric:tabular-nums;">'+fmt(r)+'</div>'+
@@ -5589,7 +5592,7 @@ function renderMinisterGuideContent(rc){
       guideStep(2,'<strong>Applications</strong>: tap a green preference to assign it, or pick any free time from <strong>Other time…</strong>. A time can only be given to one player per position.')+
       guideStep(3,'New applications appear in <strong>In progress</strong>, first come first served: <strong>#1</strong> applied first, with the exact UTC time on each card. Tap <strong>↻ Refresh</strong> to load new ones. Once every position they asked for has a time, they move to <strong>Approved</strong> automatically. Not giving one? Tap <strong>✓ Finish</strong>. Assigned names show publicly in Availability.')+
       guideStep(4,'Approved and Rejected show as short rows: tap one to open it. Use <strong>Search</strong> to find any player by name or ID.')+
-      guideStep(5,'<strong>⚡</strong> on each position is the player\'s speedups for that day: Construction + General for VP, Research + General for Education. <strong>Rank</strong> lists everyone for a day by it. Amber = waiting but stronger than someone assigned: <strong>Replace…</strong> gives them that player\'s time, even if they didn\'t ask for it, and the replaced player goes back to In progress.')+
+      guideStep(5,'<strong>⚡</strong> on each position is the player\'s speedups for that day: Construction + General for VP, Training + General for Education. <strong>Rank</strong> lists everyone for a day by it. Amber = waiting but stronger than someone assigned: <strong>Replace…</strong> gives them that player\'s time, even if they didn\'t ask for it, and the replaced player goes back to In progress.')+
       guideStep(6,'An assigned time shows as Taken for everyone and can no longer be chosen. <strong>Unassign</strong> frees it again.')+
       guideStep(7,'<strong>+ Add entry</strong> adds an application yourself. <strong>Schedule</strong> shows the full timetable with names, tap a name to unassign. <strong>📋 Copy schedule</strong> copies every assigned time, <strong>📋 Day X free</strong> copies only that day\'s free times, one per line, to post in chat.')+
       guideStep(8,'<strong>IDs</strong>: pick the day, tap 📋 to copy a player\'s ID for in-game assignment. Copied rows get a ✓, <strong>Clear marks</strong> resets that day. Empty times show as red dashed <strong>⚠ Empty</strong> rows in their place, the top line counts them, and a red dot on a day button means that day still has empty times.');
