@@ -875,7 +875,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v43'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v44'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -4216,8 +4216,8 @@ function renderPresidencyGuideContent(rc){
     guideSection('How it works')+
     guideStep(1,'<strong>SFC</strong> and <strong>SvS Supreme</strong> presidencies rotate between our alliances in <strong>two separate queues</strong>. The <strong>Board</strong> shows the <strong>current president</strong> (from the most recent event, SFC or Supreme, since only one can hold it at a time) and who is <strong>next up</strong> in each queue.')+
     guideStep(2,'When we <strong>win</strong>, the admin records it on the day it is won. The next alliance holds the presidency, counts in the <strong>Presidency Tally</strong> immediately and moves to the back of the queue. It stays shown as current president until the next SFC or Supreme event is recorded.')+
-    guideStep(3,'When we <strong>lose</strong>, the winning state takes the presidency, so nobody\'s turn is used. The same alliance stays next up for the next won event.')+
-    guideStep(4,'A <strong>TM</strong> badge means that term also carried Transfer Manager authority. TM terms are counted separately in the <strong>Presidency Tally</strong> table and do not affect the order.')+
+    guideStep(3,'When we <strong>lose</strong>, the winning state takes the presidency, so nobody\'s turn is used. The same alliance stays next up for the next won event. During transfer season a lost event can still give one of our alliances <strong>Transfer Manager</strong>: it is shown on the Board and in History, but there is still no presidency and the order does not change.')+
+    guideStep(4,'A <strong>TM</strong> badge means that event also carried Transfer Manager authority, won or lost. TM is counted separately in the <strong>Presidency Tally</strong> table and does not affect the order.')+
     guideStep(5,'<strong>History</strong> keeps every event, won or lost. Entries marked <strong>PAST ENTRY</strong> were added afterwards for the record.');
   if(isPresidencyAdmin(SESSION.name)){
     html+=guideSection('As a Presidency Admin, in the Manage tab you can:','var(--green)');
@@ -7464,8 +7464,14 @@ function presStats(){
   var stats={}, lost={sfc:0,supreme:0};
   presKnownAlliances().forEach(function(a){ stats[a]={sfc:0,supreme:0,tm:0,last:null}; });
   PRES_RECORDS.forEach(function(r){
-    if(r.outcome!=='won'){ if(lost[r.type]!=null) lost[r.type]++; return; }
-    var s=stats[r.alliance]; if(!s) return;
+    var s=stats[r.alliance];
+    if(r.outcome!=='won'){
+      if(lost[r.type]!=null) lost[r.type]++;
+      // Transfer season: a lost event can still give us Transfer Manager.
+      if(r.has_tm&&s) s.tm++;
+      return;
+    }
+    if(!s) return;
     if(r.type==='sfc') s.sfc++; else if(r.type==='supreme') s.supreme++;
     if(r.has_tm) s.tm++;
     if(!s.last||r.event_date>s.last) s.last=r.event_date;
@@ -7534,8 +7540,11 @@ function renderPresBoard(el){
           '<span style="display:flex;align-items:center;gap:6px;font-size:16px;font-weight:700;color:var(--t);">'+(last.president_name?escHtml(last.president_name):'')+
           (last.has_tm?'<span class="pres-tm">TM</span>':'')+'</span></span>'+
         '<span class="hero-meta"><span>Since '+presFmtDate(last.event_date)+'</span></span>':
-        '<span class="hero-mid"><span class="hero-big" style="color:#dd948a;font-size:22px;">No presidency</span></span>'+
-        '<span class="hero-meta"><span>Lost '+lastType+' on '+presFmtDate(last.event_date)+', the winning state holds it</span></span>')+
+        '<span class="hero-mid"><span class="hero-big" style="color:#dd948a;font-size:22px;">No presidency</span>'+
+          (last.has_tm&&last.alliance?'<span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:var(--t);"><span class="pres-tm">TM</span>'+
+            '<span style="color:'+presAlColor(last.alliance)+';">'+escHtml(last.alliance)+'</span>'+(last.president_name?' '+escHtml(last.president_name):'')+'</span>':'')+
+        '</span>'+
+        '<span class="hero-meta"><span>Lost '+lastType+' on '+presFmtDate(last.event_date)+', the winning state holds it'+(last.has_tm&&last.alliance?'. We kept Transfer Manager':'')+'</span></span>')+
     '</div>';
   function queueTile(type){
     var q=PRES_QUEUES[type]||[];
@@ -7588,7 +7597,8 @@ function renderPresHistory(el){
           '<div class="hist-meta">'+presFmtDate(r.event_date)+' · '+PRES_TYPE_LABEL[r.type]+
             (r.has_tm?badge('TM','#d9c27a'):'')+(r.is_backfill?badge('PAST ENTRY','#a3b3c2'):'')+'</div>'+
           '<div class="hist-main">'+
-            (lost?'<span style="color:#dd948a;">Lost, no presidency</span>':'<span style="color:'+presAlColor(r.alliance)+';">'+escHtml(r.alliance)+'</span>'+(r.president_name?' <span class="hist-name">'+escHtml(r.president_name)+'</span>':''))+
+            (lost?'<span style="color:#dd948a;">Lost, no presidency</span>'+
+              (r.has_tm&&r.alliance?' <span class="hist-name">· TM:</span> <span style="color:'+presAlColor(r.alliance)+';">'+escHtml(r.alliance)+'</span>'+(r.president_name?' <span class="hist-name">'+escHtml(r.president_name)+'</span>':''):''):'<span style="color:'+presAlColor(r.alliance)+';">'+escHtml(r.alliance)+'</span>'+(r.president_name?' <span class="hist-name">'+escHtml(r.president_name)+'</span>':''))+
           '</div>'+
           (r.notes?'<div class="hist-notes">'+escHtml(r.notes)+'</div>':'')+
         '</div>'+
@@ -7631,15 +7641,16 @@ function openPresRecordForm(mode,rec){
   var type=rec.type||'sfc';
   var titles={live:'Record result',past:'Add past record',edit:'Edit record'};
   var notes={
-    live:'A win is counted in the Presidency Tally right away and rotates the queue: the winning alliance moves to the back. A loss leaves the queue unchanged.',
+    live:'A win is counted in the Presidency Tally right away and rotates the queue: the winning alliance moves to the back. A loss leaves the queue unchanged, even if we still got Transfer Manager.',
     past:'Past entries are for history and the Presidency Tally only. They do not change the rotation queue.',
     edit:'Editing a record does not change the rotation queue. Adjust the order in Manage if needed.'
   };
   var alls=presKnownAlliances();
   getAllAlliances().forEach(function(a){ if(alls.indexOf(a)<0) alls.push(a); });
-  function allianceOpts(t,sel){
+  // A loss uses nobody's turn, so a lost+TM record has no next-up default.
+  function allianceOpts(t,sel,lost){
     var q=PRES_QUEUES[t]||[];
-    var def=sel||(mode==='live'?q[0]:'')||'';
+    var def=sel||(mode==='live'&&!lost?q[0]:'')||'';
     return '<option value="">Select alliance…</option>'+alls.map(function(a){
       return '<option value="'+escHtml(a)+'"'+(a===def?' selected':'')+'>'+escHtml(a)+(mode==='live'&&a===q[0]?' (next up)':'')+'</option>';
     }).join('');
@@ -7660,17 +7671,30 @@ function openPresRecordForm(mode,rec){
           '<option value="won"'+(rec.outcome!=='lost'?' selected':'')+'>Won, we hold the presidency</option>'+
           '<option value="lost"'+(rec.outcome==='lost'?' selected':'')+'>Lost, no presidency</option>'+
         '</select></div>'+
+        '<label id="prLostTmRow" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t);margin-bottom:14px;cursor:pointer;"><input type="checkbox" id="prLostTm"'+(rec.outcome==='lost'&&rec.has_tm?' checked':'')+'> We still got Transfer Manager (transfer season)</label>'+
         '<div id="prWonFields">'+
           '<div class="field"><label class="lbl">Alliance</label><select class="sel" id="prAlliance">'+allianceOpts(type,rec.alliance)+'</select></div>'+
-          '<div class="field"><label class="lbl">President name (optional)</label><input class="inp" id="prPres" autocomplete="off" value="'+escHtml(rec.president_name||'')+'"></div>'+
-          '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t);margin-bottom:14px;cursor:pointer;"><input type="checkbox" id="prTm"'+(rec.has_tm?' checked':'')+'> Transfer Manager authority this term</label>'+
+          '<div class="field"><label class="lbl" id="prPresLbl">President name (optional)</label><input class="inp" id="prPres" autocomplete="off" value="'+escHtml(rec.president_name||'')+'"></div>'+
+          '<label id="prTmRow" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t);margin-bottom:14px;cursor:pointer;"><input type="checkbox" id="prTm"'+(rec.outcome!=='lost'&&rec.has_tm?' checked':'')+'> Transfer Manager authority this term</label>'+
         '</div>'+
         '<div class="field" style="margin-bottom:0;"><label class="lbl">Notes (optional)</label><textarea class="inp" id="prNotes" rows="2" style="resize:vertical;">'+escHtml(rec.notes||'')+'</textarea></div>';
-      var outSel=b.querySelector('#prOutcome'), wonBox=b.querySelector('#prWonFields');
-      function syncOutcome(){ wonBox.style.display=outSel.value==='won'?'':'none'; }
-      outSel.addEventListener('change',syncOutcome); syncOutcome();
+      var outSel=b.querySelector('#prOutcome'), wonBox=b.querySelector('#prWonFields'), lostTm=b.querySelector('#prLostTm');
+      // Lost: only the "still got TM" checkbox, which reveals alliance + TM name.
+      function syncOutcome(){
+        var won=outSel.value==='won';
+        b.querySelector('#prLostTmRow').style.display=won?'none':'';
+        b.querySelector('#prTmRow').style.display=won?'':'none';
+        b.querySelector('#prPresLbl').textContent=won?'President name (optional)':'Transfer Manager name (optional)';
+        wonBox.style.display=won||lostTm.checked?'':'none';
+      }
+      outSel.addEventListener('change',function(){
+        if(mode==='live') b.querySelector('#prAlliance').innerHTML=allianceOpts(b.querySelector('#prType').value,'',outSel.value!=='won');
+        syncOutcome();
+      });
+      lostTm.addEventListener('change',syncOutcome);
+      syncOutcome();
       if(mode==='live') b.querySelector('#prType').addEventListener('change',function(){
-        b.querySelector('#prAlliance').innerHTML=allianceOpts(this.value,'');
+        b.querySelector('#prAlliance').innerHTML=allianceOpts(this.value,'',outSel.value!=='won');
       });
     },
     actions:[
@@ -7680,14 +7704,16 @@ function openPresRecordForm(mode,rec){
         var date=document.getElementById('prDate').value;
         var outcome=document.getElementById('prOutcome').value;
         var won=outcome==='won';
-        var al=won?document.getElementById('prAlliance').value:'';
+        var lostTm=!won&&document.getElementById('prLostTm').checked;
+        var withAl=won||lostTm;
+        var al=withAl?document.getElementById('prAlliance').value:'';
         if(!date){ toast('Pick the event date'); return; }
-        if(won&&!al){ toast('Pick the alliance'); return; }
+        if(withAl&&!al){ toast('Pick the alliance'); return; }
         var row={
           type:t, event_date:date, outcome:outcome,
-          alliance:won?al:null,
-          president_name:won?(document.getElementById('prPres').value.trim()||null):null,
-          has_tm:won?document.getElementById('prTm').checked:false,
+          alliance:withAl?al:null,
+          president_name:withAl?(document.getElementById('prPres').value.trim()||null):null,
+          has_tm:won?document.getElementById('prTm').checked:lostTm,
           notes:document.getElementById('prNotes').value.trim()||null
         };
         var q=PRES_QUEUES[t]||[];
@@ -7782,7 +7808,8 @@ function renderPresManage(el){
 function presDescribeRecord(o){
   if(!o) return '';
   return presFmtDate(o.event_date)+' '+(PRES_TYPE_LABEL[o.type]||o.type)+': '+
-    (o.outcome==='won'?escHtml(o.alliance||'')+(o.president_name?' ('+escHtml(o.president_name)+')':'')+(o.has_tm?' +TM':''):'lost');
+    (o.outcome==='won'?escHtml(o.alliance||'')+(o.president_name?' ('+escHtml(o.president_name)+')':'')+(o.has_tm?' +TM':''):
+      'lost'+(o.has_tm&&o.alliance?', TM '+escHtml(o.alliance)+(o.president_name?' ('+escHtml(o.president_name)+')':''):''));
 }
 function presLogFieldVal(k,v){
   if(v==null||v==='') return '<em>empty</em>';
