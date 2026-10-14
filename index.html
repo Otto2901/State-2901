@@ -875,7 +875,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v44'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v45'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1986,6 +1986,45 @@ function getCurrentWeekSels(){
   return ROT_SELS.filter(function(s){ return s.week_start&&s.week_start.slice(0,10)===ws; });
 }
 
+// Monthly SvS winner: gets 2 SH + 2 Forts. In game the 2nd SH comes from
+// auto-registration on the SH it held last week, so that SH is reserved for it.
+function getSvsWinner(){
+  var w=ROT_STATE&&ROT_STATE.svs_winner;
+  return w&&getAllAlliances().includes(w)?w:null;
+}
+function getPrevWeekSel(al){
+  if(!ROT_STATE) return null;
+  // Exactly last week: an older pick doesn't auto-register.
+  var pw=new Date(new Date(ROT_STATE.week_start).getTime()-7*864e5).toISOString().slice(0,10);
+  return ROT_SELS.find(function(s){ return s.alliance===al&&s.week_start&&s.week_start.slice(0,10)===pw; })||null;
+}
+function getWinnerPrevSH(){
+  var w=getSvsWinner(); if(!w) return [];
+  var p=getPrevWeekSel(w); if(!p) return [];
+  return [p.stronghold,p.stronghold2].filter(function(n){ return !!n; });
+}
+// SHs held for the winner's auto-registration until it has made its pick.
+function getWinnerReservedSH(){
+  var w=getSvsWinner(); if(!w) return [];
+  if(getCurrentWeekSels().some(function(s){ return s.alliance===w; })) return [];
+  return getWinnerPrevSH();
+}
+function selTakenMaps(sels){
+  var sh={}, ft={};
+  sels.forEach(function(s){
+    if(s.stronghold) sh[s.stronghold]=s.alliance;
+    if(s.stronghold2) sh[s.stronghold2]=s.alliance;
+    if(s.fort) ft[s.fort]=s.alliance;
+    if(s.fort2) ft[s.fort2]=s.alliance;
+  });
+  return {sh:sh,ft:ft};
+}
+function selPicksText(s){
+  var shs=[s.stronghold,s.stronghold2].filter(Boolean).map(function(n){ return 'SH'+n; }).join(' + ');
+  var fts=[s.fort,s.fort2].filter(Boolean).map(function(n){ return 'F'+n; }).join(' + ');
+  return (shs?'🏰 '+shs+(fts?' · ':''):'')+(fts?'🏯 '+fts:'');
+}
+
 function getCurrentTurnAlliance(){
   var ro=getRotOrder();
   var sels=getCurrentWeekSels();
@@ -2057,11 +2096,8 @@ function renderRotBoard(rc){
   var done=allSelsDone();
 
   // Build taken maps
-  var takenSH={}, takenFT={};
-  sels.forEach(function(s){
-    if(s.stronghold) takenSH[s.stronghold]=s.alliance;
-    if(s.fort) takenFT[s.fort]=s.alliance;
-  });
+  var tm=selTakenMaps(sels), takenSH=tm.sh, takenFT=tm.ft;
+  var winner=getSvsWinner(), reservedSH=getWinnerReservedSH();
 
   // Summary card: window status + whose turn it is, in one place.
   var winStatus = getSelectionWindowStatus();
@@ -2091,9 +2127,13 @@ function renderRotBoard(rc){
     var cls=(ally?'rot-loc-taken':'rot-loc-free')+' rot-loc-sh';
     var color=ally?(ALLIANCE_COLORS[ally]||'var(--ac)'):'var(--t2)';
     var adminBtn=canAdminBoard&&ally?'<button class="del-sel-btn" data-alliance="'+ally+'" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;margin-top:4px;">✕ Remove</button>':'';
+    var isRes=!ally&&reservedSH.includes(i);
+    if(isRes) cls='rot-loc-taken rot-loc-sh';
     shHtml+='<div class="rot-loc '+cls+'">'+
       '<div class="rot-loc-name">SH '+i+'</div>'+
-      (ally?'<div class="rot-loc-alliance" style="color:'+color+';">'+ally+'</div>':'<div class="rot-loc-alliance rot-loc-avail">Available</div>')+
+      (ally?'<div class="rot-loc-alliance" style="color:'+color+';">'+ally+'</div>':
+        isRes?'<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[winner]||'var(--ac)')+';">'+winner+' · reserved</div>':
+        '<div class="rot-loc-alliance rot-loc-avail">Available</div>')+
       (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
       adminBtn+
     '</div>';
@@ -2126,7 +2166,7 @@ function renderRotBoard(rc){
     orderHtml+='<div class="ord-row'+(isCurrent?' now':'')+'">'+
       '<span class="ord-n">'+(idx+1)+'</span>'+
       '<span class="ord-tag" style="color:'+color+';">'+ally+'</span>'+
-      '<span class="ord-kind">'+(isTop?'SH + Fort':'Fort only')+'</span>'+
+      '<span class="ord-kind">'+(ally===winner?'🏆 2 SH + 2 Fort':isTop?'SH + Fort':'Fort only')+'</span>'+
       status+
     '</div>';
   });
@@ -2307,8 +2347,8 @@ function renderRotSelect(rc){
       '<div style="font-size:40px;margin-bottom:12px;">✅</div>'+
       '<div style="font-family:var(--serif);font-size:16px;color:var(--green);margin-bottom:8px;">Selection Complete</div>'+
       '<div style="font-size:13px;color:var(--t2);margin-bottom:16px;">'+myAlliance+' has made its selection for this week.</div>'+
-      (isTop4&&mySel.stronghold?'<div style="font-size:13px;color:#f2e6d0;margin-bottom:6px;">🏰 Stronghold '+mySel.stronghold+'</div>':'')+
-      (mySel.fort?'<div style="font-size:13px;color:#f2e6d0;">🏯 Fort '+mySel.fort+'</div>':'')+
+      (mySel.stronghold?'<div style="font-size:13px;color:#f2e6d0;margin-bottom:6px;">🏰 Stronghold '+mySel.stronghold+(mySel.stronghold2?' + '+mySel.stronghold2:'')+'</div>':'')+
+      (mySel.fort?'<div style="font-size:13px;color:#f2e6d0;">🏯 Fort '+mySel.fort+(mySel.fort2?' + '+mySel.fort2:'')+'</div>':'')+
       (function(){
       var ro2=getRotOrder();
       var myPos=ro2.order.indexOf(myAlliance);
@@ -2344,115 +2384,159 @@ function renderRotSelect(rc){
   }
 
   // Build taken maps
-  var takenSH={}, takenFT={};
-  sels.forEach(function(s){ if(s.stronghold) takenSH[s.stronghold]=s.alliance; if(s.fort) takenFT[s.fort]=s.alliance; });
+  var tm=selTakenMaps(sels), takenSH=tm.sh, takenFT=tm.ft;
+  var winner=getSvsWinner(), isWinner=!!winner&&myAlliance===winner;
+  var canSH=isTop4||isWinner;
+  // Other alliances can't take the SH held for the winner's auto-registration.
+  var reservedSH=isWinner?[]:getWinnerReservedSH();
+  // Winner: last week's SH(s) that are still free can be this week's auto-registration.
+  var autoOpts=isWinner?getWinnerPrevSH().filter(function(n){ return !takenSH[n]; }):[];
+  var maxFT=isWinner?2:1;
+  var shCount=!canSH?0:(isWinner&&autoOpts.length?2:1);
 
-  var selSH=null, selFT=null;
+  // Persist picks across renders using window vars
+  if(window._rotSelAlliance!==myAlliance){ window._rotSelSH=null; window._rotSelFTs=[]; window._rotAutoSH=null; window._rotSelAlliance=myAlliance; }
+  if(autoOpts.length===1) window._rotAutoSH=autoOpts[0];
+  if(autoOpts.indexOf(window._rotAutoSH)<0) window._rotAutoSH=null;
+  if(window._rotSelSH&&(takenSH[window._rotSelSH]||reservedSH.indexOf(window._rotSelSH)>=0||window._rotSelSH===window._rotAutoSH)) window._rotSelSH=null;
+  window._rotSelFTs=(window._rotSelFTs||[]).filter(function(n){ return !takenFT[n]; }).slice(0,maxFT);
 
-  // Stronghold picker (only for top4)
-  var shPickerHtml='';
-  if(isTop4){
-    shPickerHtml='<div class="glabel" style="color:var(--gold);">Choose a stronghold</div>'+
-      '<div class="rot-grid-4" id="shPicker">';
-    for(var i=1;i<=4;i++){
-      var taken=takenSH[i];
-      var reward=getReward('stronghold',i);
-      if(taken){
-        shPickerHtml+='<div class="rot-loc rot-loc-taken rot-loc-sh">'+
-          '<div class="rot-loc-name">SH '+i+'</div>'+
-          '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[taken]||'var(--t2)')+';">'+taken+'</div>'+
-          (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
+  var hint='';
+  if(isWinner){
+    hint=autoOpts.length===1?'🏆 SvS winner: SH '+autoOpts[0]+' auto-registers from last week. Pick 1 more Stronghold and 2 Forts.':
+      autoOpts.length===2?'🏆 SvS winner: you held SH '+autoOpts[0]+' and SH '+autoOpts[1]+' last week. Choose which one auto-registers this week, then pick 1 more Stronghold and 2 Forts.':
+      '🏆 SvS winner: no Stronghold last week, so no auto-registration. Pick 1 Stronghold and 2 Forts.';
+  }
+
+  function paint(){
+    var autoSH=window._rotAutoSH, pickSH=window._rotSelSH, fts=window._rotSelFTs;
+    var needAutoChoice=autoOpts.length===2&&!autoSH;
+    var freeSH=[1,2,3,4].filter(function(n){ return !takenSH[n]&&reservedSH.indexOf(n)<0&&n!==autoSH; });
+    var shRequired=canSH&&freeSH.length>0;
+    var noShLeft=canSH&&!isWinner&&!freeSH.length;
+
+    // Auto-registration choice (winner held 2 SH last week)
+    var autoHtml='';
+    if(autoOpts.length===2){
+      autoHtml='<div class="glabel" style="color:var(--gold);">Auto-registered this week</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'+
+        autoOpts.map(function(n){
+          var on=autoSH===n;
+          return '<button class="tog pick-auto" data-auto="'+n+'" style="border-color:'+(on?'var(--gold)':'rgba(196,155,92,.22)')+';color:'+(on?'var(--gold)':'var(--t2)')+';">SH '+n+(on?' · Auto ✓':'')+'</button>';
+        }).join('')+
+        '</div>';
+    }
+
+    // Stronghold picker
+    var shPickerHtml='';
+    if(canSH){
+      shPickerHtml='<div class="glabel" style="color:var(--gold);">'+(shCount===2?'Choose your 2nd stronghold':'Choose a stronghold')+'</div>'+
+        '<div class="rot-grid-4" id="shPicker">';
+      for(var i=1;i<=4;i++){
+        var taken=takenSH[i];
+        var reward=getReward('stronghold',i);
+        var rewardHtml=reward?'<div class="rot-loc-reward">'+reward+'</div>':'';
+        if(taken||reservedSH.indexOf(i)>=0){
+          var who=taken||winner;
+          shPickerHtml+='<div class="rot-loc rot-loc-taken rot-loc-sh">'+
+            '<div class="rot-loc-name">SH '+i+'</div>'+
+            '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[who]||'var(--t2)')+';">'+who+(taken?'':' · reserved')+'</div>'+
+            rewardHtml+
+          '</div>';
+        } else if(i===autoSH){
+          shPickerHtml+='<div class="rot-loc rot-loc-sh rot-loc-mine">'+
+            '<div class="rot-loc-name">SH '+i+'</div>'+
+            '<div class="rot-loc-alliance" style="color:var(--gold);">Auto ✓</div>'+
+            rewardHtml+
+          '</div>';
+        } else {
+          var shOn=pickSH===i;
+          shPickerHtml+='<div class="rot-loc rot-loc-sh '+(shOn?'rot-loc-mine':'rot-loc-free')+' pick-sh" data-sh="'+i+'">'+
+            '<div class="rot-loc-name">SH '+i+'</div>'+
+            '<div class="rot-loc-alliance'+(shOn?'':' rot-loc-avail')+'" style="'+(shOn?'color:var(--gold);':'')+'">'+(shOn?'Selected ✓':'Tap to select')+'</div>'+
+            rewardHtml+
+          '</div>';
+        }
+      }
+      shPickerHtml+='</div>';
+    }
+
+    // Fort picker
+    var ftPickerHtml='<div class="glabel" style="color:var(--steel);">'+(maxFT===2?'Choose 2 forts':'Choose a fort')+'</div>'+
+      '<div class="rot-grid-12" id="ftPicker" style="margin-bottom:16px;">';
+    for(var j=1;j<=12;j++){
+      var ftaken=takenFT[j];
+      var freward=getReward('fort',j);
+      if(ftaken){
+        ftPickerHtml+='<div class="rot-loc rot-loc-taken rot-loc-ft">'+
+          '<div class="rot-loc-name">F'+j+'</div>'+
+          '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[ftaken]||'var(--t2)')+';">'+ftaken+'</div>'+
+          (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
         '</div>';
       } else {
-        var shIsSelected = mySelSH===i;
-        shPickerHtml+='<div class="rot-loc rot-loc-sh '+(shIsSelected?'rot-loc-mine':'rot-loc-free')+' pick-sh" data-sh="'+i+'">'+
-          '<div class="rot-loc-name">SH '+i+'</div>'+
-          '<div class="rot-loc-alliance'+(shIsSelected?'':' rot-loc-avail')+'" style="'+(shIsSelected?'color:var(--gold);':'')+'">'+(shIsSelected?'Selected ✓':'Tap to select')+'</div>'+
-          (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
+        var ftOn=fts.indexOf(j)>=0;
+        ftPickerHtml+='<div class="rot-loc rot-loc-ft '+(ftOn?'rot-loc-mine':'rot-loc-free')+' pick-ft" data-ft="'+j+'">'+
+          '<div class="rot-loc-name">F'+j+'</div>'+
+          '<div class="rot-loc-alliance'+(ftOn?'':' rot-loc-avail')+'" style="'+(ftOn?'color:var(--gold);':'')+'">'+(ftOn?'Selected ✓':'Tap')+'</div>'+
+          (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
         '</div>';
       }
     }
-    shPickerHtml+='</div>';
-  }
+    ftPickerHtml+='</div>';
 
-  // Fort picker
-  var ftPickerHtml='<div class="glabel" style="color:var(--steel);">Choose a fort</div>'+
-    '<div class="rot-grid-12" id="ftPicker" style="margin-bottom:16px;">';
-  for(var j=1;j<=12;j++){
-    var ftaken=takenFT[j];
-    var freward=getReward('fort',j);
-    if(ftaken){
-      ftPickerHtml+='<div class="rot-loc rot-loc-taken rot-loc-ft">'+
-        '<div class="rot-loc-name">F'+j+'</div>'+
-        '<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[ftaken]||'var(--t2)')+';">'+ftaken+'</div>'+
-        (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
-      '</div>';
-    } else {
-      var ftIsSelected = mySelFT===j;
-      ftPickerHtml+='<div class="rot-loc rot-loc-ft '+(ftIsSelected?'rot-loc-mine':'rot-loc-free')+' pick-ft" data-ft="'+j+'">'+
-        '<div class="rot-loc-name">F'+j+'</div>'+
-        '<div class="rot-loc-alliance'+(ftIsSelected?'':' rot-loc-avail')+'" style="'+(ftIsSelected?'color:var(--gold);':'')+'">'+(ftIsSelected?'Selected ✓':'Tap')+'</div>'+
-        (freward?'<div class="rot-loc-reward">'+freward+'</div>':'')+
-      '</div>';
-    }
-  }
-  ftPickerHtml+='</div>';
+    var shTxt=[autoSH?autoSH+' (auto)':null,pickSH].filter(Boolean).join(' + ');
+    var preview=(canSH?'SH: '+(shTxt||'—')+' · ':'')+'Fort: '+(fts.join(' + ')||'—');
+    var ready=!needAutoChoice&&(!shRequired||pickSH)&&fts.length===maxFT;
+    var pillTxt=isWinner?'🏆 '+shCount+' SH + 2 Forts':isTop4?'SH + Fort':'Fort only';
 
-  rc.innerHTML=
-    (isSuperAdmin(SESSION.name)?'<button class="btn btn-g" style="margin-bottom:10px;padding:8px;font-size:12px;" id="backAlliancePick">← Change Alliance</button>':'')+
-    '<div class="hero">'+
-      '<span class="hero-top"><span class="home-eyebrow">Selecting for</span><span class="home-pill open"><span class="dot"></span>'+(isTop4?'SH + Fort':'Fort only')+'</span></span>'+
-      '<span class="hero-mid"><span class="hero-big" style="color:'+(ALLIANCE_COLORS[myAlliance]||'var(--gold)')+';">'+myAlliance+'</span></span>'+
-      '<span class="hero-meta"><span id="selPreview">'+(isTop4?'Select a Stronghold and a Fort':'Select a Fort')+'</span></span>'+
-    '</div>'+
-    shPickerHtml+ftPickerHtml+
-    '<button class="btn btn-p" id="confirmSelBtn" disabled>Confirm Selection</button>';
+    rc.innerHTML=
+      (isSuperAdmin(SESSION.name)?'<button class="btn btn-g" style="margin-bottom:10px;padding:8px;font-size:12px;" id="backAlliancePick">← Change Alliance</button>':'')+
+      '<div class="hero">'+
+        '<span class="hero-top"><span class="home-eyebrow">Selecting for</span><span class="home-pill open"><span class="dot"></span>'+pillTxt+'</span></span>'+
+        '<span class="hero-mid"><span class="hero-big" style="color:'+(ALLIANCE_COLORS[myAlliance]||'var(--gold)')+';">'+myAlliance+'</span></span>'+
+        '<span class="hero-meta"><span id="selPreview"><span style="color:#f2e6d0;font-weight:700;">'+preview+'</span></span></span>'+
+      '</div>'+
+      (hint||noShLeft?'<div style="font-size:12px;color:var(--t2);line-height:1.5;margin:4px 2px 12px;">'+(hint||'No stronghold left this week. Pick a Fort.')+'</div>':'')+
+      autoHtml+shPickerHtml+ftPickerHtml+
+      '<button class="btn btn-p" id="confirmSelBtn"'+(ready?'':' disabled')+'>Confirm Selection</button>';
 
-  // Selection logic
-  // Persist selections across renders using window vars
-  if(window._rotSelAlliance!==myAlliance){ window._rotSelSH=null; window._rotSelFT=null; window._rotSelAlliance=myAlliance; }
-  var mySelSH=window._rotSelSH||null;
-  var mySelFT=window._rotSelFT||null;
-  function updatePreview(){
-    var txt=(isTop4?'SH: '+(mySelSH?mySelSH:'—')+'  ':'')+'Fort: '+(mySelFT?mySelFT:'—');
-    document.getElementById('selPreview').innerHTML='<span style="color:#f2e6d0;font-weight:700;">'+txt+'</span>';
-    var ready=(!isTop4||mySelSH)&&mySelFT;
-    document.getElementById('confirmSelBtn').disabled=!ready;
-  }
-
-  rc.querySelectorAll('.pick-sh').forEach(function(el){
-    el.addEventListener('click',function(){
-      rc.querySelectorAll('.pick-sh').forEach(function(e){ e.classList.remove('rot-loc-mine'); e.querySelector('.rot-loc-alliance').textContent='Tap to select'; e.querySelector('.rot-loc-alliance').style.color='#6b5a42'; });
-      el.classList.add('rot-loc-mine');
-      el.querySelector('.rot-loc-alliance').textContent='Selected ✓';
-      el.querySelector('.rot-loc-alliance').style.color='var(--gold)';
-      mySelSH=parseInt(el.dataset.sh);
-      window._rotSelSH=mySelSH;
-      updatePreview();
+    rc.querySelectorAll('.pick-auto').forEach(function(el){
+      el.addEventListener('click',function(){
+        window._rotAutoSH=parseInt(el.dataset.auto);
+        if(window._rotSelSH===window._rotAutoSH) window._rotSelSH=null;
+        paint();
+      });
     });
-  });
-
-  rc.querySelectorAll('.pick-ft').forEach(function(el){
-    el.addEventListener('click',function(){
-      rc.querySelectorAll('.pick-ft').forEach(function(e){ e.classList.remove('rot-loc-mine'); e.querySelector('.rot-loc-alliance').textContent='Tap'; e.querySelector('.rot-loc-alliance').style.color='#6b5a42'; });
-      el.classList.add('rot-loc-mine');
-      el.querySelector('.rot-loc-alliance').textContent='Selected ✓';
-      el.querySelector('.rot-loc-alliance').style.color='var(--gold)';
-      mySelFT=parseInt(el.dataset.ft);
-      window._rotSelFT=mySelFT;
-      updatePreview();
+    rc.querySelectorAll('.pick-sh').forEach(function(el){
+      el.addEventListener('click',function(){
+        var n=parseInt(el.dataset.sh);
+        window._rotSelSH=window._rotSelSH===n?null:n;
+        paint();
+      });
     });
-  });
+    rc.querySelectorAll('.pick-ft').forEach(function(el){
+      el.addEventListener('click',function(){
+        var n=parseInt(el.dataset.ft), cur=window._rotSelFTs, at=cur.indexOf(n);
+        if(at>=0) cur.splice(at,1);
+        else { if(cur.length>=maxFT) cur.shift(); cur.push(n); }
+        paint();
+      });
+    });
 
-  var backBtn=document.getElementById('backAlliancePick');
-  if(backBtn) backBtn.addEventListener('click',function(){ window._superAdminAlliance=null; render(); });
+    var backBtn=document.getElementById('backAlliancePick');
+    if(backBtn) backBtn.addEventListener('click',function(){ window._superAdminAlliance=null; render(); });
 
-  document.getElementById('confirmSelBtn').addEventListener('click',async function(){
-    if((!isTop4||mySelSH)&&mySelFT){
-      var confirmMsg='Lock in '+myAlliance+'’s selection:\n'+(isTop4?'Stronghold '+mySelSH+'\n':'')+'Fort '+mySelFT+'\n\nThis can only be undone while the window is open.';
+    document.getElementById('confirmSelBtn').addEventListener('click',async function(){
+      if(!ready) return;
+      var sh1=autoSH||pickSH||null, sh2=autoSH?(pickSH||null):null;
+      var shLine=sh1?'Stronghold '+sh1+(autoSH?' (auto)':'')+(sh2?' + '+sh2:'')+'\n':'';
+      var confirmMsg='Lock in '+myAlliance+'’s selection:\n'+shLine+'Fort '+fts.join(' + ')+'\n\nThis can only be undone while the window is open.';
       if(!await confirmDanger(confirmMsg,{title:'Confirm selection',confirmLabel:'Lock it in',danger:false})) return;
-      var newSel={week_start:ROT_STATE.week_start,alliance:myAlliance,fort:mySelFT,confirmed:true,selected_by:SESSION.name};
-      if(isTop4) newSel.stronghold=mySelSH;
+      var newSel={week_start:ROT_STATE.week_start,alliance:myAlliance,fort:fts[0],confirmed:true,selected_by:SESSION.name};
+      if(sh1) newSel.stronghold=sh1;
+      // Only send the new columns when used, so normal picks keep working without them.
+      if(sh2) newSel.stronghold2=sh2;
+      if(fts[1]) newSel.fort2=fts[1];
       var r=await sb.from('rotation_selections').upsert(newSel,{onConflict:'week_start,alliance'}).select().single();
       if(r.error){ toast('Error: '+r.error.message); return; }
       ROT_SELS=ROT_SELS.filter(function(s){ return !(s.week_start===ROT_STATE.week_start&&s.alliance===myAlliance); });
@@ -2461,10 +2545,11 @@ function renderRotSelect(rc){
       rotNotifyEdge(getCurrentTurnAlliance());
       toast('✅ Selection confirmed!');
       window._superAdminAlliance=null;
-      window._rotSelSH=null; window._rotSelFT=null; window._rotSelAlliance=null;
+      window._rotSelSH=null; window._rotSelFTs=[]; window._rotAutoSH=null; window._rotSelAlliance=null;
       ROT_TAB='board'; render();
-    }
-  });
+    });
+  }
+  paint();
 }
 
 // -- ROTATION ADMIN ---------------------------------------
@@ -2561,6 +2646,18 @@ function renderRotAdmin(rc){
       '</div>'+
       '</div>'+
     '</div>';
+  var curWinner=getSvsWinner();
+  var svsWinnerHtml=!isFullAdmin?'':
+    '<div class="glabel" style="color:var(--gold);">🏆 SvS winner · this month</div>'+
+    '<div class="panel">'+
+      '<div style="font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:10px;">Gets 2 Strongholds + 2 Forts every week until changed. The SH it held last week auto-registers, so no other alliance can pick it.</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<select class="sel" id="svsWinnerSel" style="flex:1;"><option value="">None</option>'+
+          getAllAlliances().map(function(a){ return '<option value="'+a+'"'+(a===curWinner?' selected':'')+'>'+a+'</option>'; }).join('')+
+        '</select>'+
+        '<button class="btn btn-g btn-sm" id="saveSvsWinnerBtn" style="flex-shrink:0;">Save</button>'+
+      '</div>'+
+    '</div>';
   var allianceOrderHtml=!isFullAdmin?'':
     '<div class="glabel" style="color:var(--gold);">Top 4<span class="glabel-n">Stronghold + Fort</span></div>'+
     '<div class="group">'+top4Rows+'</div>'+
@@ -2570,6 +2667,7 @@ function renderRotAdmin(rc){
 
   rc.innerHTML=
     currentWeekHtml+
+    svsWinnerHtml+
     allianceOrderHtml+
     '<div class="glabel">Alliance representatives</div>'+
     '<div class="panel" style="margin-bottom:8px;">'+
@@ -2587,6 +2685,14 @@ function renderRotAdmin(rc){
     '<button class="btn btn-p" id="saveRewardsBtn" style="margin-top:12px;">Save all rewards</button>';
 
   if(isFullAdmin){
+  document.getElementById('saveSvsWinnerBtn').addEventListener('click',async function(){
+    var w=document.getElementById('svsWinnerSel').value||null;
+    if(w===(ROT_STATE&&ROT_STATE.svs_winner||null)){ toast('No change'); return; }
+    var r=await sb.from('rotation_state').update({svs_winner:w}).eq('id',1);
+    if(r.error){ toast('Error: '+r.error.message); return; }
+    if(ROT_STATE) ROT_STATE.svs_winner=w;
+    toast(w?'🏆 SvS winner: '+w:'SvS winner cleared'); render();
+  });
   // Reset week
   document.getElementById('forceOpenBtn').addEventListener('click',async function(){
     if(!await confirmDanger('Force the selection window open? Players will be able to pick outside the normal Wed–Fri window.',{title:'Force open',confirmLabel:'Force open',danger:false})) return;
@@ -2638,8 +2744,10 @@ function renderRotAdmin(rc){
   });
 
   // Alliance order management
-  async function saveAllianceOrder(newTop4, newBot5){
-    var r=await sb.from('rotation_state').update({top4_order:newTop4,bot5_order:newBot5,updated_at:new Date().toISOString()}).eq('id',1).select().single();
+  async function saveAllianceOrder(newTop4, newBot5, extra){
+    var upd={top4_order:newTop4,bot5_order:newBot5,updated_at:new Date().toISOString()};
+    if(extra) Object.keys(extra).forEach(function(k){ upd[k]=extra[k]; });
+    var r=await sb.from('rotation_state').update(upd).eq('id',1).select().single();
     if(r.error){ toast('Error: '+r.error.message); return false; }
     ROT_STATE=r.data;
     // Update ALLIANCE_COLORS for renamed alliances
@@ -2700,7 +2808,7 @@ function renderRotAdmin(rc){
       }
 
       // Update rotation_state orders
-      var ok=await saveAllianceOrder(newTop4,newBot5);
+      var ok=await saveAllianceOrder(newTop4,newBot5,ROT_STATE.svs_winner===al?{svs_winner:newName}:null);
       if(ok){ toast('✅ Renamed: '+al+' → '+newName); render(); }
     });
   });
@@ -2765,7 +2873,7 @@ function renderRotAdmin(rc){
         var pdq=PRES_QUEUES[presDelTypes[pdi]];
         if(pdq.indexOf(al)>=0) await presSaveQueue(presDelTypes[pdi],pdq.filter(function(x){ return x!==al; }));
       }
-      var ok=await saveAllianceOrder(newTop4,newBot5);
+      var ok=await saveAllianceOrder(newTop4,newBot5,ROT_STATE.svs_winner===al?{svs_winner:null}:null);
       if(ok){ toast('🗑 '+al+' removed'); render(); }
     });
   });
@@ -3312,11 +3420,7 @@ function renderRotHistory(rc){
   var weekDate=new Date(weekStart).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
 
   // Build maps
-  var takenSH={}, takenFT={};
-  weekSels.forEach(function(s){
-    if(s.stronghold) takenSH[s.stronghold]=s.alliance;
-    if(s.fort) takenFT[s.fort]=s.alliance;
-  });
+  var tm=selTakenMaps(weekSels), takenSH=tm.sh, takenFT=tm.ft;
 
   // Nav buttons
   var navHtml=
@@ -3364,10 +3468,7 @@ function renderRotHistory(rc){
     var color=ALLIANCE_COLORS[s.alliance]||'var(--ac)';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(100,160,220,.06);">'+
       '<span style="font-size:13px;font-weight:800;color:'+color+';">'+s.alliance+'</span>'+
-      '<span style="font-size:12px;color:var(--t2);">'+
-        (s.stronghold?'🏰 SH'+s.stronghold+' · ':'')+
-        (s.fort?'🏯 F'+s.fort:'')+
-      '</span>'+
+      '<span style="font-size:12px;color:var(--t2);">'+selPicksText(s)+'</span>'+
     '</div>';
   }).join('');
 
@@ -4151,6 +4252,11 @@ function renderRotationGuideContent(rc){
     guideStep(2,'The <strong>Board</strong> tab shows what\'s taken, what\'s free, and whose turn it is right now.')+
     guideStep(3,'When it\'s your alliance\'s turn, go to <strong>My Selection</strong> to pick your Stronghold/Fort before the selection window closes.')+
     guideStep(4,'<strong>History</strong> shows past weeks\' final boards.')+
+    guideSection('🏆 SvS winner')+
+    guideStep('•','The alliance with the most SvS points that month gets <strong>2 Strongholds + 2 Forts</strong> every week. It is marked 🏆 in the selection order.')+
+    guideStep('•','In game you can only register for one Stronghold; the second comes from auto-registration on the Stronghold held last week. That Stronghold shows as <strong>reserved</strong> and no other alliance can pick it.')+
+    guideStep('•','On its turn the winner picks 1 more Stronghold and 2 Forts. If it held 2 Strongholds last week, it first chooses which one auto-registers. With no Stronghold last week, it picks 1 Stronghold.')+
+    guideStep('•','If no Stronghold is left when a Top 4 alliance picks, it confirms with a Fort only.')+
     '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Selections are only open on the scheduled window (see the countdown banner) unless an admin force-opens it.</div>';
   if(isStrongholdAdmin(SESSION.name)||isSuperAdmin(SESSION.name)){
     html+=guideSection('As a Stronghold Admin, in the Admin tab you can:','var(--green)');
@@ -4160,6 +4266,7 @@ function renderRotationGuideContent(rc){
   if(isSuperAdmin(SESSION.name)){
     html+=guideSection('Super Admin only','var(--gold)');
     html+=guideStep('•','Reorder alliances between Top 4 / Bot 5, rename/add/remove alliances.');
+    html+=guideStep('•','Set the monthly <strong>SvS winner</strong>. It stays until you change it or set None.');
     html+=guideStep('•','Force-open/close the selection window, clear selections, and reset & rotate the week.');
   }
   rc.innerHTML=html;
