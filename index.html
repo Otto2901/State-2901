@@ -398,7 +398,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
   body.has-rail #playerGroupsWrap{columns:2 340px;column-gap:16px;}
   body.has-rail #playerGroupsWrap .card{break-inside:avoid;}
   /* Rally Timer: leaders on the left, opening order + presets on the right */
-  body.has-rail .rt-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0 28px;align-items:start;}
+  body.has-rail .rt-cols,body.has-rail .bt-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0 28px;align-items:start;}
   /* Admin > Ministers applications and Admin > Troops reports as card grids */
   body.has-rail #minAppList,body.has-rail #minTrList{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:0 14px;align-items:start;}
   body.has-rail #minAppList > .empty,body.has-rail #minTrList > .empty{grid-column:1 / -1;}
@@ -478,6 +478,19 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .rep-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--b);border-radius:20px;padding:3px 4px 3px 10px;font-size:12px;font-weight:700;color:var(--t);}
 .rep-chip button{background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;width:20px;height:20px;border-radius:50%;}
 .rep-chip button:hover{color:var(--red);background:rgba(181,85,74,.12);}
+/* BEAR TRAP */
+.bt-wave{margin-bottom:10px;}
+.bt-wave-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.bt-wave-t{font-size:14px;font-weight:800;color:var(--t);}
+.bt-wave-n{font-size:12px;color:var(--t3);font-variant-numeric:tabular-nums;}
+.bt-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.bt-chip{display:inline-flex;align-items:center;min-height:34px;max-width:100%;padding:6px 12px;border-radius:17px;background:var(--surface2);border:1px solid var(--b);color:var(--t);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left;overflow-wrap:anywhere;}
+.bt-chip:active{border-color:var(--b-act);}
+.bt-empty{font-size:12px;color:var(--t3);}
+.bt-add{display:flex;gap:8px;margin-top:10px;}
+.bt-add .inp{padding:9px 12px;font-size:13px;}
+.bt-move-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.bt-move-grid .tog{padding:10px 0;}
 .rw-row{display:flex;align-items:center;gap:12px;padding:7px 12px;position:relative;}
 .rw-row+.rw-row::before{content:'';position:absolute;top:0;right:0;left:12px;height:1px;background:var(--b);}
 .rw-lbl{width:40px;font-size:13px;font-weight:800;flex-shrink:0;font-variant-numeric:tabular-nums;}
@@ -653,6 +666,7 @@ var ROLE_INFO = {
   cj_admin:         { label:'Crazy Joe Admin', guideKey:null,       desc:'You can manage Crazy Joe team assignments.' },
   war_admin:        { label:'War Team Admin',  guideKey:null,       desc:'You can manage War Team Builder rally teams, formations, and the hero list.' },
   rally_admin:      { label:'Rally Timer Admin',guideKey:'rallytimer', desc:'You can open the Rally Timer march-sync calculator.' },
+  bear_admin:       { label:'Bear Trap Admin', guideKey:'beartrap', desc:'You can open Bear Trap, edit the BT1 and BT2 wave lists and copy the announcement.' },
   presidency_admin: { label:'Presidency Admin', guideKey:'presidency', desc:'You can record SFC and SvS Supreme results, add past records, edit records, and reorder the presidency queues in the Presidency Ledger.' },
   minister_admin:   { label:'Minister Apps Admin', guideKey:'ministers', desc:'You can view SvS minister applications, add and edit entries, and assign or free time slots in Admin Panel › Ministers.' },
   troops_admin:     { label:'Troops Viewer',   guideKey:'troops',   desc:'You can view the troop level reports of players and export them as CSV in Admin Panel › Troops. View only.' },
@@ -689,6 +703,7 @@ function isLibraryAdmin(name){ return isSuperAdmin(name)||hasRole(name,'library_
 function isStrongholdAdmin(name){ return isSuperAdmin(name)||hasRole(name,'stronghold_admin'); }
 function isWarAdmin(name){ return isSuperAdmin(name)||hasRole(name,'war_admin'); }
 function isRallyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'rally_admin'); }
+function isBearAdmin(name){ return isSuperAdmin(name)||hasRole(name,'bear_admin'); }
 function isPresidencyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'presidency_admin'); }
 function isMinisterAdmin(name){ return isSuperAdmin(name)||hasRole(name,'minister_admin'); }
 function isTroopsAdmin(name){ return isSuperAdmin(name)||hasRole(name,'troops_admin'); }
@@ -751,6 +766,13 @@ var RT_PRESETS = []; // server rows: [{id, name, dur, leaders:[{name, march, act
 var RT_LOADED  = false; // guard: localStorage read once on first module open
 var RT_PRESETS_LOADED = false; // guard: presets fetched once per session
 
+// BEAR TRAP STATE — shared by all bear admins (bear_trap_config + bear_trap_players)
+var BT_CONFIG  = {1:null, 2:null}; // per-trap settings row, keyed by bt
+var BT_PLAYERS = []; // [{id, name, bt, wave, pos}] — bt/wave null = Bench
+var BT_TAB     = 1;  // trap on screen: 1 | 2
+var BT_LOADED  = false; // reset each time the module is opened from Home
+var BT_ERR     = null;
+
 // PRESIDENCY LEDGER STATE
 var PRES_QUEUES = {sfc:[], supreme:[]}; // presidency_queues: alliances in order, [0] = next up
 var PRES_RECORDS = []; // presidency_records
@@ -784,6 +806,7 @@ var MOD_COLORS = {
   crazyjoe:  {grad:'linear-gradient(90deg,#9c6b4f,#c48f6a)', icon:'linear-gradient(135deg,rgba(156,107,79,.3),rgba(196,143,106,.2))', text:'#c48f6a'},
   warteam:   {grad:'linear-gradient(90deg,#8c4b4b,#c4756a)', icon:'linear-gradient(135deg,rgba(140,75,75,.3),rgba(196,117,106,.2))', text:'#c4756a'},
   rallytimer:{grad:'linear-gradient(90deg,#6b7a8f,#e3bc6a)', icon:'linear-gradient(135deg,rgba(107,122,143,.3),rgba(227,188,106,.2))', text:'#d8c48a'},
+  beartrap:  {grad:'linear-gradient(90deg,#4f7489,#7fb0c9)', icon:'linear-gradient(135deg,rgba(79,116,137,.3),rgba(127,176,201,.2))', text:'#7fb0c9'},
   presidency:{grad:'linear-gradient(90deg,#8a6d3b,#d9c27a)', icon:'linear-gradient(135deg,rgba(138,109,59,.3),rgba(217,194,122,.2))', text:'#d9c27a'}
 };
 
@@ -794,6 +817,7 @@ var ICONS = {
   crazyjoe:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   warteam:'<path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6M16 16l4 4M19 21l2-2"/><path d="M9.5 17.5L21 6V3h-3L6.5 14.5"/><path d="M11 19l-6-6M8 16l-4 4M5 21l-2-2"/>',
   rallytimer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4M12 2v3"/>',
+  beartrap:'<circle cx="5.5" cy="10" r="2"/><circle cx="9.5" cy="5.5" r="2"/><circle cx="14.5" cy="5.5" r="2"/><circle cx="18.5" cy="10" r="2"/><path d="M12 12c-3 0-6 3.5-6 6.2C6 20 7.4 21 9 21c1.2 0 2-.6 3-.6s1.8.6 3 .6c1.6 0 3-1 3-2.8C18 15.5 15 12 12 12z"/>',
   presidency:'<path d="M3 7l4.5 5L12 5l4.5 7L21 7l-2 11H5z"/><path d="M5 21h14"/>',
   ministers:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M14 14h2M8 17h2"/>',
   rules:'<path d="M8 21h11a2 2 0 002-2v-1H10v1a2 2 0 01-4 0V5a2 2 0 00-2-2h12a2 2 0 012 2v13"/><path d="M10 8h5M10 12h5"/>',
@@ -875,7 +899,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v46'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v47'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1163,7 +1187,7 @@ var _lastView=null;
 // Phones discard a backgrounded PWA and reload it on return. Remember the
 // current screen so init() can put the user back where they were.
 var VIEW_KEY='s2901-view', VIEW_MAX_AGE=12*3600*1000;
-var VIEW_MODULES=['rotation','transfer','crazyjoe','warteam','rallytimer','presidency','rules','library','ministers','adminpanel'];
+var VIEW_MODULES=['rotation','transfer','crazyjoe','warteam','rallytimer','beartrap','presidency','rules','library','ministers','adminpanel'];
 function saveViewState(y){
   if(!SESSION||SESSION.pending||SESSION.needsProfile) return;
   try{
@@ -1241,6 +1265,7 @@ function renderView(){
   if(MODULE==='crazyjoe')  renderCrazyJoeApp(app);
   if(MODULE==='warteam')   renderWarTeamApp(app);
   if(MODULE==='rallytimer') renderRallyTimerApp(app);
+  if(MODULE==='beartrap')  renderBearTrapApp(app);
   if(MODULE==='presidency') renderPresidencyApp(app);
   if(MODULE==='rules')     renderRulesApp(app);
   if(MODULE==='library')   renderLibraryApp(app);
@@ -1465,6 +1490,8 @@ function homeModules(){
       go:open('warteam',function(){ WAR_TAB='board'; WAR_EDIT_TEAM=null; WAR_EDIT_MEMBERS=[]; WAR_EDIT_HERO=undefined; })},
     isRallyAdmin(SESSION.name)&&{id:'goRally',mod:'rallytimer',group:'Events',key:'rallytimer',color:MOD_COLORS.rallytimer.text,title:'Rally Timer',short:'Rally Timer',sub:'March sync calculator',
       go:open('rallytimer')},
+    isBearAdmin(SESSION.name)&&{id:'goBear',mod:'beartrap',group:'Events',key:'beartrap',color:MOD_COLORS.beartrap.text,title:'Bear Trap',short:'Bear Trap',sub:'Hunt waves for BT1 & BT2',
+      go:open('beartrap',function(){ BT_LOADED=false; })},
     minIsVisible()&&{id:'goMinisters',mod:'ministers',group:'Events',key:'ministers',color:'#d4a95e',title:'SvS Minister Applications',short:'Ministers',sub:'Free times & apply for a minister slot',
       go:open('ministers',function(){ MIN_PUB_TAB='avail'; })},
     {id:'goPresidency',mod:'presidency',group:'State',key:'presidency',color:MOD_COLORS.presidency.text,title:'Presidency Ledger',short:'Presidency',sub:'SFC & SvS Supreme rotation',
@@ -3942,6 +3969,7 @@ var ROLE_LIST=[
   {role:'cj_admin',         icon:'crazyjoe',   color:'#c48f6a', short:'Crazy Joe team assignments'},
   {role:'war_admin',        icon:'warteam',    color:'#c97b6b', short:'War Team boards & hero list'},
   {role:'rally_admin',      icon:'rallytimer', color:'#c9974b', short:'Opens the Rally Timer'},
+  {role:'bear_admin',       icon:'beartrap',   color:'#7fb0c9', short:'Bear Trap waves & announcement'},
   {role:'presidency_admin', icon:'presidency', color:'#d9c27a', short:'Records & queues in the Presidency Ledger'},
   {role:'minister_admin',   icon:'ministers',  color:'#d4a95e', short:'Minister applications & time slots'},
   {role:'troops_admin',     icon:'troops',     color:'#a3b3c2', short:'Views troop reports (read only)'},
@@ -4081,6 +4109,7 @@ var AUDIT_TABLE_LABEL = {
   cj_teams:'CJ teams', cj_team_members:'CJ members', war_teams:'War teams', war_team_members:'War members', war_heroes:'War heroes',
   minister_config:'Minister settings', minister_applications:'Minister apps', minister_assignments:'Minister slots',
   player_troop_reports:'Troop reports', rally_timer_presets:'Rally presets',
+  bear_trap_config:'Bear Trap settings', bear_trap_players:'Bear Trap players',
   presidency_queues:'Presidency queues', presidency_records:'Presidency records'
 };
 var LOGS_PAGE = 100;
@@ -4286,6 +4315,7 @@ var GUIDE_CONTENT = {
   library:  { title:'📚 Library — How to use',            render: renderLibraryGuideContent },
   warteam:  { title:'⚔️ War Team Builder — How to use',   render: renderWarTeamGuideContent },
   rallytimer:{ title:'⏱️ Rally Timer — How to use',       render: renderRallyTimerGuideContent },
+  beartrap:  { title:'🐻 Bear Trap — How to use',         render: renderBearTrapGuideContent },
   presidency:{ title:'👑 Presidency Ledger — How to use', render: renderPresidencyGuideContent },
   ministers: { title:'👑 SvS Minister Applications — How to use', render: renderMinisterGuideContent },
   troops:    { title:'🪖 Troops — How to use', render: renderTroopsGuideContent },
@@ -4386,6 +4416,18 @@ function renderRallyTimerGuideContent(rc){
     guideStep(4,'The result panel updates instantly, sorted longest-march-first. Each line shows the <strong>remaining time</strong> the first opener should see on their rally when that leader launches, and how many seconds <strong>after</strong> the first opener they go.')+
     guideStep(5,'Hit <strong>Copy</strong> to paste the full order into alliance chat. <strong>Save preset</strong> stores the current roster + duration as a shared preset that every rally admin can load — on any device.')+
     '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Access to this module is granted by a Super Admin. Saved presets are shared across all rally admins; the roster you are currently editing stays on this device until you save it.</div>';
+}
+function renderBearTrapGuideContent(rc){
+  rc.innerHTML=
+    guideSection('How it works')+
+    guideStep(1,'Switch between <strong>BT1</strong> and <strong>BT2</strong> at the top. Each trap has its own time and its own players. A player can only be in <strong>one wave of one trap</strong>.')+
+    guideStep(2,'Type names into a wave\'s <strong>Add names</strong> box. You can add several at once, split with <strong> - </strong> or a comma. Names with a dash inside, like <strong>Seo-yoon</strong>, stay whole.')+
+    guideStep(3,'Tap a name to <strong>move</strong> it to another wave or trap, send it to the <strong>Bench</strong>, fix its spelling, or <strong>remove</strong> it when the player leaves the alliance.')+
+    guideStep(4,'The <strong>Bench</strong> holds players who are in the alliance but not placed yet, for example new transfers. Adding a benched name to a wave moves it there.')+
+    guideStep(5,'In <strong>Setup</strong> set the time (UTC), the delay between waves, the number of waves (1 to 5), join max and the heroes line. Lowering the wave count sends the players of the removed waves to the Bench.')+
+    guideStep(6,'<strong>Copy</strong> puts the announcement on the clipboard, ready for alliance chat. <strong>Copy BT1 + BT2</strong> copies both traps at once.')+
+    guideStep(7,'<strong>Paste announcement</strong> fills a trap from an old announcement text. Players in that trap who are not in the text go to the Bench. Nobody is deleted.')+
+    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Only the Super Admin and Bear Trap Admins can open this module. All of them share the same lists, and every change is saved right away.</div>';
 }
 
 function renderPresidencyGuideContent(rc){
@@ -6991,6 +7033,370 @@ function rtPromptName(cb){
   document.getElementById('rtPromptCancel').addEventListener('click',close);
   document.getElementById('rtPromptOk').addEventListener('click',function(){ var v=inp.value.trim(); close(); cb(v); });
   inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var v=inp.value.trim(); close(); cb(v); } });
+}
+
+// ── BEAR TRAP ────────────────────────────────────────────────
+// Our alliance's Bear Hunt waves for the two traps. Every player row sits in
+// one wave of BT1 or BT2, or on the Bench (bt/wave null). Names are unique, so
+// a player is never in two places. Shared by every bear admin.
+
+function btKey(name){ return String(name||'').trim().toLowerCase(); }
+function btSort(list){
+  return list.sort(function(a,b){ return (a.pos-b.pos)||String(a.created_at).localeCompare(String(b.created_at)); });
+}
+function btWavePlayers(bt,w){
+  return btSort(BT_PLAYERS.filter(function(p){ return p.bt===bt&&p.wave===w; }));
+}
+function btBench(){ return btSort(BT_PLAYERS.filter(function(p){ return p.bt==null; })); }
+function btFind(name){
+  var k=btKey(name);
+  return BT_PLAYERS.find(function(p){ return btKey(p.name)===k; })||null;
+}
+function btWhere(p){ return p.bt?'BT'+p.bt+' Wave '+p.wave:'the Bench'; }
+function btNextPos(bt,w){
+  var list=w?btWavePlayers(bt,w):btBench();
+  return list.length?list[list.length-1].pos+1:1;
+}
+// "A - B -C, D" -> names. A dash only splits when it touches a space, so
+// names like "Seo-yoon" stay whole.
+function btSplitNames(str){
+  return String(str||'').split(/\s+-\s*|\s*-\s+|,|\r?\n/).map(function(s){ return s.trim().slice(0,40); }).filter(Boolean);
+}
+function btBuildText(bt){
+  var c=BT_CONFIG[bt]; if(!c) return '';
+  var out='BT'+bt+' SETUP: '+c.time_utc+' UTC / '+c.delay_min+' min delay per wave';
+  for(var w=1;w<=c.waves;w++){
+    out+=(w===1?'\n':'\n\n')+'📌Wave'+w+': '+btWavePlayers(bt,w).map(function(p){ return p.name.trim(); }).join(' - ');
+  }
+  var jm=(c.join_max||'').trim(), hz=(c.heroes||'').trim();
+  if(jm||hz) out+='\n\n'+(jm?'Join max '+jm:'')+(jm&&hz?'-':'')+(hz?'Join '+hz:'');
+  return out;
+}
+// Reads an announcement written in the format above.
+function btParseAnnouncement(txt){
+  var res={waves:{},maxWave:0,time:null,delay:null,joinMax:null,heroes:null};
+  String(txt||'').split(/\r?\n/).forEach(function(line){
+    var m=line.match(/Wave\s*([1-5])\s*:(.*)$/i);
+    if(m){ var w=+m[1]; res.waves[w]=btSplitNames(m[2]); if(w>res.maxWave) res.maxWave=w; return; }
+    var t=line.match(/\b(\d{1,2}):(\d{2})\s*UTC/i);
+    if(t) res.time=t[1].padStart(2,'0')+':'+t[2];
+    var d=line.match(/(\d+)\s*min/i);
+    if(d&&/delay/i.test(line)) res.delay=Math.min(60,+d[1]);
+    var j=line.match(/Join\s+max\s+(.+?)\s*-\s*Join\s+(.+)$/i);
+    if(j){ res.joinMax=j[1].trim(); res.heroes=j[2].trim(); }
+  });
+  return res;
+}
+
+async function btLoad(){
+  BT_LOADED=true;
+  var r=await Promise.all([
+    sb.from('bear_trap_config').select('*').order('bt'),
+    sb.from('bear_trap_players').select('*').order('pos')
+  ]);
+  var err=r[0].error||r[1].error;
+  if(err){ BT_ERR=err.message; }
+  else{
+    BT_ERR=null;
+    r[0].data.forEach(function(c){ BT_CONFIG[c.bt]=c; });
+    BT_PLAYERS=r[1].data;
+  }
+  renderBearTrapContent();
+}
+async function btSaveConfig(bt,patch){
+  var c=BT_CONFIG[bt];
+  Object.assign(c,patch);
+  var r=await sb.from('bear_trap_config').update(Object.assign({},patch,{updated_by:SESSION.name,updated_at:new Date().toISOString()})).eq('bt',bt);
+  if(r.error){ toast('Error: '+r.error.message); btLoad(); return false; }
+  return true;
+}
+async function btMove(p,bt,w){
+  var patch={bt:w?bt:null,wave:w||null,pos:btNextPos(bt,w)};
+  var r=await sb.from('bear_trap_players').update(patch).eq('id',p.id);
+  if(r.error){ toast('Error: '+r.error.message); btLoad(); return false; }
+  Object.assign(p,patch);
+  return true;
+}
+// w = 0 adds to the Bench. Benched names typed into a wave move there;
+// names already in a wave are left alone and reported.
+async function btAddNames(bt,w,str){
+  var names=btSplitNames(str); if(!names.length) return;
+  var seen={}, rows=[], fromBench=[], skipped=[], pos=btNextPos(bt,w);
+  names.forEach(function(n){
+    var k=btKey(n); if(seen[k]) return; seen[k]=1;
+    var ex=btFind(n);
+    if(ex){ if(ex.bt==null&&w) fromBench.push(ex); else skipped.push(ex); return; }
+    rows.push({name:n,bt:w?bt:null,wave:w||null,pos:pos++});
+  });
+  if(rows.length){
+    var r=await sb.from('bear_trap_players').insert(rows).select();
+    if(r.error){ toast('Error: '+r.error.message); btLoad(); return; }
+    BT_PLAYERS=BT_PLAYERS.concat(r.data);
+  }
+  for(var i=0;i<fromBench.length;i++){ if(!await btMove(fromBench[i],bt,w)) return; }
+  var added=rows.length+fromBench.length;
+  if(skipped.length) toast((added?'Added '+added+'. ':'')+skipped.map(function(p){ return p.name+' is already in '+btWhere(p); }).join(' · '));
+  else toast('✅ Added '+added);
+  renderBearTrapContent();
+  var inp=document.querySelector('.bt-add-inp[data-w="'+w+'"]'); if(inp) inp.focus();
+}
+
+function renderBearTrapApp(app){
+  if(!isBearAdmin(SESSION.name)){ MODULE=null; render(); return; }
+  app.innerHTML=
+    buildModuleHeader('beartrap','🐻','Bear Trap','Hunt waves · BT1 & BT2','beartrap')+
+    '<div class="content" id="btContent"></div>'+
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
+  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('beartrap'); });
+  renderBearTrapContent();
+  if(!BT_LOADED) btLoad(); // fresh lists on every open from Home — other admins may have edited
+}
+
+function btUpdateResult(){
+  var el=document.getElementById('btResult');
+  if(el) el.textContent=btBuildText(BT_TAB);
+}
+function btCopy(txt){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ toast('✅ Copied!'); },function(){ toast('Copy failed'); });
+  } else { toast('Copy not supported'); }
+}
+function btWaveHtml(title,w,list,emptyText){
+  return '<div class="panel bt-wave">'+
+    '<div class="bt-wave-hd"><span class="bt-wave-t">'+title+'</span><span class="bt-wave-n">'+list.length+' player'+(list.length===1?'':'s')+'</span></div>'+
+    '<div class="bt-chips">'+(list.length?list.map(function(p){
+      return '<button class="bt-chip" data-id="'+p.id+'">'+escHtml(p.name)+'</button>';
+    }).join(''):'<span class="bt-empty">'+emptyText+'</span>')+'</div>'+
+    '<div class="bt-add">'+
+      '<input class="inp bt-add-inp" data-w="'+w+'" placeholder="Add names, split with - or ," autocomplete="off" enterkeyhint="done">'+
+      '<button class="btn btn-g btn-sm bt-add-btn" data-w="'+w+'">Add</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function renderBearTrapContent(){
+  var el=document.getElementById('btContent'); if(!el) return;
+  if(BT_ERR){ el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load Bear Trap.<br>'+escHtml(BT_ERR)+'</p></div>'; return; }
+  if(!BT_CONFIG[1]||!BT_CONFIG[2]){ el.innerHTML='<div class="empty"><p>Loading…</p></div>'; return; }
+  var bt=BT_TAB, c=BT_CONFIG[bt], bench=btBench();
+  var waves='';
+  for(var w=1;w<=c.waves;w++) waves+=btWaveHtml('📌 Wave '+w,w,btWavePlayers(bt,w),'No players yet');
+  var tabs=[1,2].map(function(b){
+    var on=b===bt, n=BT_PLAYERS.filter(function(p){ return p.bt===b; }).length;
+    return '<button class="tog bt-tab'+(on?' on':'')+'" data-bt="'+b+'" style="flex:1;border-color:'+(on?'rgba(127,176,201,.6)':'var(--b2)')+';background:'+(on?'rgba(127,176,201,.12)':'transparent')+';color:var(--t);">'+
+      'BT'+b+' <span style="color:var(--t3);font-weight:600;">· '+escHtml(BT_CONFIG[b].time_utc)+' UTC · '+n+'</span></button>';
+  }).join('');
+  var waveBtns=[1,2,3,4,5].map(function(n){
+    var on=c.waves===n;
+    return '<button class="tog bt-waves" data-n="'+n+'" style="flex:1;padding:10px 0;border-color:'+(on?'rgba(127,176,201,.6)':'var(--b2)')+';background:'+(on?'rgba(127,176,201,.12)':'transparent')+';color:var(--t);">'+n+'</button>';
+  }).join('');
+
+  el.innerHTML=
+    '<div style="display:flex;gap:8px;margin-bottom:14px;">'+tabs+'</div>'+
+    '<div class="bt-cols"><div>'+
+      waves+
+      btWaveHtml('🪑 Bench',0,bench,'Nobody on the Bench. New players can wait here until you place them.')+
+    '</div><div>'+
+      '<div class="field">'+
+        '<label class="lbl">BT'+bt+' announcement</label>'+
+        '<pre id="btResult" class="card" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.6;color:var(--t);white-space:pre-wrap;word-break:break-word;margin:0;"></pre>'+
+        '<div style="display:flex;gap:8px;margin-top:8px;">'+
+          '<button class="btn btn-p" id="btCopy" style="flex:1;">📋 Copy BT'+bt+'</button>'+
+          '<button class="btn btn-g" id="btCopyAll" style="flex:1;">Copy BT1 + BT2</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label class="lbl">BT'+bt+' setup</label>'+
+        '<div class="panel">'+
+          '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
+            '<div style="flex:1;"><label class="lbl" for="btTime">Time (UTC)</label><input class="inp" id="btTime" value="'+escHtml(c.time_utc)+'" placeholder="20:00" maxlength="5" inputmode="numeric" autocomplete="off"></div>'+
+            '<div style="flex:1;"><label class="lbl" for="btDelay">Wave delay (min)</label><input class="inp" id="btDelay" type="number" min="0" max="60" value="'+c.delay_min+'" inputmode="numeric"></div>'+
+          '</div>'+
+          '<label class="lbl">Waves</label>'+
+          '<div style="display:flex;gap:6px;margin-bottom:12px;">'+waveBtns+'</div>'+
+          '<label class="lbl" for="btJoinMax">Join max</label>'+
+          '<input class="inp" id="btJoinMax" value="'+escHtml(c.join_max)+'" placeholder="110k" maxlength="20" autocomplete="off" style="margin-bottom:12px;">'+
+          '<label class="lbl" for="btHeroes">Join with heroes</label>'+
+          '<input class="inp" id="btHeroes" value="'+escHtml(c.heroes)+'" placeholder="Jessie, Jasser, Seo-yoon…" maxlength="200" autocomplete="off">'+
+        '</div>'+
+      '</div>'+
+      '<button class="btn btn-g" id="btImport">Paste BT'+bt+' announcement</button>'+
+    '</div></div>';
+
+  btUpdateResult();
+
+  el.querySelectorAll('.bt-tab').forEach(function(b){
+    b.addEventListener('click',function(){ BT_TAB=+b.dataset.bt; renderBearTrapContent(); });
+  });
+  el.querySelectorAll('.bt-chip').forEach(function(b){
+    b.addEventListener('click',function(){
+      var p=BT_PLAYERS.find(function(x){ return String(x.id)===b.dataset.id; });
+      if(p) btOpenPlayerSheet(p);
+    });
+  });
+  el.querySelectorAll('.bt-add-inp').forEach(function(inp){
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); btAddNames(bt,+inp.dataset.w,inp.value); } });
+  });
+  el.querySelectorAll('.bt-add-btn').forEach(function(b){
+    b.addEventListener('click',function(){
+      var inp=el.querySelector('.bt-add-inp[data-w="'+b.dataset.w+'"]');
+      btAddNames(bt,+b.dataset.w,inp.value);
+    });
+  });
+  document.getElementById('btCopy').addEventListener('click',function(){ btCopy(btBuildText(bt)); });
+  document.getElementById('btCopyAll').addEventListener('click',function(){ btCopy(btBuildText(1)+'\n\n'+btBuildText(2)); });
+
+  // Setup: preview follows each keystroke, the save happens when the field is left.
+  var time=document.getElementById('btTime');
+  time.addEventListener('change',function(){
+    var m=time.value.trim().match(/^([01]?\d|2[0-3])[:.]?([0-5]\d)$/);
+    if(!m){ toast('Time must look like 20:00'); time.value=c.time_utc; return; }
+    var v=m[1].padStart(2,'0')+':'+m[2];
+    time.value=v;
+    btSaveConfig(bt,{time_utc:v}).then(function(ok){ if(ok) renderBearTrapContent(); });
+  });
+  var delay=document.getElementById('btDelay');
+  delay.addEventListener('input',function(){
+    var v=parseInt(delay.value,10);
+    if(v>=0&&v<=60){ c.delay_min=v; btUpdateResult(); }
+  });
+  delay.addEventListener('change',function(){
+    var v=parseInt(delay.value,10);
+    if(!(v>=0&&v<=60)){ toast('Delay must be 0 to 60 minutes'); delay.value=c.delay_min; return; }
+    btSaveConfig(bt,{delay_min:v});
+  });
+  [['btJoinMax','join_max'],['btHeroes','heroes']].forEach(function(f){
+    var inp=document.getElementById(f[0]);
+    inp.addEventListener('input',function(){ c[f[1]]=inp.value; btUpdateResult(); });
+    inp.addEventListener('change',function(){ var patch={}; patch[f[1]]=inp.value.trim(); btSaveConfig(bt,patch); });
+  });
+  el.querySelectorAll('.bt-waves').forEach(function(b){
+    b.addEventListener('click',async function(){
+      var n=+b.dataset.n; if(n===c.waves) return;
+      var cut=BT_PLAYERS.filter(function(p){ return p.bt===bt&&p.wave>n; });
+      if(cut.length&&!await confirmDanger(cut.length+' player'+(cut.length===1?'':'s')+' in BT'+bt+' wave'+(c.waves-n>1?'s ':' ')+(n+1)+(c.waves-n>1?' to '+c.waves:'')+' will move to the Bench. Nobody is deleted.',{title:'Use '+n+' wave'+(n===1?'':'s'),confirmLabel:'Move to Bench',danger:false})) return;
+      if(cut.length){
+        var pos=btNextPos(bt,0);
+        var r=await sb.from('bear_trap_players').update({bt:null,wave:null,pos:pos}).eq('bt',bt).gt('wave',n);
+        if(r.error){ toast('Error: '+r.error.message); btLoad(); return; }
+        cut.forEach(function(p){ p.bt=null; p.wave=null; p.pos=pos; });
+      }
+      if(await btSaveConfig(bt,{waves:n})) renderBearTrapContent();
+    });
+  });
+  document.getElementById('btImport').addEventListener('click',function(){ btOpenImport(bt); });
+}
+
+function btOpenPlayerSheet(p){
+  var rows=[1,2].map(function(b){
+    var c=BT_CONFIG[b], btns='';
+    for(var w=1;w<=c.waves;w++){
+      var here=p.bt===b&&p.wave===w;
+      btns+='<button class="tog bt-mv" data-bt="'+b+'" data-w="'+w+'"'+(here?' disabled':'')+' style="border-color:'+(here?'rgba(127,176,201,.6)':'var(--b2)')+';background:'+(here?'rgba(127,176,201,.12)':'transparent')+';color:var(--t);">W'+w+'</button>';
+    }
+    return '<div style="font-size:12px;font-weight:800;color:var(--t2);margin:10px 0 6px;">BT'+b+' · '+escHtml(c.time_utc)+' UTC</div>'+
+      '<div class="bt-move-grid">'+btns+'</div>';
+  }).join('');
+  var m=openModal({
+    title:escHtml(p.name),
+    size:'sm',
+    bodyHtml:
+      '<div style="font-size:12px;color:var(--t2);">Now in '+btWhere(p)+'. Move to:</div>'+
+      rows+
+      (p.bt!=null?'<button class="btn btn-g bt-mv" data-bt="0" data-w="0" style="margin-top:12px;">🪑 Move to Bench</button>':'')+
+      '<label class="lbl" for="btRenameInp" style="margin-top:16px;">Fix spelling</label>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<input class="inp" id="btRenameInp" value="'+escHtml(p.name)+'" maxlength="40" autocomplete="off">'+
+        '<button class="btn btn-g btn-sm" id="btRenameOk">Save</button>'+
+      '</div>'+
+      '<button class="btn btn-d" id="btRemove" style="margin-top:16px;">Remove from the list</button>'
+  });
+  m.body.querySelectorAll('.bt-mv').forEach(function(b){
+    b.addEventListener('click',async function(){
+      var bt=+b.dataset.bt, w=+b.dataset.w;
+      m.close();
+      if(await btMove(p,bt||p.bt||1,w)){ toast(p.name+' → '+btWhere(p)); renderBearTrapContent(); }
+    });
+  });
+  var ren=m.body.querySelector('#btRenameInp');
+  async function rename(){
+    var v=ren.value.trim().slice(0,40);
+    if(!v||v===p.name){ m.close(); return; }
+    var ex=btFind(v);
+    if(ex&&ex!==p){ toast(ex.name+' is already in '+btWhere(ex)); return; }
+    var r=await sb.from('bear_trap_players').update({name:v}).eq('id',p.id);
+    if(r.error){ toast('Error: '+r.error.message); return; }
+    p.name=v; m.close(); renderBearTrapContent(); toast('✅ Saved');
+  }
+  m.body.querySelector('#btRenameOk').addEventListener('click',rename);
+  ren.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); rename(); } });
+  m.body.querySelector('#btRemove').addEventListener('click',async function(){
+    var r=await sb.from('bear_trap_players').delete().eq('id',p.id);
+    if(r.error){ toast('Error: '+r.error.message); return; }
+    BT_PLAYERS=BT_PLAYERS.filter(function(x){ return x!==p; });
+    m.close(); renderBearTrapContent(); toast(p.name+' removed');
+  });
+}
+
+function btOpenImport(bt){
+  var m=openModal({
+    title:'Paste BT'+bt+' announcement',
+    bodyHtml:
+      '<div style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px;">Paste the whole announcement. The 📌Wave lines fill the waves, and the time, delay, join max and heroes are read too. Players now in BT'+bt+' who are not in the text go to the Bench. Nobody is deleted.</div>'+
+      '<textarea class="inp" id="btImportTxt" rows="9" style="resize:vertical;font-size:13px;"></textarea>',
+    actions:[
+      {label:'Cancel',kind:'ghost'},
+      {label:'Import',onClick:function(close){ btRunImport(bt,document.getElementById('btImportTxt').value,close); }}
+    ]
+  });
+  return m;
+}
+async function btRunImport(bt,txt,close){
+  var res=btParseAnnouncement(txt);
+  if(!res.maxWave){ toast('No 📌Wave lines found'); return; }
+  var seen={}, keep=[], create=[], moveOther=0;
+  for(var w=1;w<=res.maxWave;w++){
+    var pos=1;
+    (res.waves[w]||[]).forEach(function(n){
+      var k=btKey(n); if(seen[k]) return; seen[k]=1;
+      var ex=btFind(n);
+      if(ex){ if(ex.bt&&ex.bt!==bt) moveOther++; keep.push({id:ex.id,name:ex.name,bt:bt,wave:w,pos:pos++}); }
+      else create.push({name:n,bt:bt,wave:w,pos:pos++});
+    });
+  }
+  var keepIds={}; keep.forEach(function(x){ keepIds[x.id]=1; });
+  var toBench=BT_PLAYERS.filter(function(p){ return p.bt===bt&&!keepIds[p.id]; });
+  var other=bt===1?2:1;
+  var msg=(create.length+keep.length)+' players go into '+res.maxWave+' wave'+(res.maxWave===1?'':'s')+' of BT'+bt+'.'+
+    (create.length?'\n• '+create.length+' new':'')+
+    (moveOther?'\n• '+moveOther+' move over from BT'+other:'')+
+    (toBench.length?'\n• '+toBench.length+' now in BT'+bt+' go to the Bench':'');
+  if(!await confirmDanger(msg,{title:'Import BT'+bt,confirmLabel:'Import',danger:false})) return;
+  close();
+  var r;
+  if(toBench.length){
+    var bpos=btNextPos(bt,0);
+    r=await sb.from('bear_trap_players').update({bt:null,wave:null,pos:bpos}).in('id',toBench.map(function(p){ return p.id; }));
+    if(r.error){ toast('Error: '+r.error.message); btLoad(); return; }
+  }
+  if(keep.length){
+    r=await sb.from('bear_trap_players').upsert(keep,{onConflict:'id'});
+    if(r.error){ toast('Error: '+r.error.message); btLoad(); return; }
+  }
+  if(create.length){
+    r=await sb.from('bear_trap_players').insert(create);
+    if(r.error){ toast('Error: '+r.error.message); btLoad(); return; }
+  }
+  var patch={waves:res.maxWave};
+  if(res.time) patch.time_utc=res.time;
+  if(res.delay!=null) patch.delay_min=res.delay;
+  if(res.joinMax!=null) patch.join_max=res.joinMax;
+  if(res.heroes!=null) patch.heroes=res.heroes;
+  await btSaveConfig(bt,patch);
+  BT_TAB=bt;
+  await btLoad();
+  toast('✅ BT'+bt+' imported');
 }
 
 function warHeroName(id){
