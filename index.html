@@ -928,7 +928,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v48'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v49'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -2188,11 +2188,30 @@ function getWinnerAutoOverride(){
   if(!o||!Array.isArray(o.sh)||o.week!==ROT_STATE.week_start.slice(0,10)) return null;
   return o.sh.filter(function(n){ return n>=1&&n<=4; }).slice(0,2);
 }
+// Last week's SHs still free this week, before the winner has made its pick.
+function getWinnerAutoCandidates(){
+  var w=getSvsWinner(); if(!w) return [];
+  var sels=getCurrentWeekSels();
+  if(sels.some(function(s){ return s.alliance===w; })) return [];
+  var taken=selTakenMaps(sels).sh;
+  return getWinnerPrevSH().filter(function(n){ return !taken[n]; });
+}
 // SHs held for the winner's auto-registration until it has made its pick.
+// With 2 free candidates both stay open (tagged auto-signed); once one is
+// taken the last one is held, so the winner always keeps one.
+// An admin override stays fully locked.
 function getWinnerReservedSH(){
   var w=getSvsWinner(); if(!w) return [];
   if(getCurrentWeekSels().some(function(s){ return s.alliance===w; })) return [];
-  return getWinnerAutoOverride()||getWinnerPrevSH();
+  var o=getWinnerAutoOverride(); if(o) return o;
+  var c=getWinnerAutoCandidates();
+  return c.length===1?c:[];
+}
+// Open SHs shown as the winner's auto-signed ones (still pickable by others).
+function getWinnerAutoTagSH(){
+  if(!getSvsWinner()||getWinnerAutoOverride()) return [];
+  var c=getWinnerAutoCandidates();
+  return c.length>=2?c:[];
 }
 function selTakenMaps(sels){
   var sh={}, ft={};
@@ -2282,7 +2301,7 @@ function renderRotBoard(rc){
 
   // Build taken maps
   var tm=selTakenMaps(sels), takenSH=tm.sh, takenFT=tm.ft;
-  var winner=getSvsWinner(), reservedSH=getWinnerReservedSH();
+  var winner=getSvsWinner(), reservedSH=getWinnerReservedSH(), autoTagSH=getWinnerAutoTagSH();
 
   // Summary card: window status + whose turn it is, in one place.
   var winStatus = getSelectionWindowStatus();
@@ -2318,6 +2337,7 @@ function renderRotBoard(rc){
       '<div class="rot-loc-name">SH '+i+'</div>'+
       (ally?'<div class="rot-loc-alliance" style="color:'+color+';">'+ally+'</div>':
         isRes?'<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[winner]||'var(--ac)')+';">'+winner+' · reserved</div>':
+        autoTagSH.includes(i)?'<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[winner]||'var(--ac)')+';">'+winner+' · auto-signed</div>':
         '<div class="rot-loc-alliance rot-loc-avail">Available</div>')+
       (reward?'<div class="rot-loc-reward">'+reward+'</div>':'')+
       adminBtn+
@@ -2574,6 +2594,8 @@ function renderRotSelect(rc){
   var canSH=isTop4||isWinner;
   // Other alliances can't take the SH held for the winner's auto-registration.
   var reservedSH=isWinner?[]:getWinnerReservedSH();
+  // Winner's 2 auto-signed SHs: others may take one, then the other is held.
+  var autoTagSH=isWinner?[]:getWinnerAutoTagSH();
   // Winner: last week's SH(s) that are still free can be this week's auto-registration.
   var autoOpts=isWinner?getWinnerPrevSH().filter(function(n){ return !takenSH[n]; }):[];
   // Super admin override for this week replaces last week's SH(s) and the choice.
@@ -2598,6 +2620,8 @@ function renderRotSelect(rc){
       autoOpts.length===1?'🏆 SvS winner: SH '+autoOpts[0]+' auto-registers from last week. Pick 1 more Stronghold and 2 Forts.':
       autoOpts.length===2?'🏆 SvS winner: you held SH '+autoOpts[0]+' and SH '+autoOpts[1]+' last week. Choose which one auto-registers this week, then pick 1 more Stronghold and 2 Forts.':
       '🏆 SvS winner: no Stronghold last week, so no auto-registration. Pick 1 Stronghold and 2 Forts.';
+  } else if(canSH&&autoTagSH.length===2){
+    hint='SH '+autoTagSH[0]+' and SH '+autoTagSH[1]+' are '+winner+'’s auto-signed Strongholds. You can take one; the other then stays with '+winner+'.';
   }
 
   function paint(){
@@ -2651,9 +2675,11 @@ function renderRotSelect(rc){
           '</div>';
         } else {
           var shOn=pickSH===i;
+          var isTag=autoTagSH.indexOf(i)>=0;
           shPickerHtml+='<div class="rot-loc rot-loc-sh '+(shOn?'rot-loc-mine':'rot-loc-free')+' pick-sh" data-sh="'+i+'">'+
             '<div class="rot-loc-name">SH '+i+'</div>'+
-            '<div class="rot-loc-alliance'+(shOn?'':' rot-loc-avail')+'" style="'+(shOn?'color:var(--gold);':'')+'">'+(shOn?'Selected ✓':'Tap to select')+'</div>'+
+            (isTag&&!shOn?'<div class="rot-loc-alliance" style="color:'+(ALLIANCE_COLORS[winner]||'var(--ac)')+';">'+winner+' · auto-signed</div>':
+            '<div class="rot-loc-alliance'+(shOn?'':' rot-loc-avail')+'" style="'+(shOn?'color:var(--gold);':'')+'">'+(shOn?'Selected ✓':'Tap to select')+'</div>')+
             rewardHtml+
           '</div>';
         }
@@ -4505,6 +4531,7 @@ function renderRotationGuideContent(rc){
     guideSection('🏆 SvS winner')+
     guideStep('•','The alliance with the most SvS points that month gets <strong>2 Strongholds + 2 Forts</strong> every week. It is marked 🏆 in the selection order.')+
     guideStep('•','In game you can only register for one Stronghold; the second comes from auto-registration on the Stronghold held last week. That Stronghold shows as <strong>reserved</strong> and no other alliance can pick it.')+
+    guideStep('•','If the winner held 2 Strongholds last week, both show as <strong>auto-signed</strong> and alliances picking before it can still take one of them. The other one is then reserved for the winner.')+
     guideStep('•','On its turn the winner picks 1 more Stronghold and 2 Forts. If it held 2 Strongholds last week, it first chooses which one auto-registers. With no Stronghold last week, it picks 1 Stronghold.')+
     guideStep('•','If no Stronghold is left when a Top 4 alliance picks, it confirms with a Fort only.')+
     '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Selections are only open on the scheduled window (see the countdown banner) unless an admin force-opens it.</div>';
