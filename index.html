@@ -317,6 +317,9 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 /* Login intro: first open after a sign-out wave shows only seal, title and spiral */
 body.auth-intro #authFx{opacity:.9;}
 .auth.intro > :not(.auth-seal):not(.auth-title):not(.auth-state){opacity:0;pointer-events:none;}
+/* The title waits for the "2901" dots to land on it */
+.auth.intro .auth-title{opacity:0;transition:opacity .4s ease;}
+.auth.intro.title-in .auth-title{opacity:1;}
 .auth.intro-out > :not(.auth-seal):not(.auth-title):not(.auth-state){animation:authReveal .6s var(--ease) both;}
 @keyframes authReveal{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 .home-tile .home-eyebrow{color:var(--t3);font-size:10px;}
@@ -986,7 +989,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v53'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v54'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -2031,13 +2034,48 @@ function createSpiral(canvas,opts){
     if(time>CHANGE) dot(0,CAM_Z*DOT_Y/ZOOM,TRAVEL,2.5,camZ);
     ctx.fill();
   }
+  // Login intro: extra dots that swirl in from the spiral, form a big "2901",
+  // hold, then shrink into the "2901" of the page title and fade. Screen px.
+  // pts: [{sx,sy,bx,by,tx,ty,d,turn,hi}], A = swirl-in, B = hold, C = settle (ms).
+  var asm=null, A=1700, B=500, C=800;
+  function asmEase(x){ return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2; }
+  function drawAssembly(now){
+    if(!asm){ window.__assembleCount=0; return; }
+    var e=now-asm.t0;
+    if(e>=A+B+C){ asm=null; window.__assembleCount=0; return; }
+    window.__assembleCount=asm.pts.length;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    var cx=asm.cx, cy=asm.cy, R=asm.r;
+    var pulse=e>A&&e<A+B?1+.15*Math.sin((e-A)/B*Math.PI*2):1;
+    var q=e>A+B?asmEase(constrain((e-A-B)/C,0,1)):0;
+    for(var pass=0;pass<2;pass++){
+      ctx.fillStyle=pass?'#f6e7c8':'#e3bc6a'; ctx.beginPath();
+      for(var i=0;i<asm.pts.length;i++){
+        var s=asm.pts[i]; if(s.hi!==pass) continue;
+        var x,y,al=1,rad=R*pulse;
+        if(e<A){
+          var k=constrain((e-s.d)/(A-s.d),0,1); if(k<=0) continue;
+          var kk=asmEase(k), rr=lerp(s.r0,s.r1,kk), aa=lerp(s.a0,s.a1,kk);
+          x=cx+rr*Math.cos(aa); y=cy+rr*Math.sin(aa); al=Math.min(1,k*5); rad=R*(.6+.4*kk);
+        } else {
+          // stay bright while flying, fade only over the last quarter as the title shows
+          x=lerp(s.bx,s.tx,q); y=lerp(s.by,s.ty,q); rad=lerp(R*pulse,R*.45,q); al=q<.75?1:1-(q-.75)/.25;
+        }
+        if(al<=.02) continue;
+        rad*=al;
+        ctx.moveTo(x+rad,y); ctx.arc(x,y,rad,0,Math.PI*2);
+      }
+      ctx.fill();
+    }
+  }
   function frame(now){
     if(!t0) t0=now;
     // A dialog over the login screen (minister apps, rules) hides the backdrop: skip the work
-    if(!document.querySelector('.modal-overlay')) draw(((now-t0)%LOOP)/LOOP);
+    if(!document.querySelector('.modal-overlay')){ draw(((now-t0)%LOOP)/LOOP); drawAssembly(now); }
     raf=requestAnimationFrame(frame);
   }
   function resize(){
+    if(asm&&canvas.clientWidth!==w) asm=null; // rotated mid-intro: drop the dots, the intro still ends normally
     w=canvas.clientWidth; h=canvas.clientHeight; dpr=Math.min(window.devicePixelRatio||1,2);
     canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
     scale=constrain(Math.min(w,h)/420,1,2.2);
@@ -2049,6 +2087,23 @@ function createSpiral(canvas,opts){
   }
   return {
     canvas:canvas,
+    // big: [{x,y}] dots of the big "2901", title: same count, where each lands.
+    // Starts from random points on the spiral path, swirling 1 to 1.5 turns. null stops it.
+    assemble:function(big,title,dotR){
+      if(!big){ asm=null; return; }
+      var cx=w/2, cy=h/2, pts=[];
+      for(var i=0;i<big.length;i++){
+        var p=Math.random(), th=2*Math.PI*6*Math.sqrt(p), sr=170*Math.sqrt(p)*scale;
+        var sx=cx+sr*Math.cos(th)+(Math.random()-.5)*12, sy=cy+sr*Math.sin(th)+DOT_Y*scale;
+        var a0=Math.atan2(sy-cy,sx-cx), a1=Math.atan2(big[i].y-cy,big[i].x-cx);
+        var turn=(1+Math.random()*.5)*Math.PI*2;
+        var da=((a1-a0)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+        pts.push({r0:Math.hypot(sx-cx,sy-cy),a0:a0,r1:Math.hypot(big[i].x-cx,big[i].y-cy),a1:a0+da+turn,
+          bx:big[i].x,by:big[i].y,tx:title[i].x,ty:title[i].y,d:Math.random()*500,hi:Math.random()<.35?1:0});
+      }
+      asm={t0:performance.now(),pts:pts,cx:cx,cy:cy,r:dotR||1.6};
+      if(still) asm=null;
+    },
     start:function(){
       if(running) return; running=true;
       window.addEventListener('resize',resize); document.addEventListener('visibilitychange',onVis);
@@ -2078,27 +2133,78 @@ function authFx(on){
 // or right after signing out), the name step first shows only the seal, title
 // and spiral for 2.5 s, then the form fades in. A tap or key press skips it.
 // Skipped for reduced motion. Going back from PIN to name does not replay it.
-var AUTH_INTRO_UNTIL=0, _authIntroT=0, _authIntroChecked=false;
+// The spiral's dots swirl into a big "2901" (see createSpiral.assemble), hold,
+// then settle into the "2901" of the title, which fades in as they land.
+var AUTH_INTRO_UNTIL=0, _authIntroT=0, _authTitleT=0, _authIntroChecked=false, AUTH_TITLE_IN=false;
+var AUTH_INTRO_MS=3000, AUTH_TITLE_MS=2650; // title fades in as the dots arrive (createSpiral A+B+C = 3000)
 function authIntroOn(){ return AUTH_INTRO_UNTIL>Date.now(); }
 function authIntroStart(){
   if(_authIntroChecked) return; _authIntroChecked=true;
   var still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(still) return;
-  AUTH_INTRO_UNTIL=Date.now()+2500;
+  AUTH_INTRO_UNTIL=Date.now()+AUTH_INTRO_MS+400; AUTH_TITLE_IN=false;
   document.body.classList.add('auth-intro');
-  _authIntroT=setTimeout(authIntroEnd,2500);
   document.addEventListener('pointerdown',authIntroEnd,true);
   document.addEventListener('keydown',authIntroEnd,true);
+  // Wait up to 400 ms for Cinzel so the dots draw the real title face.
+  var fontReady=document.fonts&&document.fonts.load?document.fonts.load('700 100px Cinzel').catch(function(){}):Promise.resolve();
+  Promise.race([fontReady,new Promise(function(r){ setTimeout(r,400); })]).then(function(){
+    if(!AUTH_INTRO_UNTIL) return; // skipped meanwhile
+    AUTH_INTRO_UNTIL=Date.now()+AUTH_INTRO_MS;
+    _authIntroT=setTimeout(authIntroEnd,AUTH_INTRO_MS);
+    _authTitleT=setTimeout(function(){
+      AUTH_TITLE_IN=true;
+      var a=document.querySelector('.auth.intro'); if(a) a.classList.add('title-in');
+    },AUTH_TITLE_MS);
+    try{ authAssemble(); }catch(e){ reportError('authAssemble: '+e.message); }
+  });
+}
+// Dots of "2901" drawn big near the spiral centre, and for each dot the matching
+// spot inside the "2901" of .auth-title, so the big word shrinks onto it.
+function authAssemble(){
+  if(!_authFx) return;
+  var titleEl=document.querySelector('.auth-title');
+  var node=titleEl&&titleEl.firstChild, idx=node?node.textContent.indexOf('2901'):-1;
+  if(idx<0) return;
+  var range=document.createRange(); range.setStart(node,idx); range.setEnd(node,idx+4);
+  var tb=range.getBoundingClientRect(); if(!tb.width) return;
+  var vw=window.innerWidth, vh=window.innerHeight, phone=vw<700;
+  var font=function(px){ return '700 '+px+'px Cinzel, Georgia, serif'; };
+  var off=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+  off.font=font(100);
+  var bw=Math.min(vw*.72,520), fs=100*bw/off.measureText('2901').width;
+  var cw=Math.ceil(bw)+4, ch=Math.ceil(fs*1.15);
+  off.canvas.width=cw; off.canvas.height=ch;
+  off.font=font(fs); off.textBaseline='middle'; off.fillStyle='#fff';
+  off.fillText('2901',2,ch/2);
+  var data=off.getImageData(0,0,cw,ch).data, max=phone?700:1100, gap=2, pts;
+  do{
+    gap++; pts=[];
+    for(var y=0;y<ch;y+=gap) for(var x=0;x<cw;x+=gap){ if(data[(y*cw+x)*4+3]>128) pts.push({x:x,y:y}); }
+  }while(pts.length>max&&gap<12);
+  // Map the dots' own glyph box onto the title's "2901" with one scale, centred,
+  // so the word keeps its shape and lands exactly on the title text.
+  var minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+  pts.forEach(function(p){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; });
+  var gx=(minX+maxX)/2, gy=(minY+maxY)/2, sc=tb.width/Math.max(1,maxX-minX+gap);
+  var ox=vw/2-gx, oy=vh*.47-gy, tcx=tb.left+tb.width/2, tcy=tb.top+tb.height/2;
+  var big=[], title=[];
+  pts.forEach(function(p){
+    big.push({x:ox+p.x,y:oy+p.y});
+    title.push({x:tcx+(p.x-gx)*sc,y:tcy+(p.y-gy)*sc});
+  });
+  _authFx.assemble(big,title,phone?Math.max(1.3,gap*.42):Math.max(1.6,gap*.42));
 }
 function authIntroEnd(){
   if(!AUTH_INTRO_UNTIL) return;
-  AUTH_INTRO_UNTIL=0; clearTimeout(_authIntroT);
+  AUTH_INTRO_UNTIL=0; clearTimeout(_authIntroT); clearTimeout(_authTitleT); AUTH_TITLE_IN=false;
+  if(_authFx) _authFx.assemble(null);
   document.removeEventListener('pointerdown',authIntroEnd,true);
   document.removeEventListener('keydown',authIntroEnd,true);
   document.body.classList.remove('auth-intro');
   var a=document.querySelector('.auth.intro');
   if(!a) return;
-  a.classList.remove('intro'); a.classList.add('intro-out'); // fade plays once, re-renders do not repeat it
+  a.classList.remove('intro','title-in'); a.classList.add('intro-out'); // fade plays once, re-renders do not repeat it
   var inp=document.getElementById('nameInp');
   if(inp&&!minIsVisible()) inp.focus();
 }
@@ -2136,7 +2242,7 @@ function renderAuth(app){
   var rulesLinkHtml='<div style="text-align:center;margin-top:14px;"><button id="stateRulesLink" style="background:none;border:none;color:rgba(196,155,92,.65);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:Manrope,sans-serif;">📜 View State Rules</button></div>';
   // Public, no-login module: big entry button under the auth card
   if(AUTH_STEP==='pin-login'&&minOn) ministerBtnHtml=minCtaHtml('SvS Minister Applications','No login needed · see free times & apply');
-  app.innerHTML='<div class="auth'+(stepChanged?' gate-in':'')+(intro?' intro':'')+'">'+inner+ministerBtnHtml+rulesLinkHtml+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
+  app.innerHTML='<div class="auth'+(stepChanged?' gate-in':'')+(intro?' intro'+(AUTH_TITLE_IN?' title-in':''):'')+'">'+inner+ministerBtnHtml+rulesLinkHtml+'</div><div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
   if(AUTH_STEP==='name'){
     var inp=document.getElementById('nameInp'); inp.value=NAME_INP;
     inp.addEventListener('input',function(e){ NAME_INP=e.target.value; });
