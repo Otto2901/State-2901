@@ -773,6 +773,15 @@ function isSvsLogViewer(name){ return isSuperAdmin(name)||hasRole(name,'svslog_v
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
+// Raise SESSION_EPOCH to sign everyone out once: a signed-in device whose
+// session was made under an older number is signed out on its next app open
+// (token revoked too). Pending sign-ups have no token and are left alone.
+var SESSION_EPOCH = 1;
+if(SESSION&&SESSION.token&&!((SESSION.epoch||0)>=SESSION_EPOCH)){
+  try{ createSb(SESSION.token).rpc('end_session').then(function(){},function(){}); }catch(e){}
+  SESSION=null;
+  try{ localStorage.removeItem('wos-session'); localStorage.removeItem('s2901-view'); }catch(e){}
+}
 if(SESSION&&SESSION.token) sb=createSb(SESSION.token);
 var AUTH_STEP = 'name';
 var NAME_INP  = '';
@@ -972,7 +981,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v50'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v51'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1213,7 +1222,7 @@ async function doConfirmPin(){
       loginRes=await resp.json();
     }catch(e){ AUTH_ERR='Network error. Try again.'; PIN_INP=''; render(); return; }
     if(!resp.ok||!loginRes.token){ AUTH_ERR=loginRes.error||'Wrong PIN. Try again.'; PIN_INP=''; render(); return; }
-    SESSION={name:loginRes.name,token:loginRes.token,isAdmin:loginRes.name===ADMIN_NAME};
+    SESSION={name:loginRes.name,token:loginRes.token,isAdmin:loginRes.name===ADMIN_NAME,epoch:SESSION_EPOCH};
     sb=createSb(SESSION.token);
     localStorage.setItem('wos-session',JSON.stringify(SESSION));
   }
