@@ -515,6 +515,38 @@ body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradi
 .bt-chips{display:flex;flex-wrap:wrap;gap:6px;}
 .bt-chip{display:inline-flex;align-items:center;min-height:34px;max-width:100%;padding:6px 12px;border-radius:17px;background:var(--surface2);border:1px solid var(--b);color:var(--t);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left;overflow-wrap:anywhere;}
 .bt-chip:active{border-color:var(--b-act);}
+/* SvS Prep Records */
+.spr-res{display:inline-block;flex-shrink:0;font-size:10px;font-weight:800;letter-spacing:.6px;padding:3px 8px;border-radius:7px;line-height:1.3;}
+.spr-res.won{color:#a6cf9c;background:rgba(122,156,114,.14);border:1px solid rgba(122,156,114,.38);}
+.spr-res.lost{color:#dd948a;background:rgba(181,85,74,.12);border:1px solid rgba(181,85,74,.34);}
+.spr-row-hd{display:flex;align-items:center;gap:8px;}
+.spr-prev{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:7px;font-size:12px;}
+.spr-prev-name{font-weight:700;color:var(--t);overflow-wrap:anywhere;}
+.spr-prev-score{color:var(--t2);font-variant-numeric:tabular-nums;}
+.spr-dot{color:var(--t3);margin:0 2px;}
+.spr-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.spr-head-t{font-size:14px;font-weight:800;color:var(--t);}
+.spr-head-s{font-size:12px;color:var(--t3);margin-top:3px;}
+.spr-rank{display:flex;align-items:center;gap:10px;padding:10px 14px;min-height:46px;position:relative;}
+.spr-rank+.spr-rank::before{content:'';position:absolute;top:0;right:0;left:44px;height:1px;background:var(--b);}
+.spr-rank.hit{background:rgba(169,184,119,.09);}
+.spr-pos{width:22px;flex-shrink:0;text-align:center;font-size:13px;font-weight:800;color:var(--t3);font-variant-numeric:tabular-nums;}
+.spr-rank.top .spr-pos{color:#a9b877;}
+.spr-name{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--t);overflow-wrap:anywhere;}
+.spr-score{flex-shrink:0;font-size:14px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;}
+@media(min-width:760px){ .spr-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:0 20px;align-items:start;} }
+.spr-form-top{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;}
+.spr-frow{display:grid;gap:6px;align-items:center;margin-bottom:6px;}
+.spr-frow.al{grid-template-columns:18px minmax(0,1fr) minmax(0,1fr) 34px;}
+.spr-frow.pl{grid-template-columns:18px minmax(0,1.4fr) minmax(0,.8fr) minmax(0,1fr) 34px;}
+.spr-frow .inp{padding:10px 10px;font-size:14px;}
+.spr-fpos{font-size:12px;font-weight:800;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums;}
+@media(max-width:420px){
+  .spr-frow.pl{grid-template-columns:18px minmax(0,1fr) minmax(0,1fr) 34px;}
+  .spr-frow.pl .spr-pl-name{grid-column:2 / 5;}
+  .spr-frow.pl .spr-fpos{grid-row:1 / 3;}
+  .spr-frow.pl{padding-bottom:6px;border-bottom:1px solid var(--b);margin-bottom:8px;}
+}
 .bt-empty{font-size:12px;color:var(--t3);}
 .bt-add{display:flex;gap:8px;margin-top:10px;}
 .bt-add .inp{padding:9px 12px;font-size:13px;}
@@ -699,6 +731,7 @@ var ROLE_INFO = {
   presidency_admin: { label:'Presidency Admin', guideKey:'presidency', desc:'You can record SFC and SvS Supreme results, add past records, edit records, and reorder the presidency queues in the Presidency Ledger.' },
   minister_admin:   { label:'Minister Apps Admin', guideKey:'ministers', desc:'You can view SvS minister applications, add and edit entries, and assign or free time slots in Admin Panel › Ministers.' },
   troops_admin:     { label:'Troops Viewer',   guideKey:'troops',   desc:'You can view the troop level reports of players and export them as CSV in Admin Panel › Troops. View only.' },
+  svslog_viewer:    { label:'SvS Prep Records Viewer', guideKey:'svslog', desc:'You can open SvS Prep Records and see the top alliances and players of past SvS preparations. View only.' },
   moderator:       { label:'Moderator',       guideKey:null,       desc:'You have moderator status.' }
 };
 // One badge per role, coloured by kind: super admin gold, module admins
@@ -736,6 +769,7 @@ function isBearAdmin(name){ return isSuperAdmin(name)||hasRole(name,'bear_admin'
 function isPresidencyAdmin(name){ return isSuperAdmin(name)||hasRole(name,'presidency_admin'); }
 function isMinisterAdmin(name){ return isSuperAdmin(name)||hasRole(name,'minister_admin'); }
 function isTroopsAdmin(name){ return isSuperAdmin(name)||hasRole(name,'troops_admin'); }
+function isSvsLogViewer(name){ return isSuperAdmin(name)||hasRole(name,'svslog_viewer'); }
 
 // STATE
 var SESSION   = JSON.parse(localStorage.getItem('wos-session')||'null');
@@ -802,6 +836,14 @@ var BT_TAB     = 1;  // trap on screen: 1 | 2
 var BT_LOADED  = false; // reset each time the module is opened from Home
 var BT_ERR     = null;
 
+// SVS PREP RECORDS STATE — read by super admin + svslog_viewer, written by super admin only
+var SPR_RECORDS = []; // svs_prep_records rows, newest first
+var SPR_LOADED  = false; // reset each time the module is opened from Home
+var SPR_ERR     = null;
+var SPR_SEL     = null; // id of the record on screen, null = list
+var SPR_YEAR    = 'all';
+var SPR_Q       = '';
+
 // PRESIDENCY LEDGER STATE
 var PRES_QUEUES = {sfc:[], supreme:[]}; // presidency_queues: alliances in order, [0] = next up
 var PRES_RECORDS = []; // presidency_records
@@ -836,6 +878,7 @@ var MOD_COLORS = {
   warteam:   {grad:'linear-gradient(90deg,#8c4b4b,#c4756a)', icon:'linear-gradient(135deg,rgba(140,75,75,.3),rgba(196,117,106,.2))', text:'#c4756a'},
   rallytimer:{grad:'linear-gradient(90deg,#6b7a8f,#e3bc6a)', icon:'linear-gradient(135deg,rgba(107,122,143,.3),rgba(227,188,106,.2))', text:'#d8c48a'},
   beartrap:  {grad:'linear-gradient(90deg,#4f7489,#7fb0c9)', icon:'linear-gradient(135deg,rgba(79,116,137,.3),rgba(127,176,201,.2))', text:'#7fb0c9'},
+  svslog:    {grad:'linear-gradient(90deg,#6f7d48,#a9b877)', icon:'linear-gradient(135deg,rgba(111,125,72,.3),rgba(169,184,119,.2))', text:'#a9b877'},
   presidency:{grad:'linear-gradient(90deg,#8a6d3b,#d9c27a)', icon:'linear-gradient(135deg,rgba(138,109,59,.3),rgba(217,194,122,.2))', text:'#d9c27a'}
 };
 
@@ -848,6 +891,7 @@ var ICONS = {
   rallytimer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4M12 2v3"/>',
   beartrap:'<circle cx="5.5" cy="10" r="2"/><circle cx="9.5" cy="5.5" r="2"/><circle cx="14.5" cy="5.5" r="2"/><circle cx="18.5" cy="10" r="2"/><path d="M12 12c-3 0-6 3.5-6 6.2C6 20 7.4 21 9 21c1.2 0 2-.6 3-.6s1.8.6 3 .6c1.6 0 3-1 3-2.8C18 15.5 15 12 12 12z"/>',
   presidency:'<path d="M3 7l4.5 5L12 5l4.5 7L21 7l-2 11H5z"/><path d="M5 21h14"/>',
+  svslog:'<path d="M2 21h20"/><path d="M9 21v-9h6v9"/><path d="M3 21v-5h6M15 21v-7h6v7"/><path d="M12 3l1.1 2.2 2.4.4-1.7 1.7.4 2.4L12 8.6l-2.2 1.1.4-2.4-1.7-1.7 2.4-.4z"/>',
   ministers:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M14 14h2M8 17h2"/>',
   rules:'<path d="M8 21h11a2 2 0 002-2v-1H10v1a2 2 0 01-4 0V5a2 2 0 00-2-2h12a2 2 0 012 2v13"/><path d="M10 8h5M10 12h5"/>',
   library:'<path d="M2 4h6a4 4 0 014 4v13a3 3 0 00-3-3H2z"/><path d="M22 4h-6a4 4 0 00-4 4v13a3 3 0 013-3h7z"/>',
@@ -928,7 +972,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v49'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v50'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1216,7 +1260,7 @@ var _lastView=null;
 // Phones discard a backgrounded PWA and reload it on return. Remember the
 // current screen so init() can put the user back where they were.
 var VIEW_KEY='s2901-view', VIEW_MAX_AGE=12*3600*1000;
-var VIEW_MODULES=['rotation','transfer','crazyjoe','warteam','rallytimer','beartrap','presidency','rules','library','ministers','adminpanel'];
+var VIEW_MODULES=['rotation','transfer','crazyjoe','warteam','rallytimer','beartrap','svslog','presidency','rules','library','ministers','adminpanel'];
 function saveViewState(y){
   if(!SESSION||SESSION.pending||SESSION.needsProfile) return;
   try{
@@ -1296,6 +1340,7 @@ function renderView(){
   if(MODULE==='warteam')   renderWarTeamApp(app);
   if(MODULE==='rallytimer') renderRallyTimerApp(app);
   if(MODULE==='beartrap')  renderBearTrapApp(app);
+  if(MODULE==='svslog')    renderSvsLogApp(app);
   if(MODULE==='presidency') renderPresidencyApp(app);
   if(MODULE==='rules')     renderRulesApp(app);
   if(MODULE==='library')   renderLibraryApp(app);
@@ -1525,6 +1570,8 @@ function homeModules(){
       go:open('rallytimer')},
     isBearAdmin(SESSION.name)&&{id:'goBear',mod:'beartrap',group:'Events',key:'beartrap',color:MOD_COLORS.beartrap.text,title:'Bear Trap',short:'Bear Trap',sub:'Hunt waves for BT1 & BT2',
       go:open('beartrap',function(){ BT_LOADED=false; })},
+    isSvsLogViewer(SESSION.name)&&{id:'goSvsLog',mod:'svslog',group:'Events',key:'svslog',color:MOD_COLORS.svslog.text,title:'SvS Prep Records',short:'Prep Records',sub:'Top alliances & players by month',
+      go:open('svslog',function(){ SPR_LOADED=false; SPR_SEL=null; SPR_Q=''; })},
     minIsVisible()&&{id:'goMinisters',mod:'ministers',group:'Events',key:'ministers',color:'#d4a95e',title:'SvS Minister Applications',short:'Ministers',sub:'Free times & apply for a minister slot',
       go:open('ministers',function(){ MIN_PUB_TAB='avail'; })},
     {id:'goPresidency',mod:'presidency',group:'State',key:'presidency',color:MOD_COLORS.presidency.text,title:'Presidency Ledger',short:'Presidency',sub:'SFC & SvS Supreme rotation',
@@ -4150,6 +4197,7 @@ var ROLE_LIST=[
   {role:'presidency_admin', icon:'presidency', color:'#d9c27a', short:'Records & queues in the Presidency Ledger'},
   {role:'minister_admin',   icon:'ministers',  color:'#d4a95e', short:'Minister applications & time slots'},
   {role:'troops_admin',     icon:'troops',     color:'#a3b3c2', short:'Views troop reports (read only)'},
+  {role:'svslog_viewer',    icon:'svslog',     color:'#a9b877', short:'Views SvS Prep Records (read only)'},
   {role:'library_admin',    icon:'library',    color:'#c4a876', short:'Views & edits the Library'}
 ];
 function renderAdminRoles(ac){
@@ -4493,6 +4541,7 @@ var GUIDE_CONTENT = {
   warteam:  { title:'⚔️ War Team Builder — How to use',   render: renderWarTeamGuideContent },
   rallytimer:{ title:'⏱️ Rally Timer — How to use',       render: renderRallyTimerGuideContent },
   beartrap:  { title:'🐻 Bear Trap — How to use',         render: renderBearTrapGuideContent },
+  svslog:    { title:'🏅 SvS Prep Records — How to use',  render: renderSvsLogGuideContent },
   presidency:{ title:'👑 Presidency Ledger — How to use', render: renderPresidencyGuideContent },
   ministers: { title:'👑 SvS Minister Applications — How to use', render: renderMinisterGuideContent },
   troops:    { title:'🪖 Troops — How to use', render: renderTroopsGuideContent },
@@ -4606,6 +4655,22 @@ function renderBearTrapGuideContent(rc){
     guideStep(6,'<strong>Copy</strong> puts the announcement on the clipboard, ready for alliance chat. <strong>Copy BT1 + BT2</strong> copies both traps at once.')+
     guideStep(7,'<strong>Paste announcement</strong> fills a trap from an old announcement text. Players in that trap who are not in the text go to the Bench. Nobody is deleted.')+
     '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Only the Super Admin and Bear Trap Admins can open this module. All of them share the same lists, and every change is saved right away.</div>';
+}
+function renderSvsLogGuideContent(rc){
+  var html=
+    guideSection('How it works')+
+    guideStep(1,'Each record is one <strong>SvS preparation</strong>: its date, the <strong>opponent state</strong>, whether we <strong>won or lost</strong> the prep, and the top <strong>alliances</strong> and <strong>players</strong> by total points.')+
+    guideStep(2,'The newest record is at the top. Tap a record to see both ranked lists with the full points.')+
+    guideStep(3,'Use <strong>Search</strong> to find every record a player or alliance appears in, and the year buttons to narrow the list.');
+  if(isSuperAdmin(SESSION.name)){
+    html+=guideSection('Super Admin','#a9b877')+
+      guideStep(1,'<strong>+ New record</strong> opens the form. Add as many alliance and player rows as you need; empty rows are ignored.')+
+      guideStep(2,'Points can be typed as <strong>12,540,300</strong>, <strong>12.5M</strong> or <strong>850K</strong>. Both lists are sorted by points when you save.')+
+      guideStep(3,'Picking a registered player fills in their alliance. Players and alliances from other states can be typed freely.')+
+      guideStep(4,'Open a record to <strong>Edit</strong> or <strong>Delete</strong> it. Every change is kept in Admin Panel › Logs.');
+  }
+  html+='<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Only the Super Admin and players given the SvS Prep Records Viewer role can open this module. Viewers can read it but not change it.</div>';
+  rc.innerHTML=html;
 }
 
 function renderPresidencyGuideContent(rc){
@@ -7575,6 +7640,335 @@ async function btRunImport(bt,txt,close){
   BT_TAB=bt;
   await btLoad();
   toast('✅ BT'+bt+' imported');
+}
+
+// ── SVS PREP RECORDS ─────────────────────────────────────────
+// Monthly log of the top alliances and players by total points in the SvS
+// preparation phase. Super admin + svslog_viewer read it, only the super admin
+// writes. Each record keeps its two ranked lists as JSON inside the row.
+
+// "12,540,300" / "12.540.300" -> 12540300, "12.5M" / "12,5m" -> 12500000,
+// "850K" -> 850000. Returns null when it is not a number.
+function sprParseScore(s){
+  s=String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,'');
+  if(!s) return null;
+  var m=s.match(/^([\d.,]+)([kmb])?$/);
+  if(!m) return null;
+  var num;
+  if(m[2]){
+    if((m[1].match(/[.,]/g)||[]).length>1) return null;
+    num=parseFloat(m[1].replace(',','.'))*{k:1e3,m:1e6,b:1e9}[m[2]];
+  } else {
+    num=parseFloat(m[1].replace(/[.,]/g,''));
+  }
+  if(!isFinite(num)||num<0) return null;
+  return Math.round(num);
+}
+function sprFmtFull(n){ return Number(n||0).toLocaleString('en-US'); }
+function sprFmtShort(n){
+  n=Number(n||0);
+  function t(x){ return String(+x.toFixed(x<10?2:1)); }
+  if(n>=1e9) return t(n/1e9)+'B';
+  if(n>=1e6) return t(n/1e6)+'M';
+  if(n>=1e3) return t(n/1e3)+'K';
+  return String(n);
+}
+function sprFind(id){ return SPR_RECORDS.find(function(r){ return String(r.id)===String(id); })||null; }
+function sprSortRecords(){
+  SPR_RECORDS.sort(function(a,b){ return String(b.prep_date).localeCompare(String(a.prep_date))||String(b.created_at).localeCompare(String(a.created_at)); });
+}
+function sprResultChip(res){
+  if(res!=='won'&&res!=='lost') return '';
+  var won=res==='won';
+  return '<span class="spr-res '+(won?'won':'lost')+'">'+(won?'WON':'LOST')+'</span>';
+}
+function sprVs(r){ return r.opponent_state?'vs #'+r.opponent_state:''; }
+// Lowercased name match used by search.
+function sprMatches(r,q){
+  if(!q) return true;
+  function hit(x){ return String(x||'').toLowerCase().indexOf(q)>=0; }
+  return (r.alliances||[]).some(function(a){ return hit(a.name); })||
+    (r.players||[]).some(function(p){ return hit(p.name)||hit(p.alliance); })||
+    hit(r.opponent_state);
+}
+
+async function sprLoad(){
+  SPR_LOADED=true;
+  var r=await sb.from('svs_prep_records').select('*').order('prep_date',{ascending:false});
+  if(r.error){ SPR_ERR=r.error.message; }
+  else { SPR_ERR=null; SPR_RECORDS=r.data||[]; sprSortRecords(); }
+  if(SPR_SEL&&!sprFind(SPR_SEL)) SPR_SEL=null;
+  if(MODULE==='svslog') render();
+}
+
+function renderSvsLogApp(app){
+  if(!isSvsLogViewer(SESSION.name)){ MODULE=null; render(); return; }
+  var rec=SPR_SEL?sprFind(SPR_SEL):null;
+  var sub=rec?presFmtDate(rec.prep_date)+(rec.opponent_state?' · vs #'+rec.opponent_state:''):'Top alliances & players by month';
+  app.innerHTML=
+    buildModuleHeader('svslog','🏅','SvS Prep Records',escHtml(sub),'svslog',rec?'Records':null)+
+    '<div class="content" id="sprContent"></div>'+
+    '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
+  document.getElementById('backHome').addEventListener('click',function(){
+    if(SPR_SEL){ SPR_SEL=null; render(); return; }
+    MODULE=null; render();
+  });
+  document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('svslog'); });
+  var el=document.getElementById('sprContent');
+  if(SPR_ERR){ el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load SvS Prep Records.<br>'+escHtml(SPR_ERR)+'</p></div>'; }
+  else if(!SPR_LOADED){ el.innerHTML='<div class="empty"><p>Loading…</p></div>'; }
+  else if(rec) renderSprDetail(el,rec);
+  else renderSprList(el);
+  if(!SPR_LOADED) sprLoad(); // fresh on every open from Home
+}
+
+function renderSprList(el){
+  var isSup=isSuperAdmin(SESSION.name);
+  var years=[];
+  SPR_RECORDS.forEach(function(r){ var y=String(r.prep_date).slice(0,4); if(years.indexOf(y)<0) years.push(y); });
+  if(SPR_YEAR!=='all'&&years.indexOf(SPR_YEAR)<0) SPR_YEAR='all';
+  var q=SPR_Q.trim().toLowerCase();
+  var recs=SPR_RECORDS.filter(function(r){
+    return (SPR_YEAR==='all'||String(r.prep_date).slice(0,4)===SPR_YEAR)&&sprMatches(r,q);
+  });
+  var showTools=SPR_RECORDS.length>=6;
+  var html=
+    (isSup?'<button class="btn btn-p" id="sprNew" style="margin-bottom:14px;">+ New record</button>':'')+
+    (showTools?
+      '<input class="inp" id="sprSearch" type="search" placeholder="Search player, alliance or state" autocomplete="off" value="'+escHtml(SPR_Q)+'" style="margin-bottom:10px;">'+
+      (years.length>1?'<div class="seg">'+['all'].concat(years).map(function(y){
+        return '<button class="nav-btn spr-year'+(SPR_YEAR===y?' on':'')+'" data-y="'+y+'">'+(y==='all'?'All':y)+'</button>';
+      }).join('')+'</div>':''):'');
+  if(!SPR_RECORDS.length){
+    html+='<div class="empty"><div class="empty-icon">🏅</div><p>No records yet.'+(isSup?'<br>Add the first SvS prep with <strong>+ New record</strong>.':'')+'</p></div>';
+  } else if(!recs.length){
+    html+='<div class="empty"><p>Nothing matches.</p></div>';
+  } else {
+    html+='<div class="glabel-row"><span class="glabel">Records<span class="glabel-n">'+recs.length+'</span></span></div>'+
+      '<div class="group">'+recs.map(function(r){
+        var a=(r.alliances||[])[0], p=(r.players||[])[0];
+        var top=[];
+        if(a) top.push(presChip(a.name)+' <span class="spr-prev-score">'+sprFmtShort(a.score)+'</span>');
+        if(p) top.push('<span class="spr-prev-name">'+escHtml(p.name)+'</span> <span class="spr-prev-score">'+sprFmtShort(p.score)+'</span>');
+        return '<button class="row spr-open" data-id="'+r.id+'">'+
+          '<span class="row-text">'+
+            '<span class="spr-row-hd"><span class="row-title">'+presFmtDate(r.prep_date)+'</span>'+sprResultChip(r.result)+'</span>'+
+            '<span class="row-sub">'+(sprVs(r)?escHtml(sprVs(r))+' · ':'')+(r.alliances||[]).length+' alliances · '+(r.players||[]).length+' players</span>'+
+            (top.length?'<span class="spr-prev">'+top.join('<span class="spr-dot">·</span>')+'</span>':'')+
+          '</span>'+
+          '<span class="row-chev">'+icon('chevR')+'</span>'+
+        '</button>';
+      }).join('')+'</div>';
+  }
+  el.innerHTML=html;
+
+  var nb=document.getElementById('sprNew'); if(nb) nb.addEventListener('click',function(){ openSprForm(null); });
+  var si=document.getElementById('sprSearch');
+  if(si) si.addEventListener('input',function(){
+    SPR_Q=si.value; var pos=si.selectionStart;
+    renderSprList(el);
+    var n=document.getElementById('sprSearch'); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} }
+  });
+  el.querySelectorAll('.spr-year').forEach(function(b){
+    b.addEventListener('click',function(){ SPR_YEAR=b.dataset.y; renderSprList(el); });
+  });
+  el.querySelectorAll('.spr-open').forEach(function(b){
+    b.addEventListener('click',function(){ SPR_SEL=b.dataset.id; render(); });
+  });
+}
+
+function sprRankList(title,rows,isPlayer){
+  var q=SPR_Q.trim().toLowerCase();
+  return '<div>'+
+    '<div class="glabel-row"><span class="glabel">'+title+'<span class="glabel-n">'+rows.length+'</span></span></div>'+
+    (rows.length?'<div class="group">'+rows.map(function(x,i){
+      var hit=q&&(String(x.name).toLowerCase().indexOf(q)>=0||(isPlayer&&String(x.alliance||'').toLowerCase().indexOf(q)>=0));
+      return '<div class="spr-rank'+(i<3?' top':'')+(hit?' hit':'')+'">'+
+        '<span class="spr-pos">'+(i+1)+'</span>'+
+        (isPlayer?
+          '<span class="spr-name">'+escHtml(x.name)+'</span>'+(x.alliance?presChip(x.alliance):''):
+          '<span class="spr-name">'+presChip(x.name)+'</span>')+
+        '<span class="spr-score">'+sprFmtFull(x.score)+'</span>'+
+      '</div>';
+    }).join('')+'</div>':'<div class="group"><div class="spr-rank"><span class="spr-name" style="color:var(--t3);font-weight:500;">None recorded</span></div></div>')+
+  '</div>';
+}
+
+function renderSprDetail(el,r){
+  var isSup=isSuperAdmin(SESSION.name);
+  var meta=[presFmtDate(r.prep_date)];
+  if(r.opponent_state) meta.push('vs State #'+r.opponent_state);
+  el.innerHTML=
+    '<div class="panel spr-head">'+
+      '<div><div class="spr-head-t">SvS Prep · '+escHtml(meta.join(' · '))+'</div>'+
+      (r.updated_by?'<div class="spr-head-s">Last edited by '+escHtml(r.updated_by)+'</div>':'')+'</div>'+
+      sprResultChip(r.result)+
+    '</div>'+
+    '<div class="spr-cols">'+
+      sprRankList('Top alliances',r.alliances||[],false)+
+      sprRankList('Top players',r.players||[],true)+
+    '</div>'+
+    (isSup?'<div style="display:flex;gap:8px;margin-top:18px;">'+
+      '<button class="btn btn-g" id="sprEdit" style="flex:1;">Edit</button>'+
+      '<button class="btn btn-d" id="sprDel" style="flex:1;">Delete</button>'+
+    '</div>':'');
+  if(!isSup) return;
+  document.getElementById('sprEdit').addEventListener('click',function(){ openSprForm(r); });
+  document.getElementById('sprDel').addEventListener('click',async function(){
+    if(!await confirmDanger('Delete the SvS prep record of '+presFmtDate(r.prep_date)+(r.opponent_state?' (vs #'+r.opponent_state+')':'')+'? The deletion is kept in the audit log.',{title:'Delete record',confirmLabel:'Delete'})) return;
+    var res=await sb.from('svs_prep_records').delete().eq('id',r.id).select();
+    if(res.error){ toast('Error: '+res.error.message); return; }
+    if(!res.data||!res.data.length){ toast('Not deleted: permission denied'); return; }
+    SPR_RECORDS=SPR_RECORDS.filter(function(x){ return x.id!==r.id; });
+    SPR_SEL=null; LOGS_LOADED=false;
+    toast('🗑 Record deleted');
+    render();
+  });
+}
+
+// rec = null for a new record.
+function openSprForm(rec){
+  if(!isSuperAdmin(SESSION.name)) return;
+  rec=rec||{};
+  var result=rec.result||'';
+  // Working copies of the two lists; empty rows to type into.
+  var al=(rec.alliances||[]).map(function(x){ return {name:x.name,score:sprFmtFull(x.score)}; });
+  var pl=(rec.players||[]).map(function(x){ return {name:x.name,alliance:x.alliance||'',score:sprFmtFull(x.score)}; });
+  while(al.length<3) al.push({name:'',score:''});
+  while(pl.length<5) pl.push({name:'',alliance:'',score:''});
+
+  var allis=getAllAlliances().slice();
+  var pnames={};
+  ALL_PLAYERS.forEach(function(p){ pnames[p.name]=1; });
+  SPR_RECORDS.forEach(function(r){
+    (r.alliances||[]).forEach(function(a){ if(allis.indexOf(a.name)<0) allis.push(a.name); });
+    (r.players||[]).forEach(function(p){ pnames[p.name]=1; if(p.alliance&&allis.indexOf(p.alliance)<0) allis.push(p.alliance); });
+  });
+  var dl='<datalist id="sprAlList">'+allis.map(function(a){ return '<option value="'+escHtml(a)+'">'; }).join('')+'</datalist>'+
+    '<datalist id="sprPlList">'+Object.keys(pnames).sort(function(a,b){ return a.localeCompare(b); }).map(function(n){ return '<option value="'+escHtml(n)+'">'; }).join('')+'</datalist>';
+
+  var m=openModal({
+    title:rec.id?'Edit record':'New record',
+    size:'lg',
+    bodyRender:function(b){
+      b.innerHTML=dl+
+        '<div class="spr-form-top">'+
+          '<div class="field"><label class="lbl" for="sprDate">Prep date</label><input class="inp" type="date" id="sprDate" value="'+escHtml(rec.prep_date||new Date().toISOString().slice(0,10))+'"></div>'+
+          '<div class="field"><label class="lbl" for="sprOpp">Opponent state</label><input class="inp" id="sprOpp" inputmode="numeric" maxlength="5" placeholder="e.g. 2874" autocomplete="off" value="'+escHtml(rec.opponent_state||'')+'"></div>'+
+        '</div>'+
+        '<div class="field"><label class="lbl">Prep result</label><div class="seg" id="sprRes">'+
+          [['won','Won'],['lost','Lost'],['','Not set']].map(function(o){
+            return '<button type="button" class="nav-btn spr-res-btn'+(result===o[0]?' on':'')+'" data-v="'+o[0]+'">'+o[1]+'</button>';
+          }).join('')+
+        '</div></div>'+
+        '<div class="lbl" style="margin-top:6px;">Top alliances</div>'+
+        '<div id="sprAlRows"></div>'+
+        '<button type="button" class="btn btn-g btn-sm" id="sprAlAdd" style="margin:2px 0 16px;">+ Add alliance</button>'+
+        '<div class="lbl">Top players</div>'+
+        '<div id="sprPlRows"></div>'+
+        '<button type="button" class="btn btn-g btn-sm" id="sprPlAdd" style="margin-top:2px;">+ Add player</button>'+
+        '<div style="font-size:11px;color:var(--t3);margin-top:12px;">Points: 12,540,300 or 12.5M or 850K. Empty rows are skipped, both lists are sorted by points on save.</div>';
+
+      b.querySelectorAll('.spr-res-btn').forEach(function(x){
+        x.addEventListener('click',function(){
+          result=x.dataset.v;
+          b.querySelectorAll('.spr-res-btn').forEach(function(y){ y.classList.toggle('on',y===x); });
+        });
+      });
+      function drawAl(focusLast){
+        var w=b.querySelector('#sprAlRows');
+        w.innerHTML=al.map(function(x,i){
+          return '<div class="spr-frow al">'+
+            '<span class="spr-fpos">'+(i+1)+'</span>'+
+            '<input class="inp spr-al-name" data-i="'+i+'" list="sprAlList" placeholder="Alliance" maxlength="20" autocomplete="off" value="'+escHtml(x.name)+'" aria-label="Alliance '+(i+1)+'">'+
+            '<input class="inp spr-al-score" data-i="'+i+'" inputmode="decimal" placeholder="Points" maxlength="20" autocomplete="off" value="'+escHtml(x.score)+'" aria-label="Alliance '+(i+1)+' points">'+
+            '<button type="button" class="icon-btn danger spr-al-rm" data-i="'+i+'" aria-label="Remove row">✕</button>'+
+          '</div>';
+        }).join('');
+        w.querySelectorAll('.spr-al-name').forEach(function(inp){ inp.addEventListener('input',function(){ al[+inp.dataset.i].name=inp.value; }); });
+        w.querySelectorAll('.spr-al-score').forEach(function(inp){ inp.addEventListener('input',function(){ al[+inp.dataset.i].score=inp.value; }); });
+        w.querySelectorAll('.spr-al-rm').forEach(function(x){ x.addEventListener('click',function(){ al.splice(+x.dataset.i,1); if(!al.length) al.push({name:'',score:''}); drawAl(); }); });
+        if(focusLast){ var n=w.querySelectorAll('.spr-al-name'); n[n.length-1].focus(); }
+      }
+      function drawPl(focusLast){
+        var w=b.querySelector('#sprPlRows');
+        w.innerHTML=pl.map(function(x,i){
+          return '<div class="spr-frow pl">'+
+            '<span class="spr-fpos">'+(i+1)+'</span>'+
+            '<input class="inp spr-pl-name" data-i="'+i+'" list="sprPlList" placeholder="Player" maxlength="40" autocomplete="off" value="'+escHtml(x.name)+'" aria-label="Player '+(i+1)+'">'+
+            '<input class="inp spr-pl-al" data-i="'+i+'" list="sprAlList" placeholder="Alliance" maxlength="20" autocomplete="off" value="'+escHtml(x.alliance)+'" aria-label="Player '+(i+1)+' alliance">'+
+            '<input class="inp spr-pl-score" data-i="'+i+'" inputmode="decimal" placeholder="Points" maxlength="20" autocomplete="off" value="'+escHtml(x.score)+'" aria-label="Player '+(i+1)+' points">'+
+            '<button type="button" class="icon-btn danger spr-pl-rm" data-i="'+i+'" aria-label="Remove row">✕</button>'+
+          '</div>';
+        }).join('');
+        w.querySelectorAll('.spr-pl-name').forEach(function(inp){
+          inp.addEventListener('input',function(){ pl[+inp.dataset.i].name=inp.value; });
+          // A registered player's alliance fills in when the alliance box is still empty.
+          inp.addEventListener('change',function(){
+            var row=pl[+inp.dataset.i], p=ALL_PLAYERS.find(function(x){ return x.name===inp.value.trim(); });
+            if(p&&p.alliance&&!row.alliance){ row.alliance=p.alliance; var a=w.querySelector('.spr-pl-al[data-i="'+inp.dataset.i+'"]'); if(a) a.value=p.alliance; }
+          });
+        });
+        w.querySelectorAll('.spr-pl-al').forEach(function(inp){ inp.addEventListener('input',function(){ pl[+inp.dataset.i].alliance=inp.value; }); });
+        w.querySelectorAll('.spr-pl-score').forEach(function(inp){ inp.addEventListener('input',function(){ pl[+inp.dataset.i].score=inp.value; }); });
+        w.querySelectorAll('.spr-pl-rm').forEach(function(x){ x.addEventListener('click',function(){ pl.splice(+x.dataset.i,1); if(!pl.length) pl.push({name:'',alliance:'',score:''}); drawPl(); }); });
+        if(focusLast){ var n=w.querySelectorAll('.spr-pl-name'); n[n.length-1].focus(); }
+      }
+      drawAl(); drawPl();
+      b.querySelector('#sprAlAdd').addEventListener('click',function(){ al.push({name:'',score:''}); drawAl(true); });
+      b.querySelector('#sprPlAdd').addEventListener('click',function(){ pl.push({name:'',alliance:'',score:''}); drawPl(true); });
+    },
+    actions:[
+      {label:'Cancel',kind:'ghost'},
+      {label:'Save',kind:'primary',onClick:async function(close){
+        var date=document.getElementById('sprDate').value;
+        if(!date){ toast('Pick the prep date'); return; }
+        var oppRaw=document.getElementById('sprOpp').value.trim(), opp=null;
+        if(oppRaw){
+          if(!/^\d{1,5}$/.test(oppRaw)||+oppRaw<1){ toast('Opponent state must be a number'); return; }
+          opp=+oppRaw;
+        }
+        var bad=null;
+        function clean(list,isPlayer){
+          var out=[];
+          list.forEach(function(x,i){
+            var name=String(x.name||'').trim(), raw=String(x.score||'').trim();
+            if(!name&&!raw&&!(isPlayer&&String(x.alliance||'').trim())) return;
+            var label=(isPlayer?'Player':'Alliance')+' row '+(i+1);
+            if(!name){ bad=bad||label+' has no name'; return; }
+            var sc=sprParseScore(raw);
+            if(sc==null){ bad=bad||(raw?name+': points "'+raw+'" not understood':name+' has no points'); return; }
+            var row={name:name.slice(0,isPlayer?40:20),score:sc};
+            if(isPlayer){ var a=String(x.alliance||'').trim().slice(0,20); if(a) row.alliance=a; }
+            out.push(row);
+          });
+          return out.sort(function(a,b){ return b.score-a.score; });
+        }
+        var alliances=clean(al,false), players=clean(pl,true);
+        if(bad){ toast(bad); return; }
+        if(!alliances.length&&!players.length){ toast('Add at least one alliance or player'); return; }
+        var row={prep_date:date,opponent_state:opp,result:result||null,alliances:alliances,players:players,
+          updated_by:SESSION.name,updated_at:new Date().toISOString()};
+        var r;
+        if(rec.id){
+          r=await sb.from('svs_prep_records').update(row).eq('id',rec.id).select();
+        } else {
+          row.created_by=SESSION.name;
+          r=await sb.from('svs_prep_records').insert([row]).select();
+        }
+        if(r.error){ toast('Error: '+r.error.message); return; }
+        if(!r.data||!r.data.length){ toast('Not saved: permission denied'); return; }
+        var saved=r.data[0];
+        SPR_RECORDS=SPR_RECORDS.filter(function(x){ return x.id!==saved.id; }).concat([saved]);
+        sprSortRecords();
+        SPR_SEL=saved.id; LOGS_LOADED=false;
+        close();
+        toast(rec.id?'✅ Record updated':'✅ Record saved');
+        render();
+      }}
+    ]
+  });
+  return m;
 }
 
 function warHeroName(id){
