@@ -986,7 +986,7 @@ function isHashed(pin){ return /^[a-f0-9]{64}$/i.test(pin); }
 // Client error reporting: uncaught errors and known silent failures go to the
 // client_errors table through the log_client_error RPC. Deduped by message and
 // capped per page load; can never throw itself.
-var APP_VERSION = 'v52'; // keep in step with sw.js CACHE
+var APP_VERSION = 'v53'; // keep in step with sw.js CACHE
 var _errSeen = {}, _errCount = 0;
 function reportError(message, extra){
   try{
@@ -1263,6 +1263,7 @@ function logout(){
   SESSION=null; localStorage.removeItem('wos-session'); sb=createSb();
   try{ localStorage.removeItem(VIEW_KEY); }catch(e){}
   AUTH_STEP='name'; NAME_INP=''; PIN_INP=''; AUTH_ERR='';
+  _authIntroChecked=false; // the sign-in screen opens again: play the intro
   render();
 }
 
@@ -2073,17 +2074,16 @@ function authFx(on){
   }
 }
 
-// Login intro: once per device for each SESSION_EPOCH, the name step first
-// shows only the seal, title and spiral for 2.5 s, then the form fades in.
-// A tap or key press skips it. Skipped for reduced motion.
+// Login intro: every time the sign-in screen opens (app open while signed out,
+// or right after signing out), the name step first shows only the seal, title
+// and spiral for 2.5 s, then the form fades in. A tap or key press skips it.
+// Skipped for reduced motion. Going back from PIN to name does not replay it.
 var AUTH_INTRO_UNTIL=0, _authIntroT=0, _authIntroChecked=false;
 function authIntroOn(){ return AUTH_INTRO_UNTIL>Date.now(); }
 function authIntroStart(){
   if(_authIntroChecked) return; _authIntroChecked=true;
   var still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var seen=0; try{ seen=+localStorage.getItem('s2901-intro')||0; }catch(e){}
-  if(still||seen>=SESSION_EPOCH) return;
-  try{ localStorage.setItem('s2901-intro',String(SESSION_EPOCH)); }catch(e){}
+  if(still) return;
   AUTH_INTRO_UNTIL=Date.now()+2500;
   document.body.classList.add('auth-intro');
   _authIntroT=setTimeout(authIntroEnd,2500);
