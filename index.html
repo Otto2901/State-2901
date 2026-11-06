@@ -555,6 +555,21 @@ body.auth-intro #authFx{opacity:.9;}
   .spr-frow.pl .spr-fpos{grid-row:1 / 3;}
   .spr-frow.pl{padding-bottom:6px;border-bottom:1px solid var(--b);margin-bottom:8px;}
 }
+/* Screenshots: even tiles, picture fitted whole, never cropped */
+.spr-shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));grid-auto-rows:120px;gap:8px;}
+.spr-shot{position:relative;display:block;width:100%;height:100%;padding:0;border:1px solid var(--b);border-radius:10px;background:var(--bg2);overflow:hidden;cursor:pointer;}
+.spr-shot img{display:block;width:100%;height:100%;object-fit:contain;}
+.spr-shot .spr-shot-wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--t3);}
+.spr-shot-rm{position:absolute;top:4px;right:4px;width:30px;height:30px;border-radius:50%;border:1px solid rgba(181,85,74,.5);background:rgba(11,9,6,.82);color:#dd948a;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.spr-shot-new{position:absolute;left:4px;bottom:4px;font-size:9px;font-weight:800;letter-spacing:.5px;padding:2px 6px;border-radius:6px;background:rgba(169,184,119,.22);color:#a9b877;}
+.spr-shots-cnt{font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums;}
+.spr-viewer{position:fixed;inset:0;z-index:10000;background:rgba(5,4,3,.985);display:flex;flex-direction:column;touch-action:pan-y pinch-zoom;}
+.spr-viewer-bar{display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;color:var(--t2);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
+.spr-viewer-x{width:44px;height:44px;border-radius:50%;border:1px solid var(--b);background:rgba(232,210,168,.06);color:var(--t);font-size:18px;cursor:pointer;}
+.spr-viewer-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 8px calc(12px + env(safe-area-inset-bottom));position:relative;}
+.spr-viewer-stage img{width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none;}
+.spr-viewer-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid var(--b);background:rgba(11,9,6,.7);color:var(--t);font-size:20px;cursor:pointer;}
+.spr-viewer-nav.prev{left:10px;} .spr-viewer-nav.next{right:10px;}
 .bt-empty{font-size:12px;color:var(--t3);}
 .bt-add{display:flex;gap:8px;margin-top:10px;}
 .bt-add .inp{padding:9px 12px;font-size:13px;}
@@ -860,6 +875,9 @@ var SPR_ERR     = null;
 var SPR_SEL     = null; // id of the record on screen, null = list
 var SPR_YEAR    = 'all';
 var SPR_Q       = '';
+var SPR_BUCKET  = 'svs-prep-shots'; // private Storage bucket, rls-step36
+var SPR_SHOT_MAX = 5;
+var SPR_URLS    = {}; // path -> {url, exp} signed links, reused until near expiry
 
 // PRESIDENCY LEDGER STATE
 var PRES_QUEUES = {sfc:[], supreme:[]}; // presidency_queues: alliances in order, [0] = next up
@@ -4813,13 +4831,15 @@ function renderSvsLogGuideContent(rc){
     guideSection('How it works')+
     guideStep(1,'Each record is one <strong>SvS preparation</strong>: its date, the <strong>opponent state</strong>, whether we <strong>won or lost</strong> the prep, and the top <strong>alliances</strong> and <strong>players</strong> by total points.')+
     guideStep(2,'The newest record is at the top. Tap a record to see both ranked lists with the full points.')+
-    guideStep(3,'Use <strong>Search</strong> to find every record a player or alliance appears in, and the year buttons to narrow the list.');
+    guideStep(3,'Use <strong>Search</strong> to find every record a player or alliance appears in, and the year buttons to narrow the list.')+
+    guideStep(4,'A record can have up to <strong>5 screenshots</strong> (📷 on the list). Tap one to see it full screen; swipe or use the arrows to move between them, the back button closes it.');
   if(isSuperAdmin(SESSION.name)){
     html+=guideSection('Super Admin','#a9b877')+
       guideStep(1,'<strong>+ New record</strong> opens the form. Add as many alliance and player rows as you need; empty rows are ignored.')+
       guideStep(2,'Points can be typed as <strong>12,540,300</strong>, <strong>12.5M</strong> or <strong>850K</strong>. Both lists are sorted by points when you save.')+
       guideStep(3,'Picking a registered player fills in their alliance. Players and alliances from other states can be typed freely.')+
-      guideStep(4,'Open a record to <strong>Edit</strong> or <strong>Delete</strong> it. Every change is kept in Admin Panel › Logs.');
+      guideStep(4,'<strong>+ Add screenshots</strong> in the form adds up to 5 pictures. They are made smaller on your phone before upload and are only saved when you press <strong>Save</strong>; ✕ removes one.')+
+      guideStep(5,'Open a record to <strong>Edit</strong> or <strong>Delete</strong> it. Deleting a record also deletes its screenshots. Every change is kept in Admin Panel › Logs.');
   }
   html+='<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Only the Super Admin and players given the SvS Prep Records Viewer role can open this module. Viewers can read it but not change it.</div>';
   rc.innerHTML=html;
@@ -7844,6 +7864,123 @@ function sprMatches(r,q){
     hit(r.opponent_state);
 }
 
+// ── Screenshots ──
+function sprShots(r){ return Array.isArray(r&&r.shots)?r.shots:[]; }
+function sprUuid(){
+  if(window.crypto&&crypto.randomUUID) return crypto.randomUUID();
+  var b=new Uint8Array(16); crypto.getRandomValues(b); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
+  var h=Array.from(b,function(x){ return (x<16?'0':'')+x.toString(16); }).join('');
+  return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+}
+// Long side 2560 px, WebP (JPEG where WebP encoding is missing). Redrawing
+// drops the EXIF data. One retry at lower quality when it would pass 5 MB.
+function sprEncode(bmp,quality){
+  var scale=Math.min(1,2560/Math.max(bmp.width,bmp.height));
+  var w=Math.max(1,Math.round(bmp.width*scale)), h=Math.max(1,Math.round(bmp.height*scale));
+  var c=document.createElement('canvas'); c.width=w; c.height=h;
+  c.getContext('2d').drawImage(bmp,0,0,w,h);
+  function blob(type){ return new Promise(function(ok){ c.toBlob(ok,type,quality); }); }
+  return blob('image/webp').then(function(b){
+    if(b&&b.type==='image/webp') return {blob:b,w:w,h:h,ext:'webp',type:'image/webp'};
+    return blob('image/jpeg').then(function(j){
+      if(!j) throw new Error('encode failed');
+      return {blob:j,w:w,h:h,ext:'jpg',type:'image/jpeg'};
+    });
+  });
+}
+async function sprShrink(file){
+  var bmp=await createImageBitmap(file,{imageOrientation:'from-image'});
+  try{
+    var f=await sprEncode(bmp,0.82);
+    if(f.blob.size>5*1024*1024) f=await sprEncode(bmp,0.7);
+    if(f.blob.size>5*1024*1024) throw new Error('too big');
+    return f;
+  } finally { if(bmp.close) bmp.close(); }
+}
+function sprUrl(path){ var u=SPR_URLS[path]; return u&&u.exp>Date.now()?u.url:null; }
+// Signs the paths that have no fresh link yet, then calls done().
+async function sprSign(paths,done){
+  var need=paths.filter(function(p){ return !sprUrl(p); });
+  if(!need.length){ if(done) done(); return; }
+  try{
+    var r=await sb.storage.from(SPR_BUCKET).createSignedUrls(need,3600);
+    (r&&r.data||[]).forEach(function(x){
+      if(x&&x.signedUrl&&!x.error) SPR_URLS[x.path]={url:x.signedUrl,exp:Date.now()+50*60*1000};
+    });
+  }catch(e){ console.warn('svslog sign',e); }
+  if(done) done();
+}
+function sprRemoveFiles(paths){
+  if(!paths.length) return Promise.resolve();
+  return Promise.resolve().then(function(){ return sb.storage.from(SPR_BUCKET).remove(paths); })
+    .then(function(r){ if(r&&r.error) console.warn('svslog remove',r.error); })
+    .catch(function(e){ console.warn('svslog remove',e); });
+}
+// Tile markup. s = {path} saved or {preview} picked in the form.
+function sprShotTile(s,i,opts){
+  opts=opts||{};
+  var src=s.preview||sprUrl(s.path);
+  return '<div class="spr-shot-wrap" style="position:relative;">'+
+    '<button type="button" class="spr-shot" data-i="'+i+'" aria-label="Screenshot '+(i+1)+'">'+
+      (src?'<img src="'+escHtml(src)+'" alt="" decoding="async">':'<span class="spr-shot-wait">Loading…</span>')+
+      (s.preview?'<span class="spr-shot-new">NEW</span>':'')+
+    '</button>'+
+    (opts.removable?'<button type="button" class="spr-shot-rm" data-i="'+i+'" aria-label="Remove screenshot '+(i+1)+'">✕</button>':'')+
+  '</div>';
+}
+// Full screen viewer. Phone back closes it: opening adds a history entry,
+// back pops it; closing another way takes that entry back.
+function sprOpenViewer(srcs,start){
+  if(!srcs.length) return;
+  var at=Math.max(0,Math.min(start||0,srcs.length-1)), closed=false;
+  var prevFocus=document.activeElement, prevOverflow=document.body.style.overflow;
+  var ov=document.createElement('div');
+  ov.className='spr-viewer'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true'); ov.setAttribute('aria-label','Screenshot');
+  ov.innerHTML='<div class="spr-viewer-bar"><span class="spr-viewer-n"></span><button type="button" class="spr-viewer-x" aria-label="Close">✕</button></div>'+
+    '<div class="spr-viewer-stage"><img alt="">'+
+    (srcs.length>1?'<button type="button" class="spr-viewer-nav prev" aria-label="Previous">‹</button><button type="button" class="spr-viewer-nav next" aria-label="Next">›</button>':'')+
+    '</div>';
+  document.body.appendChild(ov);
+  document.body.style.overflow='hidden';
+  var img=ov.querySelector('img'), n=ov.querySelector('.spr-viewer-n');
+  function show(){ img.src=srcs[at]; n.textContent=srcs.length>1?(at+1)+' / '+srcs.length:''; }
+  function step(d){ at=(at+d+srcs.length)%srcs.length; show(); }
+  function close(fromBack){
+    if(closed) return; closed=true;
+    window.removeEventListener('popstate',onPop);
+    document.removeEventListener('keydown',onKey,true);
+    ov.remove(); document.body.style.overflow=prevOverflow;
+    if(prevFocus&&prevFocus.focus){ try{ prevFocus.focus(); }catch(e){} }
+    if(!fromBack&&history.state&&history.state.sprViewer) history.back();
+  }
+  function onPop(){ close(true); }
+  // Capture phase + stop, so an open form under the viewer does not also react.
+  function onKey(e){
+    if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); close(); }
+    else if(e.key==='ArrowLeft'&&srcs.length>1){ e.preventDefault(); e.stopPropagation(); step(-1); }
+    else if(e.key==='ArrowRight'&&srcs.length>1){ e.preventDefault(); e.stopPropagation(); step(1); }
+    else if(e.key==='Tab'){ e.preventDefault(); e.stopPropagation(); }
+  }
+  try{ history.pushState({sprViewer:1},''); }catch(e){}
+  window.addEventListener('popstate',onPop);
+  document.addEventListener('keydown',onKey,true);
+  ov.querySelector('.spr-viewer-x').addEventListener('click',function(){ close(); });
+  var pv=ov.querySelector('.prev'), nx=ov.querySelector('.next');
+  if(pv) pv.addEventListener('click',function(){ step(-1); });
+  if(nx) nx.addEventListener('click',function(){ step(1); });
+  ov.querySelector('.spr-viewer-stage').addEventListener('click',function(e){ if(e.target===e.currentTarget) close(); });
+  var sx=null, sy=null;
+  ov.addEventListener('touchstart',function(e){ if(e.touches.length===1){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; } else sx=null; },{passive:true});
+  ov.addEventListener('touchend',function(e){
+    if(sx==null||srcs.length<2) return;
+    var t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy; sx=null;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) step(dx<0?1:-1);
+  });
+  show();
+  setTimeout(function(){ ov.querySelector('.spr-viewer-x').focus(); },0);
+  return {close:close};
+}
+
 async function sprLoad(){
   SPR_LOADED=true;
   var r=await sb.from('svs_prep_records').select('*').order('prep_date',{ascending:false});
@@ -7905,7 +8042,8 @@ function renderSprList(el){
         return '<button class="row spr-open" data-id="'+r.id+'">'+
           '<span class="row-text">'+
             '<span class="spr-row-hd"><span class="row-title">'+presFmtDate(r.prep_date)+'</span>'+sprResultChip(r.result)+'</span>'+
-            '<span class="row-sub">'+(sprVs(r)?escHtml(sprVs(r))+' · ':'')+(r.alliances||[]).length+' alliances · '+(r.players||[]).length+' players</span>'+
+            '<span class="row-sub">'+(sprVs(r)?escHtml(sprVs(r))+' · ':'')+(r.alliances||[]).length+' alliances · '+(r.players||[]).length+' players'+
+              (sprShots(r).length?' · <span aria-label="'+sprShots(r).length+' screenshots">📷 '+sprShots(r).length+'</span>':'')+'</span>'+
             (top.length?'<span class="spr-prev">'+top.join('<span class="spr-dot">·</span>')+'</span>':'')+
           '</span>'+
           '<span class="row-chev">'+icon('chevR')+'</span>'+
@@ -7947,7 +8085,7 @@ function sprRankList(title,rows,isPlayer){
 }
 
 function renderSprDetail(el,r){
-  var isSup=isSuperAdmin(SESSION.name);
+  var isSup=isSuperAdmin(SESSION.name), shots=sprShots(r);
   var meta=[presFmtDate(r.prep_date)];
   if(r.opponent_state) meta.push('vs State #'+r.opponent_state);
   el.innerHTML=
@@ -7956,6 +8094,9 @@ function renderSprDetail(el,r){
       (r.updated_by?'<div class="spr-head-s">Last edited by '+escHtml(r.updated_by)+'</div>':'')+'</div>'+
       sprResultChip(r.result)+
     '</div>'+
+    // Screenshots first: on a phone the 34-player list would bury them.
+    (shots.length?'<div class="glabel-row"><span class="glabel">Screenshots<span class="glabel-n">'+shots.length+'</span></span></div>'+
+      '<div class="spr-shots" id="sprShots">'+shots.map(function(s,i){ return sprShotTile(s,i); }).join('')+'</div>':'')+
     '<div class="spr-cols">'+
       sprRankList('Top alliances',r.alliances||[],false)+
       sprRankList('Top players',r.players||[],true)+
@@ -7964,13 +8105,28 @@ function renderSprDetail(el,r){
       '<button class="btn btn-g" id="sprEdit" style="flex:1;">Edit</button>'+
       '<button class="btn btn-d" id="sprDel" style="flex:1;">Delete</button>'+
     '</div>':'');
+  if(shots.length){
+    el.querySelectorAll('#sprShots .spr-shot').forEach(function(b){
+      b.addEventListener('click',function(){
+        var srcs=shots.map(function(s){ return sprUrl(s.path); }).filter(Boolean);
+        if(!srcs.length){ toast('Screenshots are still loading'); return; }
+        var url=sprUrl(shots[+b.dataset.i].path);
+        sprOpenViewer(srcs,Math.max(0,srcs.indexOf(url)));
+      });
+    });
+    var missing=shots.some(function(s){ return !sprUrl(s.path); });
+    if(missing) sprSign(shots.map(function(s){ return s.path; }),function(){
+      if(MODULE==='svslog'&&String(SPR_SEL)===String(r.id)&&!document.querySelector('.modal-overlay')) render();
+    });
+  }
   if(!isSup) return;
   document.getElementById('sprEdit').addEventListener('click',function(){ openSprForm(r); });
   document.getElementById('sprDel').addEventListener('click',async function(){
-    if(!await confirmDanger('Delete the SvS prep record of '+presFmtDate(r.prep_date)+(r.opponent_state?' (vs #'+r.opponent_state+')':'')+'? The deletion is kept in the audit log.',{title:'Delete record',confirmLabel:'Delete'})) return;
+    if(!await confirmDanger('Delete the SvS prep record of '+presFmtDate(r.prep_date)+(r.opponent_state?' (vs #'+r.opponent_state+')':'')+'?'+(sprShots(r).length?' Its '+sprShots(r).length+' screenshot'+(sprShots(r).length>1?'s are':' is')+' deleted too.':'')+' The deletion is kept in the audit log.',{title:'Delete record',confirmLabel:'Delete'})) return;
     var res=await sb.from('svs_prep_records').delete().eq('id',r.id).select();
     if(res.error){ toast('Error: '+res.error.message); return; }
     if(!res.data||!res.data.length){ toast('Not deleted: permission denied'); return; }
+    sprRemoveFiles(sprShots(r).map(function(s){ return s.path; }));
     SPR_RECORDS=SPR_RECORDS.filter(function(x){ return x.id!==r.id; });
     SPR_SEL=null; LOGS_LOADED=false;
     toast('🗑 Record deleted');
@@ -7988,6 +8144,10 @@ function openSprForm(rec){
   var pl=(rec.players||[]).map(function(x){ return {name:x.name,alliance:x.alliance||'',score:sprFmtFull(x.score)}; });
   while(al.length<3) al.push({name:'',score:''});
   while(pl.length<5) pl.push({name:'',alliance:'',score:''});
+  // Screenshots: saved ones {path,w,h}, picked ones {preview,f}. Files upload on Save.
+  var shots=sprShots(rec).map(function(s){ return {path:s.path,w:s.w,h:s.h}; });
+  var busy=false, savedOk=false;
+  function dropPreviews(){ shots.forEach(function(s){ if(s.preview){ try{ URL.revokeObjectURL(s.preview); }catch(e){} } }); }
 
   var allis=getAllAlliances().slice();
   var pnames={};
@@ -8002,6 +8162,7 @@ function openSprForm(rec){
   var m=openModal({
     title:rec.id?'Edit record':'New record',
     size:'lg',
+    onClose:function(){ if(!savedOk) dropPreviews(); },
     bodyRender:function(b){
       b.innerHTML=dl+
         '<div class="spr-form-top">'+
@@ -8019,7 +8180,55 @@ function openSprForm(rec){
         '<div class="lbl">Top players</div>'+
         '<div id="sprPlRows"></div>'+
         '<button type="button" class="btn btn-g btn-sm" id="sprPlAdd" style="margin-top:2px;">+ Add player</button>'+
-        '<div style="font-size:11px;color:var(--t3);margin-top:12px;">Points: 12,540,300 or 12.5M or 850K. Empty rows are skipped, both lists are sorted by points on save.</div>';
+        '<div class="lbl" style="margin-top:18px;display:flex;align-items:center;gap:8px;">Screenshots <span class="spr-shots-cnt" id="sprShotCnt"></span></div>'+
+        '<div class="spr-shots" id="sprShotRows" style="margin-bottom:8px;"></div>'+
+        '<input type="file" id="sprShotFile" accept="image/*" multiple hidden>'+
+        '<button type="button" class="btn btn-g btn-sm" id="sprShotAdd">+ Add screenshots</button>'+
+        '<div style="font-size:11px;color:var(--t3);margin-top:12px;">Points: 12,540,300 or 12.5M or 850K. Empty rows are skipped, both lists are sorted by points on save. Up to '+SPR_SHOT_MAX+' screenshots, uploaded when you save.</div>';
+
+      function drawShots(){
+        var w=b.querySelector('#sprShotRows');
+        w.innerHTML=shots.map(function(s,i){ return sprShotTile(s,i,{removable:true}); }).join('');
+        w.style.display=shots.length?'':'none';
+        b.querySelector('#sprShotCnt').textContent=shots.length+' / '+SPR_SHOT_MAX;
+        var add=b.querySelector('#sprShotAdd');
+        add.disabled=shots.length>=SPR_SHOT_MAX||busy;
+        add.textContent=busy?'Preparing…':shots.length>=SPR_SHOT_MAX?'Limit reached':'+ Add screenshots';
+        w.querySelectorAll('.spr-shot-rm').forEach(function(x){
+          x.addEventListener('click',function(){
+            if(busy) return;
+            var s=shots.splice(+x.dataset.i,1)[0];
+            if(s&&s.preview){ try{ URL.revokeObjectURL(s.preview); }catch(e){} }
+            drawShots();
+          });
+        });
+        w.querySelectorAll('.spr-shot').forEach(function(x){
+          x.addEventListener('click',function(){
+            var srcs=shots.map(function(s){ return s.preview||sprUrl(s.path); });
+            if(srcs.every(Boolean)) sprOpenViewer(srcs,+x.dataset.i);
+          });
+        });
+      }
+      var fileInp=b.querySelector('#sprShotFile');
+      b.querySelector('#sprShotAdd').addEventListener('click',function(){ fileInp.value=''; fileInp.click(); });
+      fileInp.addEventListener('change',async function(){
+        var files=Array.from(fileInp.files||[]);
+        if(!files.length) return;
+        var room=SPR_SHOT_MAX-shots.length;
+        if(files.length>room) toast('Only '+SPR_SHOT_MAX+' screenshots per record, '+(files.length-room)+' skipped');
+        files=files.slice(0,Math.max(0,room));
+        busy=true; drawShots();
+        var bad=0;
+        for(var i=0;i<files.length;i++){
+          try{ var f=await sprShrink(files[i]); shots.push({preview:URL.createObjectURL(f.blob),f:f}); }
+          catch(e){ bad++; }
+        }
+        busy=false; drawShots();
+        if(bad) toast(bad+' file'+(bad>1?'s':'')+' could not be read as a picture');
+      });
+      drawShots();
+      var signNeed=shots.filter(function(s){ return s.path&&!sprUrl(s.path); });
+      if(signNeed.length) sprSign(signNeed.map(function(s){ return s.path; }),function(){ if(b.isConnected) drawShots(); });
 
       b.querySelectorAll('.spr-res-btn').forEach(function(x){
         x.addEventListener('click',function(){
@@ -8099,17 +8308,50 @@ function openSprForm(rec){
         var alliances=clean(al,false), players=clean(pl,true);
         if(bad){ toast(bad); return; }
         if(!alliances.length&&!players.length){ toast('Add at least one alliance or player'); return; }
+        if(busy){ toast('Screenshots are still being prepared'); return; }
         var row={prep_date:date,opponent_state:opp,result:result||null,alliances:alliances,players:players,
           updated_by:SESSION.name,updated_at:new Date().toISOString()};
-        var r;
-        if(rec.id){
-          r=await sb.from('svs_prep_records').update(row).eq('id',rec.id).select();
-        } else {
-          row.created_by=SESSION.name;
-          r=await sb.from('svs_prep_records').insert([row]).select();
+        // Upload picked screenshots first; the row only ever points at files that exist.
+        var saveBtn=document.querySelector('.modal-actions .btn-p');
+        function setSaving(on,label){ busy=on; if(saveBtn){ saveBtn.disabled=on; saveBtn.textContent=label||'Save'; } }
+        var oldPaths=sprShots(rec).map(function(s){ return s.path; });
+        var uploaded=[], finalShots=[], fresh=shots.filter(function(s){ return !s.path; }).length, done=0;
+        setSaving(true,fresh?'Uploading 0/'+fresh+'…':'Saving…');
+        for(var si=0;si<shots.length;si++){
+          var s=shots[si];
+          if(s.path){ finalShots.push({path:s.path,w:s.w,h:s.h}); continue; }
+          var path=sprUuid()+'.'+s.f.ext, up;
+          try{ up=await sb.storage.from(SPR_BUCKET).upload(path,s.f.blob,{contentType:s.f.type,upsert:false,cacheControl:'3600'}); }
+          catch(e){ up={error:e}; }
+          if(up&&up.error){
+            await sprRemoveFiles(uploaded);
+            setSaving(false);
+            toast('Screenshot upload failed: '+((up.error&&up.error.message)||'error')+'. Nothing was saved.');
+            return;
+          }
+          uploaded.push(path); done++;
+          finalShots.push({path:path,w:s.f.w,h:s.f.h});
+          if(saveBtn) saveBtn.textContent=done<fresh?'Uploading '+done+'/'+fresh+'…':'Saving…';
         }
-        if(r.error){ toast('Error: '+r.error.message); return; }
-        if(!r.data||!r.data.length){ toast('Not saved: permission denied'); return; }
+        // Sent only when the record has or had screenshots.
+        if(finalShots.length||oldPaths.length) row.shots=finalShots;
+        var r;
+        try{
+          if(rec.id){
+            r=await sb.from('svs_prep_records').update(row).eq('id',rec.id).select();
+          } else {
+            row.created_by=SESSION.name;
+            r=await sb.from('svs_prep_records').insert([row]).select();
+          }
+        }catch(e){ r={error:e}; }
+        var failed=r.error?'Error: '+(r.error.message||'error'):(!r.data||!r.data.length)?'Not saved: permission denied':null;
+        if(failed){ await sprRemoveFiles(uploaded); setSaving(false); toast(failed); return; }
+        var keep=finalShots.map(function(x){ return x.path; });
+        sprRemoveFiles(oldPaths.filter(function(p){ return keep.indexOf(p)<0; }));
+        // The picked pictures show in the record right away from this device's copy.
+        shots.forEach(function(x,i){ if(x.preview) SPR_URLS[finalShots[i].path]={url:x.preview,exp:Date.now()+50*60*1000}; });
+        savedOk=true;
+        setSaving(false);
         var saved=r.data[0];
         SPR_RECORDS=SPR_RECORDS.filter(function(x){ return x.id!==saved.id; }).concat([saved]);
         sprSortRecords();
