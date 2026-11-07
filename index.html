@@ -1374,7 +1374,14 @@ function render(){
 // (so modules step back the way they already do), then put the guard back if
 // still not Home. At Home nothing is guarded, so back leaves the app as usual.
 // The screenshot viewer keeps its own entry above the guard ({sprViewer:1}).
-var _navPopping=false, _navIgnoreUntil=0;
+// On phones Home is guarded too: the first back shows "Press back again to
+// exit" and leaves the guard off for 2 s, so a second back in that time leaves
+// the app. Desktop browsers keep the plain back at Home.
+var _navPopping=false, _navIgnoreUntil=0, _navExitUntil=0, _navExitT=null;
+var NAV_EXIT_MS=2000;
+function navIsPhone(){
+  try{ return window.matchMedia('(pointer: coarse)').matches; }catch(e){ return false; }
+}
 function navOverlay(){
   var all=document.querySelectorAll('body > .modal-overlay');
   return all.length?all[all.length-1]:null;
@@ -1386,7 +1393,9 @@ function navIsRoot(){
 function navSync(){
   if(_navPopping) return;
   var st=history.state;
-  if(!navIsRoot()){
+  var root=navIsRoot();
+  if(!root||navIsPhone()){
+    if(root&&Date.now()<_navExitUntil) return; // exit window: the next back leaves
     if(!st||(!st.s2901&&!st.sprViewer)){ try{ history.pushState({s2901:1},''); }catch(e){} }
     return;
   }
@@ -1416,10 +1425,29 @@ window.addEventListener('popstate',function(){
   var st=history.state;
   if(st&&(st.s2901||st.sprViewer)) return; // an entry above the guard closed itself (screenshot viewer)
   if(Date.now()<_navIgnoreUntil){ _navIgnoreUntil=0; return; } // our own guard removal
+  if(navIsRoot()&&navIsPhone()){ navExitHint(); return; }
   _navPopping=true;
   try{ navBack(); }catch(e){ console.warn('navBack',e); }
   _navPopping=false;
   navSync();
+});
+// First back at Home on a phone: hint, keep the guard off for NAV_EXIT_MS so a
+// second back leaves, then put it back (or sooner, on the next tap).
+function navExitHint(){
+  _navExitUntil=Date.now()+NAV_EXIT_MS;
+  toast('Press back again to exit');
+  clearTimeout(_navExitT);
+  _navExitT=setTimeout(function(){
+    _navExitUntil=0;
+    var t=document.querySelector('.toast'); if(t&&t.textContent==='Press back again to exit') t.remove();
+    navSync();
+  },NAV_EXIT_MS);
+}
+['pointerup','keydown'].forEach(function(ev){
+  document.addEventListener(ev,function(){
+    if(!_navExitUntil) return;
+    _navExitUntil=0; clearTimeout(_navExitT); navSync();
+  },true);
 });
 // Dialogs are added straight to <body>: guard them as they open and close.
 new MutationObserver(function(){ navSync(); }).observe(document.body,{childList:true});

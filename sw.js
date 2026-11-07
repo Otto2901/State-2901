@@ -1,4 +1,4 @@
-const CACHE = 'state2901-v58';
+const CACHE = 'state2901-v59';
 
 const CORE = [
   '/State-2901/',
