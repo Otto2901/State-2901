@@ -853,12 +853,19 @@ var WAR_EDIT_TEAM    = null; // null=new, obj=editing (war_teams row)
 var WAR_EDIT_MEMBERS = []; // in-memory squad rows while editing/creating a team
 var WAR_EDIT_HERO    = undefined; // undefined=hidden, {}=new, obj=editing
 
-// RALLY TIMER STATE — working roster is device-local (localStorage), presets are
-// shared across all rally admins via the rally_timer_presets Supabase table.
+// RALLY TIMER STATE — working roster is saved per admin in rally_timer_state
+// (one row each, same on every device; localStorage is only a fast cache), presets
+// are shared across all rally admins via the rally_timer_presets Supabase table.
 var RT_LEADERS = []; // [{name, march, active}] in entry order — march kept as raw string
 var RT_DUR     = 180; // rally duration in seconds: 60 (1:00), 180 (3:00) or 300 (5:00)
 var RT_PRESETS = []; // server rows: [{id, name, dur, leaders:[{name, march, active}], created_by}]
-var RT_LOADED  = false; // guard: localStorage read once on first module open
+var RT_LOADED  = false; // guard: list loaded once per signed-in name (holds that name)
+var RT_DIRTY   = false; // list has edits the server does not have yet
+var RT_EDITS   = 0;     // edit counter, so a finished save knows if newer edits came in
+var RT_SYNC_T  = null;  // debounce timer for the server save
+var RT_SYNC_BUSY = false; // a save request is on its way
+var RT_SYNC_ERR = false; // one error toast per failure streak
+var RT_FETCH_AT = 0;    // last server fetch, throttles re-fetch on re-renders
 var RT_PRESETS_LOADED = false; // guard: presets fetched once per session
 
 // BEAR TRAP STATE — shared by all bear admins (bear_trap_config + bear_trap_players)
@@ -1280,6 +1287,7 @@ document.addEventListener('keydown',function(e){
 function logout(){
   // Revoke the token server-side too (rls-step29), using the client that still
   // carries it. Fire and forget: signing out on the device must never wait or fail.
+  rtFlush(); // send a pending Rally Timer save while the token is still valid
   if(SESSION){ try{ sb.rpc('end_session').then(function(r){ if(r&&r.error) console.warn('end_session:',r.error.message); },function(){}); }catch(e){} }
   SESSION=null; localStorage.removeItem('wos-session'); sb=createSb();
   try{ localStorage.removeItem(VIEW_KEY); }catch(e){}
@@ -4207,6 +4215,7 @@ function renderAdminPlayers(ac){
       var r8=await sb.from('cj_team_members').delete().eq('player_name',pl);
       if(r8.error){ failCount++; continue; }
       CJ_MEMBERS=CJ_MEMBERS.filter(function(x){ return x.player_name!==pl; });
+      await sb.from('rally_timer_state').delete().eq('player_name',pl); // non-fatal: a leftover list is harmless
       var r3=await sb.from('players').delete().eq('name',pl);
       if(r3.error){ failCount++; continue; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
@@ -4260,6 +4269,7 @@ function renderAdminPlayers(ac){
         if(r8.error){ toast('Error: '+r8.error.message); return; }
         var r9=await sb.from('cj_team_members').update({player_name:newId}).eq('player_name',player);
         if(r9.error){ toast('Error: '+r9.error.message); return; }
+        await sb.from('rally_timer_state').update({player_name:newId}).eq('player_name',player); // non-fatal
         var p=ALL_PLAYERS.find(function(x){ return x.name===player; });
         if(p) p.name=newId;
         ALLIANCE_REPS.forEach(function(r){ if(r.player_name===player) r.player_name=newId; });
@@ -4347,6 +4357,7 @@ function renderAdminPlayers(ac){
       var r8=await sb.from('cj_team_members').delete().eq('player_name',pl);
       if(r8.error){ toast('Error: '+r8.error.message); return; }
       CJ_MEMBERS=CJ_MEMBERS.filter(function(x){ return x.player_name!==pl; });
+      await sb.from('rally_timer_state').delete().eq('player_name',pl); // non-fatal: a leftover list is harmless
       var r3=await sb.from('players').delete().eq('name',pl);
       if(r3.error){ toast('Error: '+r3.error.message); return; }
       ALL_PLAYERS=ALL_PLAYERS.filter(function(p){ return p.name!==pl; });
@@ -4812,7 +4823,7 @@ function renderRallyTimerGuideContent(rc){
     guideStep(3,'Pick the rally duration: <strong>1:00</strong>, <strong>3:00</strong>, or <strong>5:00</strong>. This is the countdown the game shows after a rally is launched.')+
     guideStep(4,'The result panel updates instantly, sorted longest-march-first. Each line shows the <strong>remaining time</strong> the first opener should see on their rally when that leader launches, and how many seconds <strong>after</strong> the first opener they go.')+
     guideStep(5,'Hit <strong>Copy</strong> to paste the full order into alliance chat. <strong>Save preset</strong> stores the current roster + duration as a shared preset that every rally admin can load — on any device.')+
-    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Access to this module is granted by a Super Admin. Saved presets are shared across all rally admins; the roster you are currently editing stays on this device until you save it.</div>';
+    '<div style="background:rgba(201,151,75,.08);border:1px solid rgba(201,151,75,.25);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:11px;color:#c9b48a;">💡 Access to this module is granted by a Super Admin. The list you are editing is saved to your account as you type, so it is the same on your phone and PC. Only you see it. Saved presets are shared across all rally admins.</div>';
 }
 function renderBearTrapGuideContent(rc){
   rc.innerHTML=
@@ -7209,24 +7220,84 @@ function renderWarTeamApp(app){
 }
 
 // ── RALLY TIMER ──────────────────────────────────────────────
-// Pure client-side rally-sync calculator. No Supabase, no roles.
+// Rally-sync calculator, gated to rally admins.
 // delay = maxMarch - playerMarch ; remaining = duration - delay
+// The working list is saved per admin in rally_timer_state, debounced while
+// typing. localStorage keeps a per-name copy so the module opens instantly.
 
+function rtNormLeaders(arr){
+  return (Array.isArray(arr)?arr:[]).map(function(l){ return {name:String(l&&l.name||''),march:String(l&&l.march||''),active:!(l&&l.active===false)}; });
+}
+function rtCacheKey(){ return 'rally-timer-v1:'+(SESSION&&SESSION.name||''); }
 function rtLoad(){
-  if(RT_LOADED) return;
-  RT_LOADED=true;
+  var me=SESSION&&SESSION.name;
+  if(RT_LOADED===me) return;
+  RT_LOADED=me;
+  RT_LEADERS=[]; RT_DUR=180; RT_DIRTY=false; RT_FETCH_AT=0;
   try{
-    var s=JSON.parse(localStorage.getItem('rally-timer-v1')||'null');
+    var raw=localStorage.getItem(rtCacheKey());
+    var old=localStorage.getItem('rally-timer-v1');
+    if(raw==null&&old!=null){
+      // list from before it moved to the server: show it, drop the old key. If the
+      // server has no list yet, rtFetchState uploads it; if it has one, the server wins.
+      raw=old;
+    }
+    var s=JSON.parse(raw||'null');
     if(s&&typeof s==='object'){
-      if(Array.isArray(s.leaders)) RT_LEADERS=s.leaders.map(function(l){ return {name:String(l&&l.name||''),march:String(l&&l.march||''),active:!(l&&l.active===false)}; });
+      if(Array.isArray(s.leaders)) RT_LEADERS=rtNormLeaders(s.leaders);
       if([60,180,300].indexOf(s.dur)>=0) RT_DUR=s.dur;
     }
+    if(raw===old&&old!=null){ rtWriteCache(); localStorage.removeItem('rally-timer-v1'); }
   }catch(e){}
   if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:'',active:true},{name:'',march:'',active:true}];
 }
-function rtSave(){
-  try{ localStorage.setItem('rally-timer-v1',JSON.stringify({leaders:RT_LEADERS,dur:RT_DUR})); }catch(e){}
+function rtWriteCache(){
+  try{ localStorage.setItem(rtCacheKey(),JSON.stringify({leaders:RT_LEADERS,dur:RT_DUR})); }catch(e){}
 }
+function rtSave(){
+  RT_DIRTY=true; RT_EDITS++;
+  rtWriteCache();
+  if(RT_SYNC_T) clearTimeout(RT_SYNC_T);
+  RT_SYNC_T=setTimeout(rtSyncNow,800);
+}
+async function rtSyncNow(){
+  if(RT_SYNC_T){ clearTimeout(RT_SYNC_T); RT_SYNC_T=null; }
+  if(!SESSION||!RT_DIRTY) return;
+  if(RT_SYNC_BUSY){ RT_SYNC_T=setTimeout(rtSyncNow,400); return; }
+  var n=RT_EDITS;
+  RT_SYNC_BUSY=true;
+  try{
+    var r=await sb.from('rally_timer_state').upsert({player_name:SESSION.name,dur:RT_DUR,leaders:rtLeadersForPreset(),updated_at:new Date().toISOString()},{onConflict:'player_name'});
+    if(r.error) throw r.error;
+    RT_SYNC_ERR=false;
+    if(RT_EDITS===n) RT_DIRTY=false;
+  }catch(e){
+    if(!RT_SYNC_ERR){ RT_SYNC_ERR=true; toast('Rally list not saved to the site, kept on this device'); }
+  }finally{ RT_SYNC_BUSY=false; }
+}
+function rtFlush(){ if(RT_SYNC_T) rtSyncNow(); }
+// Pull my saved list. Never overwrites edits the server does not have yet.
+async function rtFetchState(){
+  var me=SESSION&&SESSION.name; if(!me) return;
+  if(Date.now()-RT_FETCH_AT<5000) return;
+  RT_FETCH_AT=Date.now();
+  try{
+    var r=await sb.from('rally_timer_state').select('dur,leaders').eq('player_name',me).maybeSingle();
+    if(r.error||!SESSION||SESSION.name!==me) return;
+    if(!r.data){ // first time: upload this device's list if it has anything
+      if(RT_LEADERS.some(function(l){ return l.name||l.march; })){ RT_DIRTY=true; RT_EDITS++; rtSyncNow(); }
+      return;
+    }
+    if(RT_DIRTY||RT_SYNC_T||RT_SYNC_BUSY) return;
+    var leaders=rtNormLeaders(r.data.leaders);
+    if(!leaders.length) leaders=[{name:'',march:'',active:true}];
+    var dur=[60,180,300].indexOf(r.data.dur)>=0?r.data.dur:RT_DUR;
+    if(dur===RT_DUR&&JSON.stringify(leaders)===JSON.stringify(rtLeadersForPreset())) return;
+    RT_LEADERS=leaders; RT_DUR=dur; rtWriteCache();
+    if(document.getElementById('rtContent')) renderRallyTimerContent();
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') rtFlush(); });
 // Presets live in Supabase (rally_timer_presets), shared by every rally admin.
 async function rtLoadPresets(){
   if(RT_PRESETS_LOADED) return;
@@ -7299,10 +7370,11 @@ function renderRallyTimerApp(app){
     buildModuleHeader('rallytimer','⏱️','Rally Timer','March Sync','rallytimer')+
     '<div class="content" id="rtContent"></div>'+
     '<div class="footer">© 2026 State 2901 · All rights reserved · Designed by Otto</div>';
-  document.getElementById('backHome').addEventListener('click',function(){ MODULE=null; render(); });
+  document.getElementById('backHome').addEventListener('click',function(){ rtFlush(); MODULE=null; render(); });
   document.getElementById('guideBtn').addEventListener('click',function(){ openGuideModal('rallytimer'); });
   renderRallyTimerContent();
   rtLoadPresets(); // shared presets — re-renders the content when they arrive
+  rtFetchState();  // my saved list — re-renders only if it differs and I have no unsaved edits
 }
 
 function renderRallyTimerContent(){
