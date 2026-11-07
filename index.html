@@ -867,6 +867,7 @@ var RT_SYNC_BUSY = false; // a save request is on its way
 var RT_SYNC_ERR = false; // one error toast per failure streak
 var RT_FETCH_AT = 0;    // last server fetch, throttles re-fetch on re-renders
 var RT_PRESETS_LOADED = false; // guard: presets fetched once per session
+var RT_PRESET_SEL = ''; // id of the preset picked in the dropdown, kept across re-renders
 
 // BEAR TRAP STATE — shared by all bear admins (bear_trap_config + bear_trap_players)
 var BT_CONFIG  = {1:null, 2:null}; // per-trap settings row, keyed by bt
@@ -7379,8 +7380,9 @@ function renderRallyTimerApp(app){
 
 function renderRallyTimerContent(){
   var el=document.getElementById('rtContent');
+  if(RT_PRESET_SEL&&!RT_PRESETS.some(function(p){ return String(p.id)===RT_PRESET_SEL; })) RT_PRESET_SEL='';
   var presetOpts='<option value="">Load preset…</option>'+RT_PRESETS.map(function(p){
-    return '<option value="'+p.id+'">'+escHtml(p.name)+'</option>';
+    return '<option value="'+p.id+'"'+(String(p.id)===RT_PRESET_SEL?' selected':'')+'>'+escHtml(p.name)+'</option>';
   }).join('');
   // Inputs and result in two wrappers: one column on phones, side by side on desktop.
   el.innerHTML=
@@ -7430,7 +7432,7 @@ function renderRallyTimerContent(){
     } else { toast('Copy not supported'); }
   });
   document.getElementById('rtPresetSel').addEventListener('change',function(){
-    var id=this.value; if(id==='') return;
+    var id=this.value; RT_PRESET_SEL=id; if(id==='') return;
     var p=RT_PRESETS.find(function(x){ return String(x.id)===id; }); if(!p) return;
     RT_LEADERS=(p.leaders||[]).map(function(l){ return {name:String(l.name||''),march:String(l.march||''),active:!(l&&l.active===false)}; });
     if(!RT_LEADERS.length) RT_LEADERS=[{name:'',march:'',active:true}];
@@ -7442,16 +7444,20 @@ function renderRallyTimerContent(){
       if(!name) return;
       var r=await sb.from('rally_timer_presets').insert([{name:name,dur:RT_DUR,leaders:rtLeadersForPreset(),created_by:SESSION.name}]).select().single();
       if(r.error){ toast('Error: '+r.error.message); return; }
-      RT_PRESETS.push(r.data); renderRallyTimerContent(); toast('✅ Preset saved');
+      RT_PRESETS.push(r.data); RT_PRESET_SEL=String(r.data.id); renderRallyTimerContent(); toast('✅ Preset saved');
     });
   });
   document.getElementById('rtPresetDel').addEventListener('click',async function(){
     var id=document.getElementById('rtPresetSel').value;
-    if(id===''){ toast('Pick a preset to delete'); return; }
-    if(!await confirmDanger('Delete this shared preset? Every rally admin loses it.',{title:'Delete preset',confirmLabel:'Delete'})) return;
-    var r=await sb.from('rally_timer_presets').delete().eq('id',id);
+    if(id===''){ toast('Pick a preset in the list first'); return; }
+    var p=RT_PRESETS.find(function(x){ return String(x.id)===id; });
+    if(!await confirmDanger('Delete the shared preset "'+(p?p.name:'')+'"? Every rally admin loses it.',{title:'Delete preset',confirmLabel:'Delete'})) return;
+    // select() returns the deleted rows, so a delete RLS silently skipped is not reported as done
+    var r=await sb.from('rally_timer_presets').delete().eq('id',id).select('id');
     if(r.error){ toast('Error: '+r.error.message); return; }
+    if(!r.data||!r.data.length){ toast('Preset could not be deleted'); return; }
     RT_PRESETS=RT_PRESETS.filter(function(x){ return String(x.id)!==id; });
+    RT_PRESET_SEL='';
     renderRallyTimerContent(); toast('Preset deleted');
   });
 
