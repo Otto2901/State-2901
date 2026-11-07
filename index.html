@@ -1368,16 +1368,17 @@ function render(){
 }
 
 // ── PHONE BACK BUTTON ────────────────────────────────────────
-// While the app is anywhere but Home (a module, the profile, an open dialog)
-// one guard entry {s2901:1} sits on top of the browser history. Phone back
-// pops it: we close the top dialog, or press the screen's own back button
-// (so modules step back the way they already do), then put the guard back if
-// still not Home. At Home nothing is guarded, so back leaves the app as usual.
-// The screenshot viewer keeps its own entry above the guard ({sprViewer:1}).
-// On phones Home is guarded too: the first back shows "Press back again to
-// exit" and leaves the guard off for 2 s, so a second back in that time leaves
-// the app. Desktop browsers keep the plain back at Home.
-var _navPopping=false, _navIgnoreUntil=0, _navExitUntil=0, _navExitT=null;
+// Browser history mirrors how deep the app is: one guard entry {s2901:1,d:n}
+// per level (module, sub page, open dialog), so each phone back pops exactly
+// one entry and we step back one level: close the top dialog, or press the
+// screen's own back button. Going deeper pushes entries; that happens inside
+// the user's tap, which matters: Chrome's back button skips history entries a
+// page added without a user gesture, so we never pop-then-push on back.
+// On phones Home has its own guard (d:1): the first back at Home lands below it,
+// shows "Press back again to exit" and leaves it off for 2 s, so a second back
+// in that time leaves the app. Desktop browsers keep the plain back at Home.
+// The screenshot viewer keeps its own entry above ours ({sprViewer:1}).
+var _navPopping=false, _navIgnorePops=0, _navIgnoreT=null, _navExitUntil=0, _navExitT=null;
 var NAV_EXIT_MS=2000;
 function navIsPhone(){
   try{ return window.matchMedia('(pointer: coarse)').matches; }catch(e){ return false; }
@@ -1390,22 +1391,35 @@ function navIsRoot(){
   if(navOverlay()) return false;
   return !SESSION||(!PROFILE_OPEN&&!MODULE);
 }
-function navSync(){
-  if(_navPopping) return;
+// Back steps from here to Home. Sub pages = screens whose back button goes to a parent screen.
+function navAppDepth(){
+  var d=document.querySelectorAll('body > .modal-overlay').length;
+  if(!SESSION) return d;
+  if(PROFILE_OPEN) return d+1;
+  if(!MODULE) return d;
+  var sub=(MODULE==='adminpanel'&&ADMIN_TAB)||(MODULE==='svslog'&&SPR_SEL)||(MODULE==='transfer'&&window._trEditing);
+  return d+1+(sub?1:0);
+}
+function navWant(){
+  var home=navIsPhone()&&!(Date.now()<_navExitUntil)?1:0; // phone Home guard, off in the exit window
+  return home+navAppDepth();
+}
+function navCur(){
   var st=history.state;
-  var root=navIsRoot();
-  if(!root||navIsPhone()){
-    if(root&&Date.now()<_navExitUntil) return; // exit window: the next back leaves
-    if(!st||(!st.s2901&&!st.sprViewer)){ try{ history.pushState({s2901:1},''); }catch(e){} }
-    return;
-  }
-  // Home reached by a tap: take the leftover guard away, so one back leaves the app.
-  if(st&&st.s2901){
-    setTimeout(function(){
-      if(_navPopping||!navIsRoot()||!(history.state&&history.state.s2901)) return;
-      _navIgnoreUntil=Date.now()+1000;
-      history.back();
-    },0);
+  return st&&st.s2901?(st.d||1):0;
+}
+function navSync(){
+  if(_navPopping||_navIgnorePops) return;
+  var st=history.state;
+  if(st&&st.sprViewer) return; // the viewer owns the top entry while it is open
+  var cur=navCur(), want=navWant();
+  if(want>cur){
+    try{ for(var i=cur+1;i<=want;i++) history.pushState({s2901:1,d:i},''); }catch(e){}
+  } else if(want<cur&&want>=0){
+    // Went up by a tap (Home button, dialog X): take the extra entries back off.
+    _navIgnorePops=1;
+    clearTimeout(_navIgnoreT); _navIgnoreT=setTimeout(function(){ _navIgnorePops=0; },1000);
+    history.go(want-cur);
   }
 }
 function navBack(){
@@ -1422,14 +1436,20 @@ function navBack(){
   PROFILE_OPEN=false; MODULE=null; render();
 }
 window.addEventListener('popstate',function(){
+  if(_navIgnorePops){ _navIgnorePops=0; clearTimeout(_navIgnoreT); return; } // our own history.go
   var st=history.state;
-  if(st&&(st.s2901||st.sprViewer)) return; // an entry above the guard closed itself (screenshot viewer)
-  if(Date.now()<_navIgnoreUntil){ _navIgnoreUntil=0; return; } // our own guard removal
-  if(navIsRoot()&&navIsPhone()){ navExitHint(); return; }
+  if(st&&st.sprViewer) return;
+  var cur=navCur();
+  if(navAppDepth()+(navIsPhone()?1:0)<=cur) return; // the entry above closed itself (screenshot viewer)
+  if(navIsRoot()){
+    // Popped the phone Home guard. A desktop Home has no guard, so nothing to do there.
+    if(navIsPhone()) navExitHint();
+    return;
+  }
   _navPopping=true;
   try{ navBack(); }catch(e){ console.warn('navBack',e); }
   _navPopping=false;
-  navSync();
+  navSync(); // normally a no-op: one level up matches the entry we landed on
 });
 // First back at Home on a phone: hint, keep the guard off for NAV_EXIT_MS so a
 // second back leaves, then put it back (or sooner, on the next tap).
