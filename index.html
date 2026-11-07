@@ -1357,6 +1357,7 @@ function render(){
   var key=!SESSION?'auth':PROFILE_OPEN?'profile':!MODULE?'home':MODULE==='adminpanel'?'admin|'+(ADMIN_TAB||''):MODULE;
   _lastView={key:key,depth:viewDepth()};
   saveViewState(prev&&prev.key!==key?0:window.scrollY);
+  navSync();
   if(!prev||prev.key===key||key==='auth'||prev.key==='auth') return;
   window.scrollTo(0,0);
   var mh=document.querySelector('.mod-hdr'); if(mh) mh.classList.remove('scrolled');
@@ -1365,6 +1366,63 @@ function render(){
   app.classList.remove('push-in','pop-in'); void app.offsetWidth; app.classList.add(cls);
   clearTimeout(window._navAnimT); window._navAnimT=setTimeout(function(){ app.classList.remove(cls); },420);
 }
+
+// ── PHONE BACK BUTTON ────────────────────────────────────────
+// While the app is anywhere but Home (a module, the profile, an open dialog)
+// one guard entry {s2901:1} sits on top of the browser history. Phone back
+// pops it: we close the top dialog, or press the screen's own back button
+// (so modules step back the way they already do), then put the guard back if
+// still not Home. At Home nothing is guarded, so back leaves the app as usual.
+// The screenshot viewer keeps its own entry above the guard ({sprViewer:1}).
+var _navPopping=false, _navIgnoreUntil=0;
+function navOverlay(){
+  var all=document.querySelectorAll('body > .modal-overlay');
+  return all.length?all[all.length-1]:null;
+}
+function navIsRoot(){
+  if(navOverlay()) return false;
+  return !SESSION||(!PROFILE_OPEN&&!MODULE);
+}
+function navSync(){
+  if(_navPopping) return;
+  var st=history.state;
+  if(!navIsRoot()){
+    if(!st||(!st.s2901&&!st.sprViewer)){ try{ history.pushState({s2901:1},''); }catch(e){} }
+    return;
+  }
+  // Home reached by a tap: take the leftover guard away, so one back leaves the app.
+  if(st&&st.s2901){
+    setTimeout(function(){
+      if(_navPopping||!navIsRoot()||!(history.state&&history.state.s2901)) return;
+      _navIgnoreUntil=Date.now()+1000;
+      history.back();
+    },0);
+  }
+}
+function navBack(){
+  var ov=navOverlay();
+  if(ov){
+    var x=ov.querySelector('.modal-close')||ov.querySelector('#roleNotifOk')||ov.querySelector('#rtPromptCancel');
+    if(x) x.click();
+    else ov.dispatchEvent(new MouseEvent('click',{bubbles:true})); // backdrop click
+    return;
+  }
+  if(!SESSION) return;
+  var b=document.getElementById('backHome');
+  if(b){ b.click(); return; }
+  PROFILE_OPEN=false; MODULE=null; render();
+}
+window.addEventListener('popstate',function(){
+  var st=history.state;
+  if(st&&(st.s2901||st.sprViewer)) return; // an entry above the guard closed itself (screenshot viewer)
+  if(Date.now()<_navIgnoreUntil){ _navIgnoreUntil=0; return; } // our own guard removal
+  _navPopping=true;
+  try{ navBack(); }catch(e){ console.warn('navBack',e); }
+  _navPopping=false;
+  navSync();
+});
+// Dialogs are added straight to <body>: guard them as they open and close.
+new MutationObserver(function(){ navSync(); }).observe(document.body,{childList:true});
 function renderView(){
   var app=document.getElementById('app');
   if(AUTH_STEP==='pin-profile'){ renderProfileSetup(app); return; }
@@ -9470,7 +9528,7 @@ async function init(){
   } else await minLoadCfg();
   render();
   if(restoreY) restoreScroll(restoreY);
-  if(location.hash) history.replaceState(null,'',location.pathname);
+  if(location.hash) history.replaceState(history.state,'',location.pathname); // keep the back guard
   if(SESSION) showPendingRoleNotifs();
 }
 init();
